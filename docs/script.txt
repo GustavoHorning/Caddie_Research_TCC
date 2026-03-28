@@ -1,0 +1,114 @@
+Table Usuario [note: 'Tabela central de gestão de acesso e perfis na plataforma.'] {
+  id int [primary key, increment, note: 'Identificador único do usuário no banco.']
+  nome varchar [note: 'Nome completo para exibição na plataforma.']
+  email varchar [unique, note: 'E-mail usado para login. O [unique] impede e-mails duplicados.']
+  senha_hash varchar [note: 'Senha criptografada (nunca salvar em texto puro!) - Refere-se ao RF2.']
+  tipo_perfil varchar [note: 'Define permissões: Assinante, Analista ou Admin.']
+  data_criacao datetime [note: 'Registro de auditoria para saber quando a conta foi criada.']
+}
+
+Table Assinatura [note: 'Gerencia os contratos e o tempo de acesso dos assinantes.'] {
+  id int [primary key, increment, note: 'Identificador do contrato de assinatura.']
+  usuario_id int [ref: > Usuario.id, note: 'Chave Estrangeira: Liga a assinatura ao seu dono.']
+  status_pagamento varchar [note: 'Ativa, Pendente ou Cancelada - Refere-se ao RF7.']
+  data_inicio datetime [note: 'Data em que o usuário pagou e começou a usar.']
+  data_fim datetime [note: 'Data de expiração (ideal para bloquear acessos vencidos).']
+}
+
+Table Ativo [note: 'Catálogo de produtos financeiros disponíveis na plataforma.'] {
+  id int [primary key, increment, note: 'Identificador interno do ativo.']
+  ticker varchar [unique, note: 'Código na bolsa (ex: PETR4, IVVB11). É único.']
+  nome varchar [note: 'Nome da empresa ou do fundo (ex: Petrobras).']
+  classe_ativo varchar [note: 'Ações, FIIs, Renda Fixa - Permite filtros do RF13.']
+}
+
+Table Carteira [note: 'Estratégias de investimento montadas pelos analistas.'] {
+  id int [primary key, increment, note: 'Identificador da carteira recomendada.']
+  nome varchar [note: 'Título da carteira (ex: Carteira de Dividendos).']
+  analista_id int [ref: > Usuario.id, note: 'Aponta qual analista montou a carteira.']
+  descricao text [note: 'Explicação da tese de investimento dessa carteira.']
+  data_criacao datetime [note: 'Quando a estratégia foi lançada na plataforma.']
+}
+
+Table Carteira_Ativo [note: 'Tabela associativa: Resolve a relação (N:M) entre Carteira e Ativo.'] {
+  carteira_id int [ref: > Carteira.id, note: 'ID da Carteira.']
+  ativo_id int [ref: > Ativo.id, note: 'ID do Ativo contido na carteira.']
+  peso_percentual decimal [note: 'Qual a porcentagem desse ativo na carteira (ex: 15.5%).']
+  
+  indexes {
+    (carteira_id, ativo_id) [pk]
+  }
+}
+
+Table Relatorio [note: 'Biblioteca de conteúdos e análises em PDF.'] {
+  id int [primary key, increment, note: 'Identificador do relatório.']
+  titulo varchar [note: 'Título principal da publicação.']
+  resumo text [note: 'Parágrafo de introdução para chamar a atenção.']
+  url_pdf varchar [note: 'Link de onde o PDF está armazenado na nuvem.']
+  autor_id int [ref: > Usuario.id, note: 'Qual analista escreveu o documento.']
+  data_publicacao datetime [note: 'Data e hora em que ficou disponível para leitura (RF5).']
+}
+
+Table Watchlist [note: 'Lista de acompanhamento personalizada do investidor.'] {
+  id int [primary key, increment, note: 'Identificador do registro de favorito.']
+  usuario_id int [ref: > Usuario.id, note: 'ID do assinante.']
+  ativo_id int [ref: > Ativo.id, note: 'Ativo que o assinante quer acompanhar.']
+  data_adicao datetime [note: 'Quando o ativo foi favoritado (RF10).']
+}
+
+
+
+Table Noticia [note: 'Atende ao RF6: Publicar notícias do mundo (morning call).'] {
+  id int [primary key, increment, note: 'ID da notícia.']
+  titulo varchar [note: 'Manchete do Morning Call.']
+  conteudo text [note: 'Texto da notícia ou link do vídeo.']
+  autor_id int [ref: > Usuario.id, note: 'Analista que publicou o conteúdo.']
+  data_publicacao datetime [note: 'Data e hora da publicação.']
+}
+
+Table TicketSuporte [note: 'Atende ao RF12: Canal de interação direta com suporte.'] {
+  id int [primary key, increment, note: 'ID do chamado.']
+  usuario_id int [ref: > Usuario.id, note: 'Assinante que abriu o chamado.']
+  atendente_id int [ref: > Usuario.id, note: 'Admin/BackOfficer que atendeu e resolveu o chamado.']
+  assunto varchar [note: 'Motivo do contato.']
+  mensagem text [note: 'Descrição do problema.']
+  status varchar [note: 'Aberto, Em Andamento, Resolvido.']
+  data_abertura datetime [note: 'Quando o ticket foi criado.']
+}
+
+Table Notificacao [note: 'Atende ao RF8: Gerar notificações sobre ativos de alto impacto.'] {
+  id int [primary key, increment, note: 'ID da notificação.']
+  usuario_id int [ref: > Usuario.id, note: 'Para quem o alerta foi enviado.']
+  mensagem varchar [note: 'Texto do alerta.']
+  lida boolean [note: 'Verifica se o usuário já clicou/leu a notificação.']
+  data_envio datetime [note: 'Quando o alerta disparou.']
+}
+
+
+Table CotacaoHistorica [note: 'Atende ao RF9: Base de dados para os dashboards de performance.'] {
+  id int [primary key, increment]
+  ativo_id int [ref: > Ativo.id, note: 'A qual ativo este preço se refere.']
+  data_pregao date [note: 'Data de fechamento do mercado.']
+  preco_fechamento decimal [note: 'Valor do ativo naquele dia.']
+}
+
+
+Table Glossario [note: 'Atende ao RF14: Acessar glossários de termos técnicos.'] {
+  id int [primary key, increment, note: 'ID do termo.']
+  termo varchar [note: 'A palavra ou sigla (ex: "Buy and Hold", "EBITDA").']
+  definicao text [note: 'O significado do termo explicado.']
+  autor_id int [ref: > Usuario.id, note: 'Analista que cadastrou o termo.']
+}
+
+Table CategoriaFAQ [note: 'Agrupa as perguntas frequentes por temas.'] {
+  id int [primary key, increment, note: 'ID da categoria.']
+  nome varchar [note: 'Ex: Pagamentos, Acesso, Relatórios, etc.']
+}
+
+Table FAQ [note: 'Atende ao RF15: Acessar Central de Ajuda.'] {
+  id int [primary key, increment, note: 'ID da pergunta frequente.']
+  categoria_id int [ref: > CategoriaFAQ.id, note: 'Liga a pergunta ao seu tema específico.']
+  autor_id int [ref: > Usuario.id, note: 'Admin/BackOfficer que cadastrou a resposta.']
+  pergunta varchar [note: 'A dúvida mais comum dos usuários.']
+  resposta text [note: 'A solução padrão para aquela dúvida.']
+}
