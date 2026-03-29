@@ -13,11 +13,13 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly TokenService _tokenService;
+    private readonly EmailService _emailService;
 
-    public AuthController(AppDbContext context, TokenService tokenService)
+    public AuthController(AppDbContext context, TokenService tokenService, EmailService emailService)
     {
         _context = context;
         _tokenService = tokenService;
+        _emailService = emailService; 
     }
 
     [HttpPost("cadastrar")]
@@ -38,8 +40,33 @@ public class AuthController : ControllerBase
 
         _context.Usuarios.Add(novoUsuario);
         await _context.SaveChangesAsync();
+        
+        var linkDeConfirmacao = $"http://localhost:5194/api/auth/confirmar-email?email={novoUsuario.Email}";
+        
+        await _emailService.EnviarEmailConfirmacaoAsync(novoUsuario.Email, novoUsuario.Nome, linkDeConfirmacao);
 
         return Created("", new { mensagem = "Usuário cadastrado com sucesso! Verifique seu e-mail para validar a conta." });
+    }
+    
+    [HttpGet("confirmar-email")]
+    public async Task<IActionResult> ConfirmarEmail([FromQuery] string email)
+    {
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+
+        if (usuario == null)
+        {
+            return NotFound(new { mensagem = "Usuário não encontrado." });
+        }
+
+        if (usuario.EmailConfirmado)
+        {
+            return BadRequest(new { mensagem = "Este e-mail já foi confirmado anteriormente." });
+        }
+
+        usuario.EmailConfirmado = true;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { mensagem = "E-mail confirmado com sucesso! Você já pode fazer login no Caddie Research." });
     }
 }
 
