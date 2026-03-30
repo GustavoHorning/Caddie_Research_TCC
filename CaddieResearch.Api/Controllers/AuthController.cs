@@ -68,6 +68,43 @@ public class AuthController : ControllerBase
 
         return Ok(new { mensagem = "E-mail confirmado com sucesso! Você já pode fazer login no Caddie Research." });
     }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+       
+        if (usuario == null)
+        {
+            return Unauthorized(new { mensagem = "E-mail ou senha incorretos." }); 
+        }
+        
+        if (!usuario.EmailConfirmado)
+        {
+            return Unauthorized(new { mensagem = "Acesso negado. Por favor, confirme seu e-mail antes de fazer login." });
+        }
+
+        var senhaValida = _tokenService.VerifyPassword(request.Senha, usuario.SenhaHash);
+        if (!senhaValida)
+        {
+            return Unauthorized(new { mensagem = "E-mail ou senha incorretos." });
+        }
+
+        var token = _tokenService.GenerateToken(usuario);
+
+        return Ok(new 
+        { 
+            mensagem = "Login realizado com sucesso!",
+            token = token,
+            usuario = new 
+            { 
+                id = usuario.Id, 
+                nome = usuario.Nome, 
+                email = usuario.Email 
+            }
+        });
+    }
 }
 
 public class CadastrarUsuarioRequest
@@ -85,5 +122,15 @@ public class CadastrarUsuarioRequest
     [MinLength(8, ErrorMessage = "A senha deve ter no mínimo 8 caracteres.")]
     [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$", 
         ErrorMessage = "A senha deve conter pelo menos 8 caracteres, uma letra maiúscula, uma minúscula, um número e um caractere especial.")]
+    public string Senha { get; set; } = string.Empty;
+}
+
+public class LoginRequest
+{
+    [Required(ErrorMessage = "O e-mail é obrigatório.")]
+    [EmailAddress(ErrorMessage = "O formato do e-mail é inválido.")]
+    public string Email { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "A senha é obrigatória.")]
     public string Senha { get; set; } = string.Empty;
 }
