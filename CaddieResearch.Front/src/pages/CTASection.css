@@ -1,0 +1,104 @@
+.cta-section {
+  background-color: #0a121e;
+  padding: 7rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-glow {
+  position: absolute;
+  bottom: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(0, 180, 216, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cta-container {
+  max-width: 700px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.cta-badge {
+  display: inline-block;
+  background-color: rgba(0, 180, 216, 0.1);
+  color: #00B4D8;
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  padding: 0.4rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+}
+
+.cta-title {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 1.2rem;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+.cta-highlight {
+  color: #00B4D8;
+}
+
+.cta-subtitle {
+  font-size: 1.05rem;
+  color: #7a90a8;
+  line-height: 1.7;
+  margin-bottom: 2.5rem;
+}
+
+.cta-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+
+.cta-btn-primary {
+  background-color: #00B4D8;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 0.9rem 2.2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: background-color 0.2s, transform 0.15s;
+  box-shadow: 0 0 30px rgba(0, 180, 216, 0.3);
+}
+
+.cta-btn-primary:hover {
+  background-color: #0096c7;
+  transform: translateY(-2px);
+}
+
+.cta-btn-secondary {
+  color: #a0b0c0;
+  text-decoration: none;
+  padding: 0.9rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 1rem;
+  font-weight: 500;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.cta-btn-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.cta-disclaimer {
+  font-size: 0.82rem;
+  color: #4a6070;
+}

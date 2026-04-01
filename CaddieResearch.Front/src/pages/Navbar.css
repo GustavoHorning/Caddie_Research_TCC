@@ -1,0 +1,90 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background-color: rgba(10, 18, 30, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 180, 216, 0.15);
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-text {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.logo-highlight {
+  color: #00B4D8;
+}
+
+.navbar-links {
+  display: flex;
+  list-style: none;
+  gap: 2.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.navbar-links a {
+  color: #a0b0c0;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.navbar-links a:hover {
+  color: #ffffff;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-login {
+  color: #a0b0c0;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.btn-login:hover {
+  color: #ffffff;
+}
+
+.btn-cadastro {
+  background-color: #00B4D8;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 0.5rem 1.3rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-cadastro:hover {
+  background-color: #0096c7;
+  transform: translateY(-1px);
+}
