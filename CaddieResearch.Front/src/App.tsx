@@ -6,19 +6,10 @@ import Produtos from './pages/Produtos'
 import ComoFunciona from './pages/ComoFunciona'
 import CTASection from './pages/CTASection'
 import Footer from './pages/Footer'
+import Cadastro from './pages/Cadastro'
 
 function App() {
-  return (
-    <>
-      <Navbar />
-      <HeroSection />
-      <Diferenciais />
-      <Produtos />
-      <ComoFunciona />
-      <CTASection />
-      <Footer />
-    </>
-  )
+  return <Cadastro />
 }
 
 export default App
