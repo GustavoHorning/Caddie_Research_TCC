@@ -1,3 +1,4 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import Navbar from './pages/Navbar'
 import HeroSection from './pages/HeroSection'
@@ -8,8 +9,29 @@ import CTASection from './pages/CTASection'
 import Footer from './pages/Footer'
 import Cadastro from './pages/Cadastro'
 
+function PaginaInicial() {
+  return (
+    <>
+      <Navbar />
+      <HeroSection />
+      <Diferenciais />
+      <Produtos />
+      <ComoFunciona />
+      <CTASection />
+      <Footer />
+    </>
+  )
+}
+
 function App() {
-  return <Cadastro />
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PaginaInicial />} />
+        <Route path="/cadastro" element={<Cadastro />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App
