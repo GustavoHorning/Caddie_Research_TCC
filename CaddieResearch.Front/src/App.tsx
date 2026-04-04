@@ -8,6 +8,7 @@ import ComoFunciona from './pages/ComoFunciona'
 import CTASection from './pages/CTASection'
 import Footer from './pages/Footer'
 import Cadastro from './pages/Cadastro'
+import Login from './pages/Login'
 
 function PaginaInicial() {
   return (
@@ -29,6 +30,7 @@ function App() {
       <Routes>
         <Route path="/" element={<PaginaInicial />} />
         <Route path="/cadastro" element={<Cadastro />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </BrowserRouter>
   )
