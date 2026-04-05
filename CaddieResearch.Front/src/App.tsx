@@ -10,6 +10,8 @@ import Footer from './pages/Footer'
 import Cadastro from './pages/Cadastro'
 import Login from './pages/Login'
 import DashboardLayout from './pages/Dashboard/DashboardLayout'
+import Carteiras from './pages/Dashboard/Carteiras/Carteiras'
+import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternacional'
 
 function PaginaInicial() {
   return (
@@ -33,6 +35,8 @@ function App() {
         <Route path="/cadastro" element={<Cadastro />} />
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<DashboardLayout />} />
+        <Route path="/carteiras" element={<Carteiras />} />
+        <Route path="/carteiras/internacional" element={<CarteiraInternacional />} />
       </Routes>
     </BrowserRouter>
   )
