@@ -1,0 +1,144 @@
+/* =============================================
+   TOPBAR — Barra superior do dashboard
+   ============================================= */
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 64px;
+  right: 0;
+  height: 64px;
+  background: #111111;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  z-index: 900;
+}
+
+/* ---- Search ---- */
+.topbar-search {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0 16px;
+  height: 42px;
+  flex: 1;
+  max-width: 620px;
+  gap: 12px;
+}
+
+.topbar-search-icon {
+  font-size: 0.95rem;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.topbar-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.topbar-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.topbar-search-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  cursor: pointer;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 14px;
+  margin-left: 4px;
+}
+
+.topbar-radio {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ---- Actions ---- */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 24px;
+  flex-shrink: 0;
+}
+
+.topbar-btn-icon {
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.topbar-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.topbar-notif {
+  position: relative;
+}
+
+.topbar-notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  background: #e53935;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.topbar-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent, #00B4D8), #0077b6);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  margin-left: 4px;
+}
+
+.topbar-avatar:hover {
+  transform: scale(1.08);
+}

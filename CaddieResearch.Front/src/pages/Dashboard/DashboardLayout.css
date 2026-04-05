@@ -1,0 +1,16 @@
+/* =============================================
+   DASHBOARD LAYOUT — Wrapper geral
+   ============================================= */
+
+.dashboard-layout {
+  min-height: 100vh;
+  background: #111111;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.dashboard-main {
+  margin-left: 64px;
+  margin-top: 64px;
+  min-height: calc(100vh - 64px);
+}
