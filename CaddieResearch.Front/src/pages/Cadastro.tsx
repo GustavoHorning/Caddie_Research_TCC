@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './Cadastro.css';
+import axios from 'axios';
 
 interface Passo1 {
   nome: string;
@@ -14,6 +15,7 @@ interface Passo2 {
 export default function Cadastro() {
   const [passo, setPasso] = useState(1);
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [carregando, setCarregando] = useState(false); 
 
   const [dados, setDados] = useState<Passo1>({
     nome: '',
@@ -51,9 +53,31 @@ export default function Cadastro() {
     if (validarPasso1()) setPasso(2);
   }
 
-  function handleCriarConta() {
+  async function handleCriarConta() {
     if (senhaValida) {
-      alert('Conta criada com sucesso! Bem-vindo à Caddie Research 🎉');
+      setCarregando(true); 
+
+      try {
+        const response = await axios.post('http://localhost:5194/api/auth/cadastrar', {
+          Nome: dados.nome,
+          Email: dados.email,
+          Senha: senha.senha
+        });
+
+        alert('Conta criada com sucesso! Verifique seu e-mail para confirmar. 🎉');
+        window.location.href = '/login';
+
+      } catch (error: any) {
+        console.error("Erro na API:", error);
+
+        if (error.response && error.response.data && error.response.data.mensagem) {
+          alert(error.response.data.mensagem);
+        } else {
+          alert('Erro ao criar conta. O e-mail já pode estar em uso ou a API está desligada.');
+        }
+      } finally {
+        setCarregando(false);
+      }
     }
   }
 
@@ -66,151 +90,147 @@ export default function Cadastro() {
   }
 
   return (
-    <div className="cadastro-page">
-      {/* Lado esquerdo - Formulário */}
-      <div className="cadastro-form-side">
-        <div className="cadastro-form-container">
+      <div className="cadastro-page">
+        <div className="cadastro-form-side">
+          <div className="cadastro-form-container">
 
-          <div className="cadastro-logo">
-            Caddie <span className="cadastro-logo-highlight">Research</span>
-          </div>
-
-          <h1 className="cadastro-titulo">Crie sua conta</h1>
-
-          {/* Indicador de progresso */}
-          <div className="cadastro-progresso">
-            <span className="cadastro-passo-label">Passo {passo} de 2</span>
-            <p className="cadastro-passo-titulo">
-              {passo === 1 ? 'Dados pessoais' : 'Proteja a sua conta'}
-            </p>
-            <div className="cadastro-barra">
-              <div className={`cadastro-barra-fill passo-${passo}`} />
+            <div className="cadastro-logo">
+              Caddie <span className="cadastro-logo-highlight">Research</span>
             </div>
-          </div>
 
-          {/* PASSO 1 */}
-          {passo === 1 && (
-            <div className="cadastro-fields">
-              <div className="campo-grupo">
-                <label>Nome completo</label>
-                <input
-                  type="text"
-                  placeholder="Ex.: João Silva"
-                  value={dados.nome}
-                  onChange={(e) => setDados({ ...dados, nome: e.target.value })}
-                  className={erros.nome ? 'input-erro' : ''}
-                />
-                {erros.nome && <span className="erro-msg">{erros.nome}</span>}
-              </div>
+            <h1 className="cadastro-titulo">Crie sua conta</h1>
 
-              <div className="campo-grupo">
-                <label>E-mail</label>
-                <input
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={dados.email}
-                  onChange={(e) => setDados({ ...dados, email: e.target.value })}
-                  className={erros.email ? 'input-erro' : ''}
-                />
-                {erros.email && <span className="erro-msg">{erros.email}</span>}
-              </div>
-
-              <div className="campo-grupo">
-                <label>Telefone</label>
-                <input
-                  type="tel"
-                  placeholder="(00) 00000-0000"
-                  value={dados.telefone}
-                  onChange={(e) =>
-                    setDados({ ...dados, telefone: formatarTelefone(e.target.value) })
-                  }
-                  className={erros.telefone ? 'input-erro' : ''}
-                />
-                {erros.telefone && <span className="erro-msg">{erros.telefone}</span>}
-              </div>
-
-              <button className="cadastro-btn" onClick={handleContinuar}>
-                Continuar
-              </button>
-
-              <p className="cadastro-login-link">
-                Já tenho uma conta <a href="/login">Entrar</a>
+            {/* Indicador de progresso */}
+            <div className="cadastro-progresso">
+              <span className="cadastro-passo-label">Passo {passo} de 2</span>
+              <p className="cadastro-passo-titulo">
+                {passo === 1 ? 'Dados pessoais' : 'Proteja a sua conta'}
               </p>
+              <div className="cadastro-barra">
+                <div className={`cadastro-barra-fill passo-${passo}`} />
+              </div>
             </div>
-          )}
 
-          {/* PASSO 2 */}
-          {passo === 2 && (
-            <div className="cadastro-fields">
-              <div className="campo-grupo">
-                <label>Senha</label>
-                <div className="senha-wrapper">
-                  <input
-                    type={mostrarSenha ? 'text' : 'password'}
-                    placeholder="Digite sua senha"
-                    value={senha.senha}
-                    onChange={(e) => setSenha({ senha: e.target.value })}
-                  />
-                  <button
-                    className="senha-toggle"
-                    onClick={() => setMostrarSenha(!mostrarSenha)}
-                    type="button"
-                  >
-                    {mostrarSenha ? '🙈' : '👁️'}
+            {passo === 1 && (
+                <div className="cadastro-fields">
+                  <div className="campo-grupo">
+                    <label>Nome completo</label>
+                    <input
+                        type="text"
+                        placeholder="Ex.: João Silva"
+                        value={dados.nome}
+                        onChange={(e) => setDados({ ...dados, nome: e.target.value })}
+                        className={erros.nome ? 'input-erro' : ''}
+                    />
+                    {erros.nome && <span className="erro-msg">{erros.nome}</span>}
+                  </div>
+
+                  <div className="campo-grupo">
+                    <label>E-mail</label>
+                    <input
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={dados.email}
+                        onChange={(e) => setDados({ ...dados, email: e.target.value })}
+                        className={erros.email ? 'input-erro' : ''}
+                    />
+                    {erros.email && <span className="erro-msg">{erros.email}</span>}
+                  </div>
+
+                  <div className="campo-grupo">
+                    <label>Telefone</label>
+                    <input
+                        type="tel"
+                        placeholder="(00) 00000-0000"
+                        value={dados.telefone}
+                        onChange={(e) =>
+                            setDados({ ...dados, telefone: formatarTelefone(e.target.value) })
+                        }
+                        className={erros.telefone ? 'input-erro' : ''}
+                    />
+                    {erros.telefone && <span className="erro-msg">{erros.telefone}</span>}
+                  </div>
+
+                  <button className="cadastro-btn" onClick={handleContinuar}>
+                    Continuar
                   </button>
+
+                  <p className="cadastro-login-link">
+                    Já tenho uma conta <a href="/login">Entrar</a>
+                  </p>
                 </div>
-              </div>
+            )}
 
-              <div className="senha-requisitos">
-                <p className="requisitos-titulo">A senha deve conter:</p>
-                {validacoesSenha.map((v, i) => (
-  <div key={i} className={`requisito ${v.ok ? 'ok' : ''}`}>
-    <span className="requisito-icone">
-      {v.ok && (
-        <svg viewBox="0 0 10 8" width="9" height="9" fill="none">
-          <path
-            d="M1 4l3 3 5-6"
-            stroke="white"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
-    </span>
-    {v.label}
-  </div>
-))}
-              </div>
+            {passo === 2 && (
+                <div className="cadastro-fields">
+                  <div className="campo-grupo">
+                    <label>Senha</label>
+                    <div className="senha-wrapper">
+                      <input
+                          type={mostrarSenha ? 'text' : 'password'}
+                          placeholder="Digite sua senha"
+                          value={senha.senha}
+                          onChange={(e) => setSenha({ senha: e.target.value })}
+                      />
+                      <button
+                          className="senha-toggle"
+                          onClick={() => setMostrarSenha(!mostrarSenha)}
+                          type="button"
+                      >
+                        {mostrarSenha ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                  </div>
 
-              <p className="cadastro-termos">
-                Ao criar sua conta, você está de acordo com os{' '}
-                <a href="#">termos de uso</a> e{' '}
-                <a href="#">política de privacidade</a> da Caddie Research.
-              </p>
+                  <div className="senha-requisitos">
+                    <p className="requisitos-titulo">A senha deve conter:</p>
+                    {validacoesSenha.map((v, i) => (
+                        <div key={i} className={`requisito ${v.ok ? 'ok' : ''}`}>
+                    <span className="requisito-icone">
+                      {v.ok && (
+                          <svg viewBox="0 0 10 8" width="9" height="9" fill="none">
+                            <path
+                                d="M1 4l3 3 5-6"
+                                stroke="white"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                          </svg>
+                      )}
+                    </span>
+                          {v.label}
+                        </div>
+                    ))}
+                  </div>
 
-              <button
-                className={`cadastro-btn ${!senhaValida ? 'btn-desabilitado' : ''}`}
-                onClick={handleCriarConta}
-                disabled={!senhaValida}
-              >
-                Concordar e criar conta
-              </button>
+                  <p className="cadastro-termos">
+                    Ao criar sua conta, você está de acordo com os{' '}
+                    <a href="#">termos de uso</a> e{' '}
+                    <a href="#">política de privacidade</a> da Caddie Research.
+                  </p>
 
-              <p className="cadastro-login-link">
-                <button className="btn-voltar" onClick={() => setPasso(1)}>
-                  ← Voltar
-                </button>
-              </p>
-            </div>
-          )}
+                  <button
+                      className={`cadastro-btn ${!senhaValida || carregando ? 'btn-desabilitado' : ''}`}
+                      onClick={handleCriarConta}
+                      disabled={!senhaValida || carregando}
+                  >
+                    {carregando ? 'Criando conta...' : 'Concordar e criar conta'}
+                  </button>
+
+                  <p className="cadastro-login-link">
+                    <button className="btn-voltar" onClick={() => setPasso(1)}>
+                      ← Voltar
+                    </button>
+                  </p>
+                </div>
+            )}
+          </div>
+        </div>
+
+        <div className="cadastro-painel-lado">
+          <img src="/img/caddie-banner.png" alt="Caddie Research" className="painel-imagem-full" />
         </div>
       </div>
-
-      {/* Lado direito - Painel da Caddie */}
-     <div className="cadastro-painel-lado">
-        <img src="/img/caddie-banner.png" alt="Caddie Research" className="painel-imagem-full" />
-      </div>
-    </div>
   );
 }

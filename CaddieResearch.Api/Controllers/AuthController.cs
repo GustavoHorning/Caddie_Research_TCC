@@ -80,15 +80,17 @@ public class AuthController : ControllerBase
             return Unauthorized(new { mensagem = "E-mail ou senha incorretos." }); 
         }
         
-        if (!usuario.EmailConfirmado)
-        {
-            return Unauthorized(new { mensagem = "Acesso negado. Por favor, confirme seu e-mail antes de fazer login." });
-        }
+        
 
         var senhaValida = _tokenService.VerifyPassword(request.Senha, usuario.SenhaHash);
         if (!senhaValida)
         {
             return Unauthorized(new { mensagem = "E-mail ou senha incorretos." });
+        }
+        
+        if (!usuario.EmailConfirmado)
+        {
+            return Unauthorized(new { mensagem = "Acesso negado. Por favor, confirme seu e-mail antes de fazer login." });
         }
 
         var token = _tokenService.GenerateToken(usuario);
