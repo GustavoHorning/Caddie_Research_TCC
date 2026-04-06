@@ -251,3 +251,10 @@
 }
 .requisito.ok { color: #1B7A3E; }
 .requisito-icon { font-size: 0.75rem; width: 14px; text-align: center; }
+
+@media (max-width: 768px) {
+  .card { padding: 30px 20px; }
+  .title { font-size: 1.5rem; }
+  .social-grid { flex-direction: column; }
+  .social-btn { width: 100%; }
+}

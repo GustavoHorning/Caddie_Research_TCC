@@ -1,0 +1,126 @@
+.carteiras-content {
+  padding: 24px 28px;
+}
+
+.carteiras-titulo {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 24px;
+  letter-spacing: -0.3px;
+}
+
+.carteiras-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.carteira-card {
+  background: #1a1a1a;
+  border-radius: 14px;
+  padding: 22px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.carteira-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.carteira-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.carteira-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.carteira-tempo {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.carteira-nome {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.carteira-card-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.carteira-rent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.carteira-rent-valor {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #4caf50;
+}
+
+.carteira-seta {
+  font-size: 0.75rem;
+  margin-right: 2px;
+}
+
+.carteira-rent-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.carteira-ativos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: right;
+}
+
+.carteira-ativo-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.carteira-ativo-tipo { color: rgba(255, 255, 255, 0.4); }
+.carteira-ativo-linha strong { color: #fff; font-weight: 600; }
+
+@media (max-width: 1024px) {
+  .carteiras-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .carteiras-content {
+    padding: 16px;
+  }
+  .carteiras-grid {
+    grid-template-columns: 1fr;
+  }
+  .carteiras-titulo {
+    font-size: 1.4rem;
+  }
+}

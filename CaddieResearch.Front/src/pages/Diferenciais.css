@@ -46,3 +46,8 @@
   color: #7a90a8;
   line-height: 1.7;
 }
+
+@media (max-width: 768px) {
+  .diferenciais { padding: 4rem 1rem; }
+  .diferenciais-grid { grid-template-columns: 1fr; }
+}

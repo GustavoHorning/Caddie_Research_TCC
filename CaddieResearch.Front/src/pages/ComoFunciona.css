@@ -62,3 +62,20 @@
   color: #7a90a8;
   line-height: 1.7;
 }
+
+@media (max-width: 768px) {
+  .como-funciona { padding: 4rem 1rem; }
+  .passos-grid { 
+    grid-template-columns: 1fr; 
+    gap: 3rem; 
+  }
+  .passo-linha {
+    width: 1px; 
+    height: 30px;
+    top: 100%; 
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(to bottom, rgba(0, 180, 216, 0.4), rgba(0, 180, 216, 0.1));
+  }
+  .passo-item:last-child .passo-linha { display: none; }
+}

@@ -102,3 +102,15 @@
   font-size: 0.82rem;
   color: #4a6070;
 }
+
+@media (max-width: 768px) {
+  .cta-section { padding: 4rem 1rem; }
+  .cta-actions { 
+    flex-direction: column; 
+    width: 100%; 
+  }
+  .cta-btn-primary, .cta-btn-secondary { 
+    width: 100%; 
+    text-align: center;
+  }
+}
