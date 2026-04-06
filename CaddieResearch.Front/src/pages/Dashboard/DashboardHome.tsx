@@ -11,7 +11,6 @@ const ultimasAtualizacoes = [
 export default function DashboardHome() {
   return (
     <div className="dash-content">
-      {/* Topo: Banner + Promo lado a lado */}
       <div className="dash-topo-row">
         <section className="dash-banner">
           <div className="dash-banner-content">
@@ -37,9 +36,7 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Grid principal de cards */}
       <section className="dash-grid">
-        {/* Ultimas Atualizacoes */}
         <div className="dash-card dash-card-atualizacoes">
           <div className="dash-card-header">
             <h3>{'\u00DAltimas Atualiza\u00E7\u00F5es'}</h3>
@@ -74,7 +71,6 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        {/* Caddie Minuto */}
         <div className="dash-card dash-card-minuto">
           <div className="dash-card-header">
             <h3>Caddie Minuto</h3>
