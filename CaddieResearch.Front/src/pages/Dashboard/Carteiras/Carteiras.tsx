@@ -1,72 +1,39 @@
+import { useState } from 'react'
 import './Carteiras.css'
 import Sidebar from '../Sidebar'
 import TopBar from '../TopBar'
 
 const carteiras = [
-  {
-    nome: 'Dividendos',
-    rentabilidade: '519,25%',
-    comprar: 8,
-    aguardar: 5,
-    tempo: 'ha 17 dias',
-  },
-  {
-    nome: 'Valor',
-    rentabilidade: '140,17%',
-    comprar: 4,
-    aguardar: 9,
-    tempo: 'ha 1 mes',
-  },
-  {
-    nome: 'FIIs',
-    rentabilidade: '163,36%',
-    comprar: 33,
-    aguardar: 22,
-    tempo: 'ha 11 dias',
-  },
-  {
-    nome: 'Small Caps',
-    rentabilidade: '308,51%',
-    comprar: 8,
-    aguardar: 7,
-    tempo: 'ha 1 mes',
-  },
-  {
-    nome: 'Internacional',
-    rentabilidade: '334,89%',
-    comprar: 11,
-    aguardar: 10,
-    tempo: 'ha 20 dias',
-    link: '/carteiras/internacional',
-  },
-  {
-    nome: 'Fundos',
-    rentabilidade: '87,42%',
-    comprar: 6,
-    aguardar: 4,
-    tempo: 'ha 3 anos',
-  },
-  {
-    nome: 'Renda Fixa',
-    rentabilidade: '112,30%',
-    comprar: 10,
-    aguardar: 3,
-    tempo: 'ha 1 mes',
-  },
-  {
-    nome: 'Reserva de Emergencia',
-    rentabilidade: '45,60%',
-    comprar: 3,
-    aguardar: 2,
-    tempo: 'ha 2 anos',
-  },
+  { nome: 'Dividendos', rentabilidade: '519,25%', comprar: 8, aguardar: 5, tempo: 'ha 17 dias' },
+  { nome: 'Valor', rentabilidade: '140,17%', comprar: 4, aguardar: 9, tempo: 'ha 1 mes' },
+  { nome: 'FIIs', rentabilidade: '163,36%', comprar: 33, aguardar: 22, tempo: 'ha 11 dias' },
+  { nome: 'Small Caps', rentabilidade: '308,51%', comprar: 8, aguardar: 7, tempo: 'ha 1 mes' },
+  { nome: 'Internacional', rentabilidade: '334,89%', comprar: 11, aguardar: 10, tempo: 'ha 20 dias', link: '/carteiras/internacional' },
+  { nome: 'Fundos', rentabilidade: '87,42%', comprar: 6, aguardar: 4, tempo: 'ha 3 anos' },
+  { nome: 'Renda Fixa', rentabilidade: '112,30%', comprar: 10, aguardar: 3, tempo: 'ha 1 mes' },
+  { nome: 'Reserva de Emergencia', rentabilidade: '45,60%', comprar: 3, aguardar: 2, tempo: 'ha 2 anos' },
 ]
 
 export default function Carteiras() {
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false)
+
   return (
     <div className="dashboard-layout">
-      <Sidebar activePath="/carteiras" />
-      <TopBar userName="Usuario" />
+      <Sidebar 
+        activePath="/carteiras" 
+        isOpen={menuMobileAberto} 
+        onClose={() => setMenuMobileAberto(false)} 
+      />
+      
+      {menuMobileAberto && (
+        <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>
+      )}
+
+      <TopBar 
+        userName="Usuario" 
+        onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} 
+      />
+      
       <main className="dashboard-main">
         <div className="carteiras-content">
           <h1 className="carteiras-titulo">Carteiras disponiveis</h1>

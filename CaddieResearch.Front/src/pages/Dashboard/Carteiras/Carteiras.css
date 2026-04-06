@@ -1,7 +1,3 @@
-/* =============================================
-   CARTEIRAS — Pagina de carteiras disponiveis
-   ============================================= */
-
 .carteiras-content {
   padding: 24px 28px;
 }
@@ -14,14 +10,12 @@
   letter-spacing: -0.3px;
 }
 
-/* ---- Grid de cards ---- */
 .carteiras-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-/* ---- Card individual ---- */
 .carteira-card {
   background: #1a1a1a;
   border-radius: 14px;
@@ -30,15 +24,15 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease;
   cursor: pointer;
 }
 
 .carteira-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
 }
 
-/* ---- Topo do card: icone + tempo ---- */
 .carteira-card-top {
   display: flex;
   align-items: center;
@@ -61,14 +55,12 @@
   color: rgba(255, 255, 255, 0.35);
 }
 
-/* ---- Nome da carteira ---- */
 .carteira-nome {
   font-size: 1.15rem;
   font-weight: 700;
   color: #fff;
 }
 
-/* ---- Bottom: rentabilidade + ativos ---- */
 .carteira-card-bottom {
   display: flex;
   align-items: flex-end;
@@ -76,7 +68,6 @@
   margin-top: auto;
 }
 
-/* ---- Rentabilidade ---- */
 .carteira-rent {
   display: flex;
   flex-direction: column;
@@ -99,7 +90,6 @@
   color: rgba(255, 255, 255, 0.35);
 }
 
-/* ---- Ativos comprar/aguardar ---- */
 .carteira-ativos {
   display: flex;
   flex-direction: column;
@@ -114,32 +104,23 @@
   font-size: 0.8rem;
 }
 
-.carteira-ativo-tipo {
-  color: rgba(255, 255, 255, 0.4);
-}
+.carteira-ativo-tipo { color: rgba(255, 255, 255, 0.4); }
+.carteira-ativo-linha strong { color: #fff; font-weight: 600; }
 
-.carteira-ativo-linha strong {
-  color: #fff;
-  font-weight: 600;
-}
-
-/* ---- Responsivo ---- */
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .carteiras-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .carteiras-grid {
-    grid-template-columns: 1fr;
-  }
-
   .carteiras-content {
     padding: 16px;
   }
-
+  .carteiras-grid {
+    grid-template-columns: 1fr;
+  }
   .carteiras-titulo {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
   }
 }

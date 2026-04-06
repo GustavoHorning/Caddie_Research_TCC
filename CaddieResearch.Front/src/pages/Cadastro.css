@@ -344,20 +344,21 @@
   max-height: 250px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .cadastro-page {
     flex-direction: column;
+    height: auto; 
+    min-height: 100vh;
   }
 
-  .cadastro-form-side,
-  .cadastro-painel-lado {
-    flex: none;
+  .cadastro-form-side {
+    flex: none; 
     width: 100%;
+    min-height: 100vh;
+    padding: 3rem 1rem;
   }
 
   .cadastro-painel-lado {
-    padding: 2rem;
-    min-height: 300px;
+    display: none; 
   }
-
 }

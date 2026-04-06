@@ -12,94 +12,16 @@ const subcarteiras = [
 ]
 
 const atualizacoes = [
-  {
-    icone: 'rank',
-    texto: 'BTC agora esta na posicao 1 do ranking',
-    tempo: 'ha 2 meses',
-  },
-  {
-    icone: 'novo',
-    texto: 'Novo ativo adicionado a Carteira: SOL',
-    tempo: 'ha 7 meses',
-  },
+  { icone: 'rank', texto: 'BTC agora esta na posicao 1 do ranking', tempo: 'ha 2 meses' },
+  { icone: 'novo', texto: 'Novo ativo adicionado a Carteira: SOL', tempo: 'ha 7 meses' },
 ]
 
 const ativos = [
-  {
-    rank: 1,
-    variacao: 0,
-    ticker: 'BTC',
-    nome: 'Bitcoin',
-    dyEsperado: '0,0%',
-    entrada: '28.450,00',
-    dataEntrada: '15.03.2023',
-    precoAtual: '67.890,00',
-    varPreco: '2,35%',
-    precoTeto: '95.000,00',
-    rentabilidade: '138,56%',
-    rentPositiva: true,
-    vies: 'Comprar',
-  },
-  {
-    rank: 2,
-    variacao: 3,
-    ticker: 'ETH',
-    nome: 'Ethereum',
-    dyEsperado: '0,0%',
-    entrada: '1.820,00',
-    dataEntrada: '01.09.2022',
-    precoAtual: '3.450,00',
-    varPreco: '1,87%',
-    precoTeto: '5.200,00',
-    rentabilidade: '89,56%',
-    rentPositiva: true,
-    vies: 'Comprar',
-  },
-  {
-    rank: 3,
-    variacao: 1,
-    ticker: 'SOL',
-    nome: 'Solana',
-    dyEsperado: '0,0%',
-    entrada: '22,50',
-    dataEntrada: '28.06.2023',
-    precoAtual: '145,30',
-    varPreco: '3,12%',
-    precoTeto: '200,00',
-    rentabilidade: '545,78%',
-    rentPositiva: true,
-    vies: 'Comprar',
-  },
-  {
-    rank: 4,
-    variacao: 1,
-    ticker: 'ADA',
-    nome: 'Cardano',
-    dyEsperado: '0,0%',
-    entrada: '0,35',
-    dataEntrada: '01.03.2023',
-    precoAtual: '0,62',
-    varPreco: '1,45%',
-    precoTeto: '0,90',
-    rentabilidade: '77,14%',
-    rentPositiva: true,
-    vies: 'Comprar',
-  },
-  {
-    rank: 5,
-    variacao: 1,
-    ticker: 'DOT',
-    nome: 'Polkadot',
-    dyEsperado: '0,0%',
-    entrada: '5,80',
-    dataEntrada: '10.07.2019',
-    precoAtual: '7,25',
-    varPreco: '0,89%',
-    precoTeto: '12,00',
-    rentabilidade: '25,00%',
-    rentPositiva: true,
-    vies: 'Aguardar',
-  },
+  { rank: 1, variacao: 0, ticker: 'BTC', nome: 'Bitcoin', dyEsperado: '0,0%', entrada: '28.450,00', dataEntrada: '15.03.2023', precoAtual: '67.890,00', varPreco: '2,35%', precoTeto: '95.000,00', rentabilidade: '138,56%', rentPositiva: true, vies: 'Comprar' },
+  { rank: 2, variacao: 3, ticker: 'ETH', nome: 'Ethereum', dyEsperado: '0,0%', entrada: '1.820,00', dataEntrada: '01.09.2022', precoAtual: '3.450,00', varPreco: '1,87%', precoTeto: '5.200,00', rentabilidade: '89,56%', rentPositiva: true, vies: 'Comprar' },
+  { rank: 3, variacao: 1, ticker: 'SOL', nome: 'Solana', dyEsperado: '0,0%', entrada: '22,50', dataEntrada: '28.06.2023', precoAtual: '145,30', varPreco: '3,12%', precoTeto: '200,00', rentabilidade: '545,78%', rentPositiva: true, vies: 'Comprar' },
+  { rank: 4, variacao: 1, ticker: 'ADA', nome: 'Cardano', dyEsperado: '0,0%', entrada: '0,35', dataEntrada: '01.03.2023', precoAtual: '0,62', varPreco: '1,45%', precoTeto: '0,90', rentabilidade: '77,14%', rentPositiva: true, vies: 'Comprar' },
+  { rank: 5, variacao: 1, ticker: 'DOT', nome: 'Polkadot', dyEsperado: '0,0%', entrada: '5,80', dataEntrada: '10.07.2019', precoAtual: '7,25', varPreco: '0,89%', precoTeto: '12,00', rentabilidade: '25,00%', rentPositiva: true, vies: 'Aguardar' },
 ]
 
 const benchmarks = [
@@ -111,18 +33,28 @@ const benchmarks = [
 export default function CarteiraInternacional() {
   const [abaAtiva, setAbaAtiva] = useState(0)
   const [somenteDestaque, setSomenteDestaque] = useState(false)
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false)
 
   return (
     <div className="dashboard-layout">
-      <Sidebar activePath="/carteiras" />
-      <TopBar userName="Usuario" />
+      <Sidebar 
+        activePath="/carteiras" 
+        isOpen={menuMobileAberto} 
+        onClose={() => setMenuMobileAberto(false)} 
+      />
+      
+      {menuMobileAberto && (
+        <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>
+      )}
+
+      <TopBar 
+        userName="Usuario" 
+        onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} 
+      />
+
       <main className="dashboard-main">
         <div className="detalhe-content">
-
-          {/* Topo com 3 cards */}
           <div className="detalhe-topo-row">
-
-            {/* Card Rentabilidade */}
             <div className="detalhe-card detalhe-card-rent">
               <h3 className="detalhe-card-titulo">Rentabilidade</h3>
               <div className="detalhe-rent-valor">
@@ -134,27 +66,18 @@ export default function CarteiraInternacional() {
                     <stop offset="0%" stopColor="#4caf50" stopOpacity="0.3" />
                     <stop offset="100%" stopColor="#4caf50" stopOpacity="0" />
                   </linearGradient>
-                  <polygon
-                    fill="url(#chartGrad)"
-                    points="0,55 30,50 60,45 90,40 120,38 150,30 180,25 210,20 240,12 270,8 300,5 300,60 0,60"
-                  />
-                  <polyline
-                    fill="none"
-                    stroke="#4caf50"
-                    strokeWidth="2"
-                    points="0,55 30,50 60,45 90,40 120,38 150,30 180,25 210,20 240,12 270,8 300,5"
-                  />
+                  <polygon fill="url(#chartGrad)" points="0,55 30,50 60,45 90,40 120,38 150,30 180,25 210,20 240,12 270,8 300,5 300,60 0,60" />
+                  <polyline fill="none" stroke="#4caf50" strokeWidth="2" points="0,55 30,50 60,45 90,40 120,38 150,30 180,25 210,20 240,12 270,8 300,5" />
                 </svg>
               </div>
               <span className="detalhe-rent-periodo">Set 2018 - Mar 2026</span>
-
               <div className="detalhe-benchmarks">
                 <span className="detalhe-bench-label">BENCHMARKS</span>
                 {benchmarks.map((b, i) => (
                   <div key={i} className="detalhe-bench-item">
                     <span className="detalhe-bench-nome">{b.nome}</span>
                     <span className="detalhe-bench-valor" style={{ color: b.cor }}>
-                      <span className="detalhe-seta-verde">&#9650;</span> {b.valor}
+                      <span className="detalhe-seta-verde" style={{color: b.cor}}>&#9650;</span> {b.valor}
                     </span>
                     <div className="detalhe-bench-barra">
                       <div className="detalhe-bench-fill" style={{ width: b.largura, background: b.cor }} />
@@ -165,7 +88,6 @@ export default function CarteiraInternacional() {
               <span className="detalhe-bench-nota">Rentabilidade referente ao mesmo periodo da Carteira.</span>
             </div>
 
-            {/* Card Atualizacoes */}
             <div className="detalhe-card detalhe-card-atualiz">
               <div className="detalhe-card-header-row">
                 <h3 className="detalhe-card-titulo">Atualizacoes</h3>
@@ -198,7 +120,6 @@ export default function CarteiraInternacional() {
               </ul>
             </div>
 
-            {/* Card Video */}
             <div className="detalhe-card detalhe-card-video">
               <div className="detalhe-video-bg">
                 <div className="detalhe-video-overlay">
@@ -220,7 +141,6 @@ export default function CarteiraInternacional() {
             </div>
           </div>
 
-          {/* Abas de subcarteiras */}
           <div className="detalhe-abas">
             {subcarteiras.map((sub, i) => (
               <button
@@ -234,7 +154,6 @@ export default function CarteiraInternacional() {
             ))}
           </div>
 
-          {/* Toggle */}
           <div className="detalhe-toggle-row">
             <div
               className={'detalhe-toggle' + (somenteDestaque ? ' toggle-on' : '')}
@@ -245,7 +164,6 @@ export default function CarteiraInternacional() {
             <span className="detalhe-toggle-label">Exibir somente BDRs</span>
           </div>
 
-          {/* Tabela de ativos */}
           <div className="detalhe-tabela-wrapper">
             <table className="detalhe-tabela">
               <thead>

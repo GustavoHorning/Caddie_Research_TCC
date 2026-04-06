@@ -91,3 +91,8 @@
   font-weight: 700;
   font-size: 0.9rem;
 }
+
+@media (max-width: 768px) {
+  .produtos { padding: 4rem 1rem; }
+  .produtos-grid { grid-template-columns: 1fr; }
+}

@@ -98,13 +98,17 @@
   .footer-top {
     grid-template-columns: 1fr 1fr;
   }
-  .footer-brand {
-    grid-column: 1 / -1;
+  .footer-logo, .footer-tagline {
+    grid-column: 1 / -1; 
   }
 }
 
 @media (max-width: 480px) {
   .footer-top {
     grid-template-columns: 1fr;
+  }
+  .footer-bottom {
+    flex-direction: column;
+    text-align: center;
   }
 }

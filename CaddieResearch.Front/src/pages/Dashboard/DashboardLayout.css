@@ -1,16 +1,35 @@
-/* =============================================
-   DASHBOARD LAYOUT — Wrapper geral
-   ============================================= */
-
 .dashboard-layout {
   min-height: 100vh;
   background: #111111;
   color: #fff;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  position: relative;
 }
 
 .dashboard-main {
   margin-left: 64px;
   margin-top: 64px;
   min-height: calc(100vh - 64px);
+  transition: margin-left 0.3s ease;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 950; 
+}
+
+@media (max-width: 1024px) {
+  .dashboard-main {
+    margin-left: 0;
+  }
+  .sidebar-overlay {
+    display: block; 
+  }
 }
