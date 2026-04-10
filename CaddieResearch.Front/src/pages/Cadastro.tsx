@@ -15,7 +15,9 @@ interface Passo2 {
 export default function Cadastro() {
   const [passo, setPasso] = useState(1);
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [carregando, setCarregando] = useState(false); 
+  const [carregando, setCarregando] = useState(false);
+  const [emailRejeitado, setEmailRejeitado] = useState('');
+  const [sucesso, setSucesso] = useState(false);
 
   const [dados, setDados] = useState<Passo1>({
     nome: '',
@@ -39,12 +41,19 @@ export default function Cadastro() {
 
   function validarPasso1() {
     const novosErros: Partial<Passo1> = {};
+
     if (!dados.nome.trim() || dados.nome.trim().split(' ').length < 2)
       novosErros.nome = 'Insira nome e sobrenome.';
-    if (!dados.email.trim() || !/\S+@\S+\.\S+/.test(dados.email))
+
+    if (!dados.email.trim() || !/\S+@\S+\.\S+/.test(dados.email)) {
       novosErros.email = 'Insira um e-mail válido.';
+    } else if (dados.email === emailRejeitado) {
+      novosErros.email = 'Este e-mail já está em uso no Caddie Research.';
+    }
+
     if (!dados.telefone.trim())
       novosErros.telefone = 'Insira seu telefone.';
+
     setErros(novosErros);
     return Object.keys(novosErros).length === 0;
   }
@@ -55,7 +64,7 @@ export default function Cadastro() {
 
   async function handleCriarConta() {
     if (senhaValida) {
-      setCarregando(true); 
+      setCarregando(true);
 
       try {
         const response = await axios.post('http://localhost:5194/api/auth/cadastrar', {
@@ -64,16 +73,24 @@ export default function Cadastro() {
           Senha: senha.senha
         });
 
-        alert('Conta criada com sucesso! Verifique seu e-mail para confirmar. 🎉');
-        window.location.href = '/login';
+        setSucesso(true);
 
       } catch (error: any) {
         console.error("Erro na API:", error);
 
-        if (error.response && error.response.data && error.response.data.mensagem) {
-          alert(error.response.data.mensagem);
+        setPasso(1);
+        setEmailRejeitado(dados.email);
+
+        if (error.response && error.response.data) {
+          if (error.response.data.mensagem) {
+            setErros({ email: error.response.data.mensagem });
+          }
+          else if (error.response.data.errors) {
+            const primeiroErro = Object.values(error.response.data.errors)[0] as string[];
+            setErros({ email: primeiroErro[0] });
+          }
         } else {
-          alert('Erro ao criar conta. O e-mail já pode estar em uso ou a API está desligada.');
+          setErros({ email: 'Erro de conexão com o servidor. Tente novamente.' });
         }
       } finally {
         setCarregando(false);
@@ -89,6 +106,39 @@ export default function Cadastro() {
     return numeros.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
   }
 
+  if (sucesso) {
+    return (
+        <div className="cadastro-page">
+          <div className="cadastro-form-side">
+            <div className="cadastro-form-container" style={{ textAlign: 'center', marginTop: '10vh' }}>
+              <div className="cadastro-logo" style={{ justifyContent: 'center' }}>
+                Caddie <span className="cadastro-logo-highlight">Research</span>
+              </div>
+
+              <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎉</div>
+              <h1 className="cadastro-titulo" style={{ fontSize: '28px', marginBottom: '16px' }}>Conta criada com sucesso!</h1>
+
+              <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6', marginBottom: '40px' }}>
+                Enviamos um link de confirmação para <strong>{dados.email}</strong>.<br />
+                Por favor, verifique sua caixa de entrada (e a pasta de spam) para ativar sua conta.
+              </p>
+
+              <button
+                  className="cadastro-btn"
+                  onClick={() => window.location.replace('/login')}
+                  style={{ maxWidth: '300px', margin: '0 auto' }}
+              >
+                Ir para o Login
+              </button>
+            </div>
+          </div>
+
+          <div className="cadastro-painel-lado">
+            <img src="/img/caddie-banner.png" alt="Caddie Research" className="painel-imagem-full" />
+          </div>
+        </div>
+    );
+  }
   return (
       <div className="cadastro-page">
         <div className="cadastro-form-side">
@@ -100,7 +150,6 @@ export default function Cadastro() {
 
             <h1 className="cadastro-titulo">Crie sua conta</h1>
 
-            {/* Indicador de progresso */}
             <div className="cadastro-progresso">
               <span className="cadastro-passo-label">Passo {passo} de 2</span>
               <p className="cadastro-passo-titulo">
