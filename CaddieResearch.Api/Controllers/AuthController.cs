@@ -108,6 +108,111 @@ public class AuthController : ControllerBase
         });
     }
     
+    [HttpPost("login-google")]
+    public async Task<IActionResult> LoginGoogle([FromBody] LoginGoogleRequest request)
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", request.Token);
+        
+        var response = await httpClient.GetAsync("https://www.googleapis.com/oauth2/v3/userinfo");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return BadRequest(new { mensagem = "Não foi possível validar sua conta com o Google." });
+        }
+
+        var googleUser = await response.Content.ReadFromJsonAsync<GoogleUserInfo>();
+        
+        if (googleUser == null || string.IsNullOrEmpty(googleUser.email))
+        {
+            return BadRequest(new { mensagem = "Dados do Google inválidos." });
+        }
+
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == googleUser.email);
+
+        if (usuario == null)
+        {
+            usuario = new Usuario
+            {
+                Nome = googleUser.name,
+                Email = googleUser.email,
+                EmailConfirmado = true, 
+                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "Caddie@2026!") 
+            };
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+        }
+
+        var tokenCaddie = _tokenService.GenerateToken(usuario);
+
+        return Ok(new 
+        { 
+            mensagem = "Login com Google realizado com sucesso!",
+            token = tokenCaddie,
+            usuario = new 
+            { 
+                id = usuario.Id, 
+                nome = usuario.Nome, 
+                email = usuario.Email 
+            }
+        });
+    }
+    
+    [HttpPost("login-microsoft")]
+    public async Task<IActionResult> LoginMicrosoft([FromBody] LoginMicrosoftRequest request)
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", request.Token);
+        
+        var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return BadRequest(new { mensagem = "Não foi possível validar sua conta com a Microsoft." });
+        }
+
+        var msUser = await response.Content.ReadFromJsonAsync<MicrosoftUserInfo>();
+        
+        var emailDaMicrosoft = !string.IsNullOrEmpty(msUser?.mail) ? msUser.mail : msUser?.userPrincipalName;
+
+        if (string.IsNullOrEmpty(emailDaMicrosoft))
+        {
+            return BadRequest(new { mensagem = "Não conseguimos ler o e-mail da sua conta Microsoft." });
+        }
+
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == emailDaMicrosoft);
+
+        if (usuario == null)
+        {
+            usuario = new Usuario
+            {
+                Nome = msUser!.displayName,
+                Email = emailDaMicrosoft,
+                EmailConfirmado = true,
+                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieMS@2026!") 
+            };
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+        }
+
+        var tokenCaddie = _tokenService.GenerateToken(usuario);
+
+        return Ok(new 
+        { 
+            mensagem = "Login com Microsoft realizado com sucesso!",
+            token = tokenCaddie,
+            usuario = new 
+            { 
+                id = usuario.Id, 
+                nome = usuario.Nome, 
+                email = usuario.Email 
+            }
+        });
+    }
+
+    
     
     [HttpPost("esqueci-senha")]
     public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaRequest request)
@@ -200,4 +305,28 @@ public class RedefinirSenhaRequest
     public string Email { get; set; } = string.Empty;
     public string Token { get; set; } = string.Empty; 
     public string NovaSenha { get; set; } = string.Empty;
+}
+
+public class LoginGoogleRequest
+{
+    public string Token { get; set; } = string.Empty;
+}
+
+public class GoogleUserInfo
+{
+    public string email { get; set; } = string.Empty;
+    public string name { get; set; } = string.Empty;
+    public bool email_verified { get; set; }
+}
+
+public class LoginMicrosoftRequest
+{
+    public string Token { get; set; } = string.Empty;
+}
+
+public class MicrosoftUserInfo
+{
+    public string displayName { get; set; } = string.Empty;
+    public string mail { get; set; } = string.Empty;
+    public string userPrincipalName { get; set; } = string.Empty;
 }

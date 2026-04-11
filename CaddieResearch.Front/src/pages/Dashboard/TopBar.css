@@ -72,3 +72,11 @@
   .topbar-search { display: none; }
   .topbar-actions { margin-left: auto; }
 }
+
+.topbar-logout {
+  color: #d32f2f;
+}
+
+.topbar-logout:hover {
+  background: rgba(211, 47, 47, 0.15) !important;
+}
