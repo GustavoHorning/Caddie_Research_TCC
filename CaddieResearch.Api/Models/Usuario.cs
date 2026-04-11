@@ -26,4 +26,6 @@ public class Usuario
     public string TipoPerfil { get; set; } = "Assinante";
 
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
+    public string? CodigoRecuperacao { get; set; }
+    public DateTime? DataExpiracaoCodigo { get; set; }
 }

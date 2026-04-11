@@ -107,7 +107,60 @@ public class AuthController : ControllerBase
             }
         });
     }
-}
+    
+    
+    [HttpPost("esqueci-senha")]
+    public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaRequest request)
+    {
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+        
+        if (usuario == null)
+        {
+            return Ok(new { mensagem = "Se o e-mail estiver correto, você receberá o código em instantes." });
+        }
+
+        var random = new Random();
+        string codigo = random.Next(100000, 999999).ToString();
+
+        usuario.CodigoRecuperacao = codigo;
+        usuario.DataExpiracaoCodigo = DateTime.UtcNow.AddMinutes(15);
+        await _context.SaveChangesAsync();
+
+        await _emailService.EnviarEmailRecuperacaoAsync(usuario.Email, usuario.Nome, codigo);
+
+        return Ok(new { mensagem = "Código enviado com sucesso!" });
+    }
+
+    [HttpPost("redefinir-senha")]
+    public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaRequest request)
+    {
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+        
+        if (usuario == null) 
+            return BadRequest(new { mensagem = "Usuário não encontrado." });
+
+        if (usuario.CodigoRecuperacao != request.Token)
+            return BadRequest(new { mensagem = "Código inválido. Verifique se digitou corretamente." });
+
+        if (usuario.DataExpiracaoCodigo < DateTime.UtcNow)
+            return BadRequest(new { mensagem = "O código expirou. Por favor, solicite um novo." });
+        
+        var usouMesmaSenha = _tokenService.VerifyPassword(request.NovaSenha, usuario.SenhaHash);
+        if (usouMesmaSenha)
+        {
+            return BadRequest(new { mensagem = "A nova senha não pode ser igual à senha atual. Escolha uma senha diferente." });
+        }
+
+        usuario.SenhaHash = _tokenService.HashPassword(request.NovaSenha); 
+        
+        usuario.CodigoRecuperacao = null;
+        usuario.DataExpiracaoCodigo = null;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { mensagem = "Senha redefinida com sucesso!" });
+        }
+    }
 
 public class CadastrarUsuarioRequest
 {
@@ -135,4 +188,16 @@ public class LoginRequest
 
     [Required(ErrorMessage = "A senha é obrigatória.")]
     public string Senha { get; set; } = string.Empty;
+}
+
+public class EsqueciSenhaRequest
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public class RedefinirSenhaRequest
+{
+    public string Email { get; set; } = string.Empty;
+    public string Token { get; set; } = string.Empty; 
+    public string NovaSenha { get; set; } = string.Empty;
 }
