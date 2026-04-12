@@ -1,0 +1,438 @@
+/* =============================================
+   PAINEL GESTOR — Area administrativa
+   ============================================= */
+
+.gestor-content {
+  padding: 24px 28px;
+}
+
+/* ---- Metricas ---- */
+.gestor-metricas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.gestor-metrica-card {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gestor-metrica-label {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.gestor-metrica-valor {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* ---- Meio: Upload + Recentes ---- */
+.gestor-meio-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+/* ---- Card generico ---- */
+.gestor-card {
+  background: #1a1a1a;
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ---- Upload ---- */
+.gestor-upload {
+  flex: 2;
+}
+
+.gestor-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.gestor-card-header h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.gestor-badge-novo {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(0, 180, 216, 0.15);
+  color: #00B4D8;
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+
+/* ---- Dropzone ---- */
+.gestor-dropzone {
+  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 36px;
+  text-align: center;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.gestor-dropzone:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gestor-dropzone-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.gestor-dropzone-texto {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 6px;
+}
+
+.gestor-dropzone-sub {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ---- Campos do upload ---- */
+.gestor-upload-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.gestor-campo-row {
+  display: flex;
+  gap: 14px;
+}
+
+.gestor-campo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gestor-campo label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+}
+
+.gestor-campo select,
+.gestor-campo input {
+  height: 40px;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: inherit;
+  padding: 0 12px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.gestor-campo select:hover,
+.gestor-campo input:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.gestor-campo select:focus,
+.gestor-campo input:focus {
+  border-color: #00B4D8;
+}
+
+.gestor-campo input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* ---- Botao publicar ---- */
+.gestor-btn-publicar {
+  width: 100%;
+  height: 42px;
+  background: #00B4D8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.gestor-btn-publicar:hover {
+  background: #0096c7;
+}
+
+.gestor-btn-publicar:active {
+  transform: scale(0.98);
+}
+
+/* ---- Recentes ---- */
+.gestor-recentes {
+  flex: 1;
+}
+
+.gestor-recentes-titulo {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 18px;
+}
+
+.gestor-recentes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gestor-recente-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+
+.gestor-recente-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.gestor-recente-icon {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  background: rgba(229, 57, 53, 0.12);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e53935;
+}
+
+.gestor-recente-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gestor-recente-info strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gestor-recente-info span {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ---- Gerenciar ativos ---- */
+.gestor-ativos {
+  width: 100%;
+}
+
+.gestor-ativos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.gestor-ativos-header h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.gestor-ativos-acoes {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.gestor-ativos-acoes select {
+  height: 36px;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-family: inherit;
+  padding: 0 12px;
+  outline: none;
+}
+
+.gestor-btn-novo-ativo {
+  height: 36px;
+  padding: 0 16px;
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.gestor-btn-novo-ativo:hover {
+  background: rgba(76, 175, 80, 0.25);
+}
+
+/* ---- Tabela ---- */
+.gestor-tabela-wrapper {
+  overflow-x: auto;
+}
+
+.gestor-tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.gestor-tabela th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.gestor-tabela td {
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+
+.gestor-tabela tbody tr {
+  transition: background 0.15s ease;
+}
+
+.gestor-tabela tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gestor-td-ticker {
+  font-weight: 700;
+}
+
+.gestor-td-empresa {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ---- Vies ---- */
+.gestor-vies {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+
+.vies-comprar {
+  background: rgba(76, 175, 80, 0.12);
+  color: #4caf50;
+}
+
+.vies-aguardar {
+  background: rgba(255, 152, 0, 0.12);
+  color: #ff9800;
+}
+
+/* ---- Acoes da tabela ---- */
+.gestor-td-acoes {
+  display: flex;
+  gap: 12px;
+}
+
+.gestor-acao-editar {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #00B4D8;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.gestor-acao-editar:hover {
+  opacity: 0.7;
+}
+
+.gestor-acao-remover {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e53935;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.gestor-acao-remover:hover {
+  opacity: 0.7;
+}
+
+/* ---- Responsivo ---- */
+@media (max-width: 1100px) {
+  .gestor-metricas {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gestor-meio-row {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .gestor-metricas {
+    grid-template-columns: 1fr;
+  }
+
+  .gestor-content {
+    padding: 16px;
+  }
+
+  .gestor-campo-row {
+    flex-direction: column;
+  }
+
+  .gestor-ativos-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+}

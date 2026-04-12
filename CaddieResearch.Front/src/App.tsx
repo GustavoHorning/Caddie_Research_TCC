@@ -12,6 +12,7 @@ import Login from './pages/Login'
 import DashboardLayout from './pages/Dashboard/DashboardLayout'
 import Carteiras from './pages/Dashboard/Carteiras/Carteiras'
 import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternacional'
+import PainelGestor from './pages/Dashboard/Gestor/PainelGestor'
 
 function PaginaInicial() {
   return (
@@ -37,6 +38,7 @@ function App() {
         <Route path="/home" element={<DashboardLayout />} />
         <Route path="/carteiras" element={<Carteiras />} />
         <Route path="/carteiras/internacional" element={<CarteiraInternacional />} />
+        <Route path="/gestor" element={<PainelGestor />} />
       </Routes>
     </BrowserRouter>
   )
