@@ -13,6 +13,8 @@ import DashboardLayout from './pages/Dashboard/DashboardLayout'
 import Carteiras from './pages/Dashboard/Carteiras/Carteiras'
 import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternacional'
 import PainelGestor from './pages/Dashboard/Gestor/PainelGestor'
+import Assinaturas from './pages/Assinaturas'
+import Pagamento from './pages/Pagamento'
 
 function PaginaInicial() {
   return (
@@ -39,6 +41,8 @@ function App() {
         <Route path="/carteiras" element={<Carteiras />} />
         <Route path="/carteiras/internacional" element={<CarteiraInternacional />} />
         <Route path="/gestor" element={<PainelGestor />} />
+        <Route path="/planos" element={<Assinaturas />} />
+        <Route path="/pagamento" element={<Pagamento />} />
       </Routes>
     </BrowserRouter>
   )
