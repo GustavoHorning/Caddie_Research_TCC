@@ -15,6 +15,7 @@ import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternaci
 import PainelGestor from './pages/Dashboard/Gestor/PainelGestor'
 import Assinaturas from './pages/Assinaturas'
 import Pagamento from './pages/Pagamento'
+import GerenciarPlano from './pages/Dashboard/GerenciarPlano'
 
 function PaginaInicial() {
   return (
@@ -43,6 +44,7 @@ function App() {
         <Route path="/gestor" element={<PainelGestor />} />
         <Route path="/planos" element={<Assinaturas />} />
         <Route path="/pagamento" element={<Pagamento />} />
+        <Route path="/gerenciar-plano" element={<GerenciarPlano />} />
       </Routes>
     </BrowserRouter>
   )
