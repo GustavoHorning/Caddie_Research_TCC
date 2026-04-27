@@ -55,7 +55,13 @@ public class PagamentoController : ControllerBase
         var usuario = await _context.Usuarios.FindAsync(userId);
         if (usuario != null)
         {
-            usuario.TipoPerfil = request.PlanoNome;
+            usuario.Plano = request.PlanoNome; 
+    
+            if (string.IsNullOrEmpty(usuario.TipoPerfil) || usuario.TipoPerfil != "Gestor")
+            {
+                usuario.TipoPerfil = "Assinante";
+            }
+    
             _context.Usuarios.Update(usuario);
         }
 

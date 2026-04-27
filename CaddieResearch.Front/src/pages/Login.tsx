@@ -6,6 +6,7 @@ import EsqueciSenha from './EsqueciSenha'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useMsal } from '@azure/msal-react'
 import { EventType } from '@azure/msal-browser'
+import { useNavigate } from 'react-router-dom';
 
 function isUsuarioGestor(token: string) {
   try {
@@ -26,28 +27,35 @@ function isUsuarioGestor(token: string) {
   }
 }
 
-function redirecionarAposLogin(token: string) {
-  const planoSalvo = sessionStorage.getItem('plano_selecionado')
-
-  if (planoSalvo) {
-    sessionStorage.removeItem('plano_selecionado')
-    window.location.replace('/pagamento')
-  } else {
-    if (isUsuarioGestor(token)) {
-      window.location.replace('/gestor') 
-    } else {
-      window.location.replace('/carteiras') 
-    }
-  }
-}
 
 export default function Login() {
+  const navigate = useNavigate();
   const [tela, setTela] = useState<'login' | 'esqueci'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const [carregando, setCarregando] = useState(false)
+
+  function redirecionarAposLogin(token: string) {
+    const planoSalvo = sessionStorage.getItem('plano_selecionado')
+
+    if (planoSalvo) {
+      const planoObj = JSON.parse(planoSalvo);
+
+      sessionStorage.removeItem('plano_selecionado');
+
+      navigate('/pagamento', { state: { plano: planoObj } });
+    } else {
+      if (isUsuarioGestor(token)) {
+        navigate('/gestor');
+      } else {
+        navigate('/carteiras');
+      }
+    }
+  }
+
+
 
   const loginGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -144,9 +152,21 @@ export default function Login() {
   }
 
   return (
+      
     <div className="wrapper">
+      <div style={{ position: 'absolute', top: '30px', left: '30px' }}>
+        <button
+            onClick={() => navigate('/')}
+            style={{ background: 'none', border: 'none', color: '#7a90a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', padding: '0', transition: 'color 0.2s' }}
+            onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+            onMouseOut={(e) => e.currentTarget.style.color = '#7a90a8'}
+        >
+          ← Voltar para o Site
+        </button>
+      </div>
       <div className="card">
         <div className="logo">Caddie <span>Research</span></div>
+        
 
         <h1 className="title">Entrar</h1>
         <p className="subtitle">

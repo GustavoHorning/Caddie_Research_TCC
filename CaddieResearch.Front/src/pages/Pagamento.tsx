@@ -138,6 +138,8 @@ export default function Pagamento() {
   }
 
   return (
+      
+      
     <div className="pag-page">
       <div className="pag-glow" />
       <div className="pag-container">
@@ -163,8 +165,16 @@ export default function Pagamento() {
             </div>
             <p className="pag-resumo-obs">Cobrado mensalmente. Cancele quando quiser.</p>
           </div>
-          <button className="pag-voltar" onClick={() => navigate('/planos')}>
+          <button className="pag-voltar" onClick={() => navigate('/gerenciar-plano')}>
             ← Trocar de plano
+          </button>
+
+          <button
+              className="pag-voltar"
+              onClick={() => navigate('/home')}
+              style={{ color: '#7a90a8', background: 'transparent', border: 'none' }}
+          >
+            Ir para o Painel
           </button>
         </div>
 

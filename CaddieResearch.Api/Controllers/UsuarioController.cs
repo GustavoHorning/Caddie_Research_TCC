@@ -33,7 +33,7 @@ public class UsuarioController : ControllerBase
 
             var usuario = await _context.Usuarios
                 .Where(u => u.Id == userId)
-                .Select(u => new { u.Nome, u.Email, u.TipoPerfil })
+                .Select(u => new { u.Nome, u.Email, u.TipoPerfil, u.Plano })
                 .FirstOrDefaultAsync();
 
             if (usuario == null)

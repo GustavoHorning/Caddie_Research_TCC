@@ -5,7 +5,6 @@ import TopBar from '../TopBar'
 import api from '../../../services/api';
 import { Link } from 'react-router-dom';
 
-
 const carteirasVitrine = [
     { nome: 'Dividendos', iconeCor: '#4caf50', icone: '💸' },
     { nome: 'FIIs', iconeCor: '#ff9800', icone: '🏢' },
@@ -16,9 +15,9 @@ const carteirasVitrine = [
     { nome: 'Renda Fixa', iconeCor: '#607d8b', icone: '🛡️' },
     { nome: 'Reserva de Emergencia', iconeCor: '#e91e63', icone: '🐷' }
 ];
-export default function Carteiras() {
-  const [menuMobileAberto, setMenuMobileAberto] = useState(false)
 
+export default function Carteiras() {
+    const [menuMobileAberto, setMenuMobileAberto] = useState(false)
     const [carteirasAutorizadas, setCarteirasAutorizadas] = useState<any[]>([]);
     const [carregando, setCarregando] = useState(true);
 
@@ -38,105 +37,106 @@ export default function Carteiras() {
         return <div className="loading-tela">Carregando seus investimentos...</div>;
     }
 
-  return (
-    <div className="dashboard-layout">
-      <Sidebar 
-        activePath="/carteiras" 
-        isOpen={menuMobileAberto} 
-        onClose={() => setMenuMobileAberto(false)} 
-      />
-      
-      {menuMobileAberto && (
-        <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>
-      )}
+    return (
+        <div className="dashboard-layout">
+            <Sidebar
+                activePath="/carteiras"
+                isOpen={menuMobileAberto}
+                onClose={() => setMenuMobileAberto(false)}
+            />
 
-      <TopBar 
-        userName="Usuario" 
-        onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} 
-      />
-      
-      <main className="dashboard-main">
-        <div className="carteiras-content">
-          <h1 className="carteiras-titulo">Carteiras disponiveis</h1>
-            <div className="carteiras-grid">
-                {carteirasVitrine.map((vitrine, i) => {
-                    const carteiraAPI = carteirasAutorizadas.find(
-                        c => c.nome.toLowerCase() === vitrine.nome.toLowerCase()
-                    );
-                    const bloqueada = !carteiraAPI;
+            {menuMobileAberto && (
+                <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>
+            )}
 
-                    let qtdComprar = 0;
-                    let qtdAguardar = 0;
-                    let rentabilidade = "0,00%";
+            <TopBar
+                onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)}
+            />
 
-                    if (carteiraAPI) {
-                        if (carteiraAPI.rentabilidade) {
-                            rentabilidade = carteiraAPI.rentabilidade;
-                        }
+            <main className="dashboard-main">
+                <div className="carteiras-content">
+                    <h1 className="carteiras-titulo">Carteiras disponíveis</h1>
+                    <div className="carteiras-grid">
+                        {carteirasVitrine.map((vitrine, i) => {
+                            const carteiraAPI = carteirasAutorizadas.find(
+                                c => c.nome.toLowerCase() === vitrine.nome.toLowerCase()
+                            );
+                            const bloqueada = !carteiraAPI;
 
-                        if (carteiraAPI.ativos) {
-                            qtdComprar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Comprar').length;
-                            qtdAguardar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Aguardar').length;
-                        }
-                    }
-                    
+                            // Criamos dados fictícios ("??") para as carteiras bloqueadas aguçarem a curiosidade
+                            let qtdComprar: string | number = bloqueada ? '?' : 0;
+                            let qtdAguardar: string | number = bloqueada ? '?' : 0;
+                            let rentabilidade = bloqueada ? '??,??%' : "0,00%";
 
-                    return (
-                        <Link
-                            key={i}
-                            className={`carteira-card ${bloqueada ? 'carteira-bloqueada' : ''}`}
-                            to={bloqueada ? '/assinaturas' : `/carteiras/${carteiraAPI?.id}`}
-                            style={{ textDecoration: 'none', color: 'inherit', position: 'relative', display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', background: '#1e1e1e', border: '1px solid #333' }}
-                        >
-                            {bloqueada && (
-                                <div className="overlay-cadeado" style={{
-                                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                    backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex',
-                                    flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10, borderRadius: '12px', backdropFilter: 'blur(2px)'
-                                }}>
-                                    <span style={{ fontSize: '2.5rem' }}>🔒</span>
-                                    <span style={{ color: 'white', fontWeight: 'bold', marginTop: '10px' }}>Exclusivo</span>
-                                </div>
-                            )}
+                            if (carteiraAPI) {
+                                if (carteiraAPI.rentabilidade) {
+                                    rentabilidade = carteiraAPI.rentabilidade;
+                                }
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                                <div style={{
-                                    backgroundColor: vitrine.iconeCor + '20',
-                                    color: vitrine.iconeCor, padding: '12px', borderRadius: '8px',
-                                    fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                    {vitrine.icone}
-                                </div>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>{vitrine.nome}</h3>
-                                </div>
-                            </div>
+                                if (carteiraAPI.ativos) {
+                                    qtdComprar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Comprar').length;
+                                    qtdAguardar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Aguardar').length;
+                                }
+                            }
 
-                            {!bloqueada && (
-                                <>
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Rentabilidade Histórica</span>
-                                        <h2 style={{ margin: '5px 0 0 0', color: '#4caf50', fontSize: '1.8rem' }}>+{rentabilidade}</h2>
-                                    </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #333', paddingTop: '15px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Comprar</span>
-                                            <span style={{ color: '#fff', fontWeight: 'bold' }}>{qtdComprar} ativos</span>
+                            return (
+                                <Link
+                                    key={i}
+                                    className={`carteira-card ${bloqueada ? 'carteira-bloqueada' : ''}`}
+                                    // 👇 CORREÇÃO DA ROTA: Agora leva para o painel interno de upgrade
+                                    to={bloqueada ? '/gerenciar-plano' : `/carteiras/${carteiraAPI?.id}`}
+                                    style={{ textDecoration: 'none', color: 'inherit', position: 'relative', display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', background: '#1e1e1e', border: '1px solid #333', overflow: 'hidden' }}
+                                >
+                                    {/* OVERLAY DE BLOQUEIO */}
+                                    {bloqueada && (
+                                        <div className="overlay-cadeado" style={{
+                                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                                            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+                                            flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10
+                                        }}>
+                                            <span style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🔒</span>
+                                            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>Desbloquear Acesso</span>
+                                            <span style={{ color: '#00B4D8', fontSize: '0.8rem', marginTop: '4px', fontWeight: '600' }}>Exclusivo para assinantes</span>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
-                                            <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Aguardar</span>
-                                            <span style={{ color: '#fff', fontWeight: 'bold' }}>{qtdAguardar} ativos</span>
+                                    )}
+
+                                    {/* 👇 O SEGREDO: Aplicamos o blur() apenas no conteúdo, não no cadeado */}
+                                    <div style={{ filter: bloqueada ? 'blur(4px) grayscale(60%)' : 'none', opacity: bloqueada ? 0.4 : 1, transition: 'all 0.3s ease', pointerEvents: bloqueada ? 'none' : 'auto' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                                            <div style={{
+                                                backgroundColor: vitrine.iconeCor + '20',
+                                                color: vitrine.iconeCor, padding: '12px', borderRadius: '8px',
+                                                fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                            }}>
+                                                {vitrine.icone}
+                                            </div>
+                                            <div>
+                                                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>{vitrine.nome}</h3>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Rentabilidade Histórica</span>
+                                            <h2 style={{ margin: '5px 0 0 0', color: bloqueada ? '#888' : '#4caf50', fontSize: '1.8rem' }}>+{rentabilidade}</h2>
+                                        </div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #333', paddingTop: '15px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Comprar</span>
+                                                <span style={{ color: '#fff', fontWeight: 'bold' }}>{qtdComprar} ativos</span>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
+                                                <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Aguardar</span>
+                                                <span style={{ color: '#fff', fontWeight: 'bold' }}>{qtdAguardar} ativos</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </>
-                            )}
-                        </Link>
-                    );
-                })}
-            </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
+            </main>
         </div>
-      </main>
-    </div>
-  )
+    )
 }

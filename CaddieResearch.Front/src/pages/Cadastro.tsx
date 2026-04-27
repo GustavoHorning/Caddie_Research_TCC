@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import './Cadastro.css';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 interface Passo1 {
   nome: string;
@@ -18,6 +19,7 @@ export default function Cadastro() {
   const [carregando, setCarregando] = useState(false);
   const [emailRejeitado, setEmailRejeitado] = useState('');
   const [sucesso, setSucesso] = useState(false);
+  const navigate = useNavigate();
 
   const [dados, setDados] = useState<Passo1>({
     nome: '',
@@ -141,6 +143,16 @@ export default function Cadastro() {
   }
   return (
       <div className="cadastro-page">
+        <div style={{ position: 'absolute', top: '30px', left: '30px' }}>
+          <button
+              onClick={() => navigate('/')}
+              style={{ background: 'none', border: 'none', color: '#7a90a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', padding: '0', transition: 'color 0.2s' }}
+              onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+              onMouseOut={(e) => e.currentTarget.style.color = '#7a90a8'}
+          >
+            ← Voltar para o Site
+          </button>
+        </div>
         <div className="cadastro-form-side">
           <div className="cadastro-form-container">
 

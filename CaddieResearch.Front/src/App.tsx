@@ -44,11 +44,13 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<DashboardLayout />} />
         <Route path="/carteiras" element={<Carteiras />} />
+        <Route path="/carteiras/:id" element={<CarteiraDetalhes />} />
         <Route path="/carteiras/internacional" element={<CarteiraInternacional />} />
         <Route path="/gestor" element={<PainelGestor />} />
         <Route path="/planos" element={<Assinaturas />} />
         <Route path="/pagamento" element={<Pagamento />} />
         <Route path="/gerenciar-plano" element={<GerenciarPlano />} />
+          <Route path="/home/perfil" element={<Perfil />} />
       </Routes>
     </BrowserRouter>
   )

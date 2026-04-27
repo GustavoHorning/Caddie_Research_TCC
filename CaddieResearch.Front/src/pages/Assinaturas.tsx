@@ -71,9 +71,20 @@ export default function Assinaturas() {
 
   return (
     <div className="ass-page">
+      <div style={{ position: 'absolute', top: '30px', left: '30px' }}>
+        <button
+            onClick={() => navigate('/')}
+            style={{ background: 'none', border: 'none', color: '#7a90a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', padding: '0', transition: 'color 0.2s' }}
+            onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+            onMouseOut={(e) => e.currentTarget.style.color = '#7a90a8'}
+        >
+          ← Voltar para o Site
+        </button>
+      </div>
       <div className="ass-glow" />
       <div className="ass-header">
         <a href="/" className="ass-logo">Caddie<span>Research</span></a>
+        
         <div className="ass-badge-topo-page">💳 Planos e Preços</div>
         <h1 className="ass-title">Escolha seu plano</h1>
         <p className="ass-subtitle">Invista com inteligência. Cancele quando quiser.</p>

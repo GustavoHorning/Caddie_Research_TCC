@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CaddieResearch.Api.Data;
@@ -21,21 +22,27 @@ namespace CaddieResearch.Controllers
         [Authorize] 
         public async Task<IActionResult> GetCarteiras()
         {
-            var planoUsuario = User.FindFirst("Plano")?.Value;
-            var roleUsuario = User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value 
-                              ?? User.FindFirst("Role")?.Value;
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+            if (string.IsNullOrEmpty(userIdString)) 
+                return Unauthorized(new { mensagem = "Usuário não autenticado." });
 
-            bool isGestor = roleUsuario == "Gestor" || planoUsuario == "Gestor";
+            var usuario = await _context.Usuarios.FindAsync(int.Parse(userIdString));
+
+            if (usuario == null) 
+                return NotFound(new { mensagem = "Usuário não encontrado." });
+
+            bool isGestor = usuario.TipoPerfil == "Gestor" || usuario.TipoPerfil == "Admin";
 
             int nivelPermitido;
 
             if (isGestor)
             {
-                nivelPermitido = 99;
+                nivelPermitido = 99; 
             }
             else
             {
-                nivelPermitido = planoUsuario switch
+                nivelPermitido = usuario.Plano switch
                 {
                     "Basic" => 1,
                     "Premium" => 2,
