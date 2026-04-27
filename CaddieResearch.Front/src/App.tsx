@@ -16,6 +16,9 @@ import PainelGestor from './pages/Dashboard/Gestor/PainelGestor'
 import Assinaturas from './pages/Assinaturas'
 import Pagamento from './pages/Pagamento'
 import GerenciarPlano from './pages/Dashboard/GerenciarPlano'
+import CarteiraDetalhes from './pages/CarteiraDetalhes';
+import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor'
+import ClientesGestor from './pages/Dashboard/ClientesGestor'
 
 function PaginaInicial() {
   return (
@@ -40,11 +43,14 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<DashboardLayout />} />
         <Route path="/carteiras" element={<Carteiras />} />
+        <Route path="/carteiras/:id" element={<CarteiraDetalhes />} />
         <Route path="/carteiras/internacional" element={<CarteiraInternacional />} />
         <Route path="/gestor" element={<PainelGestor />} />
         <Route path="/planos" element={<Assinaturas />} />
         <Route path="/pagamento" element={<Pagamento />} />
         <Route path="/gerenciar-plano" element={<GerenciarPlano />} />
+        <Route path="/gestor/relatorios" element={<RelatoriosGestor />} />
+        <Route path="/gestor/clientes" element={<ClientesGestor />} />
       </Routes>
     </BrowserRouter>
   )

@@ -7,13 +7,37 @@ import { useGoogleLogin } from '@react-oauth/google'
 import { useMsal } from '@azure/msal-react'
 import { EventType } from '@azure/msal-browser'
 
-function redirecionarAposLogin() {
+function isUsuarioGestor(token: string) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+
+    const decoded = JSON.parse(jsonPayload)
+
+    const role = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded['Role'] || decoded['role']
+    const plano = decoded['Plano'] || decoded['plano']
+
+    return role === 'Gestor' || plano === 'Gestor'
+  } catch (e) {
+    return false
+  }
+}
+
+function redirecionarAposLogin(token: string) {
   const planoSalvo = sessionStorage.getItem('plano_selecionado')
+
   if (planoSalvo) {
     sessionStorage.removeItem('plano_selecionado')
     window.location.replace('/pagamento')
   } else {
-    window.location.replace('/home')
+    if (isUsuarioGestor(token)) {
+      window.location.replace('/gestor') 
+    } else {
+      window.location.replace('/carteiras') 
+    }
   }
 }
 
@@ -33,7 +57,7 @@ export default function Login() {
           Token: tokenResponse.access_token
         })
         localStorage.setItem('caddie_token', response.data.token)
-        redirecionarAposLogin()
+        redirecionarAposLogin(response.data.token)
       } catch (error: any) {
         console.error(error)
         setErrors({ email: 'Erro ao autenticar com o servidor do Caddie.' })
@@ -69,7 +93,7 @@ export default function Login() {
         Token: token
       })
       localStorage.setItem('caddie_token', response.data.token)
-      redirecionarAposLogin()
+      redirecionarAposLogin(response.data.token)
     } catch (error: any) {
       console.error(error)
       setErrors({ email: 'Erro ao autenticar com o servidor do Caddie.' })
@@ -98,7 +122,7 @@ export default function Login() {
         Senha: password
       })
       localStorage.setItem('caddie_token', response.data.token)
-      redirecionarAposLogin()
+      redirecionarAposLogin(response.data.token)
     } catch (error: any) {
       console.error(error)
       if (error.response && error.response.data && error.response.data.mensagem) {

@@ -212,3 +212,20 @@
     display: block;
   }
 }
+
+.logo-badge-gestor {
+  background-color: #ff9800; 
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+  letter-spacing: 1px;
+  vertical-align: middle;
+  display: inline-block;
+  text-transform: uppercase;
+}
+
+
+

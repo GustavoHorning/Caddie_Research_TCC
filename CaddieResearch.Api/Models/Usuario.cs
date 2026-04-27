@@ -28,4 +28,7 @@ public class Usuario
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
     public string? CodigoRecuperacao { get; set; }
     public DateTime? DataExpiracaoCodigo { get; set; }
+    
+    [MaxLength(20)]
+    public string? Plano { get; set; } 
 }
