@@ -28,4 +28,5 @@ public class Usuario
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
     public string? CodigoRecuperacao { get; set; }
     public DateTime? DataExpiracaoCodigo { get; set; }
+    public ICollection<Assinatura>? Assinaturas { get; set; }
 }
