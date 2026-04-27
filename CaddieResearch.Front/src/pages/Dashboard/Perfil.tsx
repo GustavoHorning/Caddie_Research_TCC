@@ -4,6 +4,7 @@ import './Perfil.css';
 import Sidebar from './Sidebar'; 
 import TopBar from './TopBar'; 
 import { useNavigate } from 'react-router-dom';
+import SidebarGestor from './SidebarGestor';
 
 export default function Perfil() {
   const navigate = useNavigate();
@@ -87,13 +88,16 @@ export default function Perfil() {
   };
 
   return (
-      // 👇 A MÁGICA ACONTECE AQUI: Envelopamos tudo no layout do dashboard
       <div className="dashboard-layout">
-        <Sidebar
-            activePath="/home/perfil"
-            isOpen={menuMobileAberto}
-            onClose={() => setMenuMobileAberto(false)}
-        />
+        {tipoPerfil === 'Gestor' ? (
+            <SidebarGestor activePath="/home/perfil" />
+        ) : (
+            <Sidebar
+                activePath="/home/perfil"
+                isOpen={menuMobileAberto}
+                onClose={() => setMenuMobileAberto(false)}
+            />
+        )}
 
         {menuMobileAberto && (
             <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>
@@ -105,7 +109,7 @@ export default function Perfil() {
           {/* Daqui para baixo é o seu código original intocado! */}
           <div className="perfil-container">
             <button
-                onClick={() => navigate('/home')}
+                onClick={() => navigate(tipoPerfil === 'Gestor' ? '/gestor' : '/home')}
                 style={{ background: 'none', border: 'none', color: '#7a90a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', padding: '0', marginBottom: '12px', transition: 'color 0.2s' }}
                 onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
                 onMouseOut={(e) => e.currentTarget.style.color = '#7a90a8'}
