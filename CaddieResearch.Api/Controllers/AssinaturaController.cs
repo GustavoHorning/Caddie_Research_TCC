@@ -60,7 +60,13 @@ public class AssinaturaController : ControllerBase
         var usuario = await _context.Usuarios.FindAsync(userId);
         if (usuario != null) 
         {
-            usuario.TipoPerfil = "Usuario"; 
+            usuario.Plano = null; 
+    
+            if (usuario.TipoPerfil != "Gestor")
+            {
+                usuario.TipoPerfil = "Assinante"; 
+            }
+
             _context.Usuarios.Update(usuario);
         }
 

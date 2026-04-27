@@ -8,9 +8,15 @@ interface UserProfile {
   nome: string;
   email: string;
   tipoPerfil: string;
+  plano: string | null;
 }
 
-export default function TopBar() {
+interface TopBarProps {
+  userName?: string;          
+  onMenuToggle?: () => void;  
+}
+
+export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const { instance, accounts } = useMsal();
@@ -44,6 +50,9 @@ export default function TopBar() {
 
   return (
     <header className="topbar">
+      <button className="menu-btn" onClick={onMenuToggle}>
+        ☰
+      </button>
       <div className="topbar-search">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="8" />
@@ -64,9 +73,8 @@ export default function TopBar() {
         <div className="user-profile" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
           <div className="user-info">
             <span className="user-name">{user?.nome || "Carregando..."}</span>
-            {/* Exibe o selo do plano real vindo do banco */}
-            <span className={`user-plan plan-${user?.tipoPerfil?.toLowerCase() || 'free'}`}>
-              {user?.tipoPerfil || "Free"}
+            <span className={`user-plan plan-${user?.plano?.toLowerCase() || 'free'}`}>
+              {user?.plano || "Free"}
             </span>
           </div>
           <div className="avatar">

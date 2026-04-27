@@ -1,13 +1,35 @@
 import axios from 'axios'
-import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { useState } from 'react'
 import './Login.css'
 import EsqueciSenha from './EsqueciSenha'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useMsal } from '@azure/msal-react'
+import { EventType } from '@azure/msal-browser'
+import { useNavigate } from 'react-router-dom';
+
+function isUsuarioGestor(token: string) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    }).join(''))
+
+    const decoded = JSON.parse(jsonPayload)
+
+    const role = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded['Role'] || decoded['role']
+    const plano = decoded['Plano'] || decoded['plano']
+
+    return role === 'Gestor' || plano === 'Gestor'
+  } catch (e) {
+    return false
+  }
+}
+
 
 export default function Login() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [tela, setTela] = useState<'login' | 'esqueci'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -15,16 +37,25 @@ export default function Login() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const [carregando, setCarregando] = useState(false)
 
-  function redirecionarAposLogin() {
+  function redirecionarAposLogin(token: string) {
     const planoSalvo = sessionStorage.getItem('plano_selecionado')
+
     if (planoSalvo) {
-      sessionStorage.removeItem('plano_selecionado')
-      const plano = JSON.parse(planoSalvo)
-      navigate('/pagamento', { state: { plano } })
+      const planoObj = JSON.parse(planoSalvo);
+
+      sessionStorage.removeItem('plano_selecionado');
+
+      navigate('/pagamento', { state: { plano: planoObj } });
     } else {
-      navigate('/home')
+      if (isUsuarioGestor(token)) {
+        navigate('/gestor');
+      } else {
+        navigate('/carteiras');
+      }
     }
   }
+
+
 
   const loginGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -34,7 +65,7 @@ export default function Login() {
           Token: tokenResponse.access_token
         })
         localStorage.setItem('caddie_token', response.data.token)
-        redirecionarAposLogin()
+        redirecionarAposLogin(response.data.token)
       } catch (error: any) {
         console.error(error)
         setErrors({ email: 'Erro ao autenticar com o servidor do Caddie.' })
@@ -70,7 +101,7 @@ export default function Login() {
         Token: token
       })
       localStorage.setItem('caddie_token', response.data.token)
-      redirecionarAposLogin()
+      redirecionarAposLogin(response.data.token)
     } catch (error: any) {
       console.error(error)
       setErrors({ email: 'Erro ao autenticar com o servidor do Caddie.' })
@@ -99,7 +130,7 @@ export default function Login() {
         Senha: password
       })
       localStorage.setItem('caddie_token', response.data.token)
-      redirecionarAposLogin()
+      redirecionarAposLogin(response.data.token)
     } catch (error: any) {
       console.error(error)
       if (error.response && error.response.data && error.response.data.mensagem) {
@@ -121,9 +152,21 @@ export default function Login() {
   }
 
   return (
+      
     <div className="wrapper">
+      <div style={{ position: 'absolute', top: '30px', left: '30px' }}>
+        <button
+            onClick={() => navigate('/')}
+            style={{ background: 'none', border: 'none', color: '#7a90a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', padding: '0', transition: 'color 0.2s' }}
+            onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
+            onMouseOut={(e) => e.currentTarget.style.color = '#7a90a8'}
+        >
+          ← Voltar para o Site
+        </button>
+      </div>
       <div className="card">
         <div className="logo">Caddie <span>Research</span></div>
+        
 
         <h1 className="title">Entrar</h1>
         <p className="subtitle">

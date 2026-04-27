@@ -1,7 +1,11 @@
-/* Container Principal */
+
 .perfil-container {
-  padding: 40px;
+  padding: 10px 20px; 
   max-width: 800px;
+  margin-top: -20px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
   animation: fadeIn 0.5s ease-out;
 }
 
@@ -12,74 +16,75 @@
 
 .perfil-container h1 {
   color: #fff;
-  margin-bottom: 8px;
+  margin-bottom: 4px; /* Mais colado no subtítulo */
   font-size: 28px;
   font-weight: 700;
 }
 
 .perfil-subtitulo-page {
   color: #7a90a8;
-  margin-bottom: 32px;
+  margin-bottom: 24px; /* Reduzido o espaço antes do card */
   font-size: 15px;
 }
 
-/* Card de Perfil */
 .perfil-card {
   background: rgba(22, 27, 34, 0.4);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border-radius: 12px; /* Borda um pouco mais suave */
+  padding: 28px 32px; /* Reduzi o espaço interno do card (antes era 40px) */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  width: 100%;
 }
 
-/* Seção de Avatar/Foto */
 .perfil-header-info {
   display: flex;
   align-items: center;
-  gap: 24px;
-  margin-bottom: 40px;
-  padding-bottom: 32px;
+  gap: 20px;
+  margin-bottom: 24px; /* Muito menos espaço vazio abaixo da foto */
+  padding-bottom: 24px; /* Muito menos espaço acima da linha */
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .perfil-avatar-grande {
-  width: 80px;
-  height: 80px;
+  width: 68px; /* Ligeiramente menor e mais elegante */
+  height: 68px;
   background: linear-gradient(135deg, #00B4D8, #0077B6);
-  border-radius: 20px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  box-shadow: 0 10px 20px rgba(0, 180, 216, 0.2);
+  flex-shrink: 0;
+  box-shadow: 0 8px 16px rgba(0, 180, 216, 0.15);
 }
 
 .perfil-header-text h2 {
   color: #fff;
   font-size: 20px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .perfil-header-text p {
   color: #7a90a8;
-  font-size: 14px;
+  font-size: 13px;
+  margin: 0;
 }
 
-/* Campos do Formulário */
 .perfil-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 32px;
+  gap: 16px; /* Campos mais próximos uns dos outros */
+  margin-bottom: 24px; /* Espaço ajustado antes do botão de salvar */
 }
 
 .perfil-field {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px; /* O label agora fica coladinho no input */
 }
 
 .perfil-field.full-width {
@@ -88,19 +93,21 @@
 
 .perfil-field label {
   color: #c9d1d9;
-  font-size: 14px;
+  font-size: 13px; /* Fonte levemente menor para não brigar com o input */
   font-weight: 500;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 .perfil-field input {
   background: rgba(13, 17, 23, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 8px; /* Borda mais moderna */
+  padding: 12px 14px; /* Input um pouquinho mais fino */
   color: #fff;
-  font-size: 15px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+  box-sizing: border-box;
+  width: 100%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .perfil-field input:focus {
@@ -117,7 +124,6 @@
   cursor: not-allowed;
 }
 
-/* Botão Salvar */
 .perfil-footer {
   display: flex;
   align-items: center;
@@ -130,14 +136,15 @@
   background: #00B4D8;
   color: #fff;
   border: none;
-  padding: 14px 32px;
-  border-radius: 10px;
+  padding: 12px 24px; /* Botão mais harmônico */
+  border-radius: 8px;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -151,11 +158,10 @@
   transform: translateY(0);
 }
 
-/* Status e Mensagens */
 .perfil-status {
-  padding: 12px 20px;
+  padding: 10px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -174,15 +180,37 @@
   border: 1px solid rgba(255, 77, 77, 0.2);
 }
 
-/* Responsividade */
 @media (max-width: 768px) {
+  .perfil-container {
+    padding: 20px 16px;
+  }
+
   .perfil-grid {
     grid-template-columns: 1fr;
   }
+
   .perfil-field.full-width {
     grid-column: span 1;
   }
+
   .perfil-card {
-    padding: 24px;
+    padding: 24px 20px;
+  }
+
+  .perfil-header-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .perfil-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .perfil-status {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
   }
 }
