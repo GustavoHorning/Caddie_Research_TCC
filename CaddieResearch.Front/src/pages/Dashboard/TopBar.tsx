@@ -1,127 +1,109 @@
-import React, { useState, useRef, useEffect } from 'react'
-import './TopBar.css'
-import { useMsal } from '@azure/msal-react'
-import { googleLogout } from '@react-oauth/google'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "./TopBar.css";
+import { useMsal } from "@azure/msal-react";
+import { googleLogout } from "@react-oauth/google";
 
-interface TopBarProps {
-  userName?: string
-  userPlan?: 'Basic' | 'Premium' | 'Black' | null
-  onMenuToggle?: () => void
+interface UserProfile {
+  nome: string;
+  email: string;
+  tipoPerfil: string;
 }
 
-const planConfig = {
-  Basic:   { label: 'Basic',   color: '#00B4D8', bg: 'rgba(0,180,216,0.15)',   icon: '📊' },
-  Premium: { label: 'Premium', color: '#F59E0B', bg: 'rgba(245,158,11,0.15)',  icon: '⭐' },
-  Black:   { label: 'Black',   color: '#A78BFA', bg: 'rgba(167,139,250,0.15)', icon: '💎' },
-}
-
-export default function TopBar({ userName = 'Usuário', userPlan = 'Basic', onMenuToggle }: TopBarProps) {
-  const { instance, accounts } = useMsal()
-  const navigate = useNavigate()
-  const [menuAberto, setMenuAberto] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const plano = userPlan ? planConfig[userPlan] : null
+export default function TopBar() {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const { instance, accounts } = useMsal();
 
   useEffect(() => {
-    function handleClickFora(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuAberto(false)
+    const carregarPerfil = async () => {
+      try {
+        const token = localStorage.getItem('caddie_token');
+        const response = await axios.get('http://localhost:5194/api/usuario/meu-perfil', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUser(response.data);
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error);
       }
-    }
-    document.addEventListener('mousedown', handleClickFora)
-    return () => document.removeEventListener('mousedown', handleClickFora)
-  }, [])
+    };
+
+    carregarPerfil();
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('caddie_token')
-    googleLogout()
-    sessionStorage.clear()
-    window.location.replace('/')
-  }
+    localStorage.removeItem('caddie_token');
+    
+    if (accounts.length > 0) {
+      instance.logoutRedirect();
+    } else {
+      googleLogout();
+      window.location.href = "/login";
+    }
+  };
 
   return (
     <header className="topbar">
-      <div className="topbar-left-group">
-        <button className="mobile-menu-toggle" onClick={onMenuToggle}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-        <div className="topbar-search">
-          <span className="topbar-search-icon">🔍</span>
-          <input type="text" className="topbar-search-input" placeholder="Pesquise por empresa ou ticker..." />
-          <div className="topbar-search-filter">
-            <span className="topbar-radio" />
-            Somente relatórios
-          </div>
-        </div>
+      <div className="topbar-search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" placeholder="Buscar ativos, relatórios..." />
       </div>
 
       <div className="topbar-actions">
-        <button className="topbar-btn-icon" title="Configurações">⚙️</button>
-        <button className="topbar-btn-icon topbar-notif" title="Notificações">
-          🔔
-          <span className="topbar-notif-badge">1</span>
+        <button className="icon-btn" title="Notificações">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+          <span className="badge"></span>
         </button>
 
-        <div className="topbar-profile-wrapper" ref={menuRef}>
-          <button className="topbar-avatar" title={userName} onClick={() => setMenuAberto(v => !v)}>
-            {userName.charAt(0).toUpperCase()}
-          </button>
+        <div className="user-profile" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+          <div className="user-info">
+            <span className="user-name">{user?.nome || "Carregando..."}</span>
+            {/* Exibe o selo do plano real vindo do banco */}
+            <span className={`user-plan plan-${user?.tipoPerfil?.toLowerCase() || 'free'}`}>
+              {user?.tipoPerfil || "Free"}
+            </span>
+          </div>
+          <div className="avatar">
+            <div className="avatar-placeholder">
+              {user?.nome?.charAt(0).toUpperCase() || "U"}
+            </div>
+          </div>
 
-          {menuAberto && (
-            <div className="topbar-dropdown">
-              <div className="topbar-dropdown-header">
-                <div className="topbar-dropdown-avatar">{userName.charAt(0).toUpperCase()}</div>
-                <div>
-                  <p className="topbar-dropdown-nome">{userName}</p>
-                  {plano && (
-                    <span className="topbar-plano-badge" style={{ color: plano.color, background: plano.bg }}>
-                      {plano.icon} {plano.label}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="topbar-dropdown-divider" />
-
-              <button className="topbar-dropdown-item" onClick={() => { navigate('/minha-conta'); setMenuAberto(false) }}>
-                <span className="topbar-dropdown-item-icon">👤</span>
-                Minha conta
-              </button>
-
-              <button className="topbar-dropdown-item" onClick={() => { navigate('/gerenciar-plano'); setMenuAberto(false) }}>
-                <span className="topbar-dropdown-item-icon">💳</span>
-                Gerenciar plano
-              </button>
-
-              <div className="topbar-dropdown-divider" />
-
-              <button className="topbar-dropdown-item topbar-dropdown-item-logout" onClick={handleLogout}>
-                <span className="topbar-dropdown-item-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                </span>
-                Sair da conta
+          {isDropdownOpen && (
+            <div className="dropdown-menu">
+              <a href="/home/perfil" className="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Meu Perfil
+              </a>
+              <a href="/gerenciar-plano" className="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <line x1="2" y1="10" x2="22" y2="10" />
+                </svg>
+                Assinatura
+              </a>
+              <div className="dropdown-divider"></div>
+              <button onClick={handleLogout} className="dropdown-item logout">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Sair
               </button>
             </div>
           )}
         </div>
-
-        <button className="topbar-btn-icon topbar-logout" title="Sair do Sistema" onClick={handleLogout}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
-        </button>
       </div>
     </header>
-  )
+  );
 }

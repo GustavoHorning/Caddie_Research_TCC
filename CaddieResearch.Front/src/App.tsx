@@ -16,6 +16,7 @@ import PainelGestor from './pages/Dashboard/Gestor/PainelGestor'
 import Assinaturas from './pages/Assinaturas'
 import Pagamento from './pages/Pagamento'
 import GerenciarPlano from './pages/Dashboard/GerenciarPlano'
+import Perfil from "./pages/Dashboard/Perfil";
 
 function PaginaInicial() {
   return (
@@ -45,6 +46,7 @@ function App() {
         <Route path="/planos" element={<Assinaturas />} />
         <Route path="/pagamento" element={<Pagamento />} />
         <Route path="/gerenciar-plano" element={<GerenciarPlano />} />
+        <Route path="/home/perfil" element={<Perfil />} />
       </Routes>
     </BrowserRouter>
   )
