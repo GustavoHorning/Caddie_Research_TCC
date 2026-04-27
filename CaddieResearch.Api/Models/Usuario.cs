@@ -31,4 +31,5 @@ public class Usuario
     
     [MaxLength(20)]
     public string? Plano { get; set; } 
+    public ICollection<Assinatura>? Assinaturas { get; set; }
 }

@@ -13,4 +13,5 @@ public class AppDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Carteira> Carteiras { get; set; }
     public DbSet<Ativo> Ativos { get; set; }
+    public DbSet<Assinatura> Assinaturas { get; set; }
 }

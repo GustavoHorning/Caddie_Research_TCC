@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import axios from 'axios'
 import './GerenciarPlano.css'
 import { useNavigate } from 'react-router-dom'
 
@@ -53,30 +54,86 @@ const planos = [
   },
 ]
 
-// Plano atual do usuário — virá do backend futuramente
-const PLANO_ATUAL = 'Basic'
-
 export default function MeuPlano() {
   const navigate = useNavigate()
+  
+  const [planoAtualNome, setPlanoAtualNome] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false)
   const [cancelado, setCancelado] = useState(false)
   const [alterando, setAlterando] = useState(false)
-  const [planoSelecionado, setPlanoSelecionado] = useState<string | null>(null)
+  
+  const planoAtualObj = planos.find(p => p.nome === planoAtualNome)
 
-  const planoAtualObj = planos.find(p => p.nome === PLANO_ATUAL)
+  useEffect(() => {
+    const fetchPlanoAtual = async () => {
+      try {
+        const token = localStorage.getItem('caddie_token')
+        const response = await axios.get('http://localhost:5194/api/assinatura/atual', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        setPlanoAtualNome(response.data.plano)
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          setPlanoAtualNome(null)
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchPlanoAtual()
+  }, [])
 
   function handleAlterarPlano(nomePlano: string) {
-    setPlanoSelecionado(nomePlano)
     const plano = planos.find(p => p.nome === nomePlano)
     if (plano) {
-      sessionStorage.setItem('plano_selecionado', JSON.stringify(plano))
-      navigate('/pagamento')
+      navigate('/pagamento', { state: { plano } })
     }
   }
 
-  function handleCancelar() {
-    setCancelado(true)
-    setConfirmandoCancelamento(false)
+  async function handleCancelar() {
+    try {
+      const token = localStorage.getItem('caddie_token')
+      await axios.post('http://localhost:5194/api/assinatura/cancelar', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      setCancelado(true)
+      setConfirmandoCancelamento(false)
+      setPlanoAtualNome(null)
+    } catch (error) {
+      console.error(error)
+      alert("Erro ao tentar cancelar a assinatura.")
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="mp-page" style={{ display: 'flex', justifyContent: 'center', paddingTop: '100px' }}>
+        <p style={{ color: '#7a90a8' }}>Carregando dados do plano...</p>
+      </div>
+    )
+  }
+
+  if (!planoAtualNome && !cancelado && !alterando) {
+    return (
+      <div className="mp-page">
+        <div className="mp-header">
+          <h1 className="mp-titulo">Meu Plano</h1>
+          <p className="mp-subtitulo">Gerencie sua assinatura e benefícios</p>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '60px', padding: '40px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📉</div>
+          <h2 style={{ color: 'white', marginBottom: '8px' }}>Você não possui plano ativo</h2>
+          <p style={{ color: '#7a90a8', marginBottom: '24px' }}>Assine um plano para liberar os relatórios e carteiras exclusivas.</p>
+          <button className="mp-btn-primario" onClick={() => navigate('/planos')} style={{ padding: '12px 24px' }}>
+            Ver planos disponíveis
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (cancelado) {
@@ -113,7 +170,7 @@ export default function MeuPlano() {
           <div>
             <p className="mp-plano-atual-label">Plano atual</p>
             <h2 className="mp-plano-atual-nome" style={{ color: planoAtualObj?.cor }}>
-              {planoAtualObj?.icone} {PLANO_ATUAL}
+              {planoAtualObj?.icone} {planoAtualNome}
             </h2>
             <p className="mp-plano-atual-preco">
               R$ {planoAtualObj?.preco.toFixed(2).replace('.', ',')}
@@ -162,15 +219,15 @@ export default function MeuPlano() {
             {planos.map((plano) => (
               <div
                 key={plano.nome}
-                className={`mp-plano-card ${plano.nome === PLANO_ATUAL ? 'atual' : ''}`}
-                style={{ borderColor: plano.nome === PLANO_ATUAL ? plano.borda : undefined }}
+                className={`mp-plano-card ${plano.nome === planoAtualNome ? 'atual' : ''}`}
+                style={{ borderColor: plano.nome === planoAtualNome ? plano.borda : undefined }}
               >
-                {plano.nome === PLANO_ATUAL && (
+                {plano.nome === planoAtualNome && (
                   <span className="mp-plano-card-badge" style={{ color: plano.cor, background: plano.bg }}>
                     Plano atual
                   </span>
                 )}
-                {plano.destaque && plano.nome !== PLANO_ATUAL && (
+                {plano.destaque && plano.nome !== planoAtualNome && (
                   <span className="mp-plano-card-badge" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)' }}>
                     Mais popular
                   </span>
@@ -196,14 +253,14 @@ export default function MeuPlano() {
                 <button
                   className="mp-plano-card-btn"
                   style={{
-                    background: plano.nome === PLANO_ATUAL ? 'transparent' : plano.cor,
-                    color: plano.nome === PLANO_ATUAL ? plano.cor : '#fff',
+                    background: plano.nome === planoAtualNome ? 'transparent' : plano.cor,
+                    color: plano.nome === planoAtualNome ? plano.cor : '#fff',
                     border: `1px solid ${plano.borda}`,
                   }}
-                  disabled={plano.nome === PLANO_ATUAL}
+                  disabled={plano.nome === planoAtualNome}
                   onClick={() => handleAlterarPlano(plano.nome)}
                 >
-                  {plano.nome === PLANO_ATUAL ? 'Plano atual' : `Assinar ${plano.nome}`}
+                  {plano.nome === planoAtualNome ? 'Plano atual' : `Assinar ${plano.nome}`}
                 </button>
               </div>
             ))}
@@ -218,7 +275,7 @@ export default function MeuPlano() {
             <div className="mp-modal-icone">⚠️</div>
             <h3 className="mp-modal-titulo">Cancelar plano?</h3>
             <p className="mp-modal-texto">
-              Tem certeza que deseja cancelar seu plano <strong>{PLANO_ATUAL}</strong>?
+              Tem certeza que deseja cancelar seu plano <strong>{planoAtualNome}</strong>?
               Você perderá acesso aos benefícios ao final do período atual.
             </p>
             <div className="mp-modal-acoes">

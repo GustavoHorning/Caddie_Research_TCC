@@ -1,0 +1,188 @@
+/* Container Principal */
+.perfil-container {
+  padding: 40px;
+  max-width: 800px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.perfil-container h1 {
+  color: #fff;
+  margin-bottom: 8px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.perfil-subtitulo-page {
+  color: #7a90a8;
+  margin-bottom: 32px;
+  font-size: 15px;
+}
+
+/* Card de Perfil */
+.perfil-card {
+  background: rgba(22, 27, 34, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Seção de Avatar/Foto */
+.perfil-header-info {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 40px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.perfil-avatar-grande {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #00B4D8, #0077B6);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(0, 180, 216, 0.2);
+}
+
+.perfil-header-text h2 {
+  color: #fff;
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.perfil-header-text p {
+  color: #7a90a8;
+  font-size: 14px;
+}
+
+/* Campos do Formulário */
+.perfil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.perfil-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.perfil-field.full-width {
+  grid-column: span 2;
+}
+
+.perfil-field label {
+  color: #c9d1d9;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.perfil-field input {
+  background: rgba(13, 17, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: #fff;
+  font-size: 15px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.perfil-field input:focus {
+  border-color: #00B4D8;
+  background: rgba(13, 17, 23, 0.9);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.15);
+}
+
+.perfil-field input:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  color: #484f58;
+  border-color: rgba(255, 255, 255, 0.05);
+  cursor: not-allowed;
+}
+
+/* Botão Salvar */
+.perfil-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.perfil-btn {
+  background: #00B4D8;
+  color: #fff;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perfil-btn:hover {
+  background: #0096b4;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 180, 216, 0.3);
+}
+
+.perfil-btn:active {
+  transform: translateY(0);
+}
+
+/* Status e Mensagens */
+.perfil-status {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perfil-status.sucesso {
+  background: rgba(0, 230, 118, 0.1);
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.2);
+}
+
+.perfil-status.erro {
+  background: rgba(255, 77, 77, 0.1);
+  color: #ff4d4d;
+  border: 1px solid rgba(255, 77, 77, 0.2);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .perfil-grid {
+    grid-template-columns: 1fr;
+  }
+  .perfil-field.full-width {
+    grid-column: span 1;
+  }
+  .perfil-card {
+    padding: 24px;
+  }
+}

@@ -52,10 +52,6 @@ namespace CaddieResearch.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Plano")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<string>("SenhaHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -157,6 +153,22 @@ namespace CaddieResearch.Api.Migrations
             modelBuilder.Entity("CaddieResearch.Models.Carteira", b =>
                 {
                     b.Navigation("Ativos");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.Assinatura", b =>
+                {
+                    b.HasOne("CaddieResearch.Api.Models.Usuario", "Usuario")
+                        .WithMany("Assinaturas")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.Usuario", b =>
+                {
+                    b.Navigation("Assinaturas");
                 });
 #pragma warning restore 612, 618
         }
