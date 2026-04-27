@@ -13,7 +13,7 @@ export default function Pagamento() {
   const navigate = useNavigate()
   const plano = location.state?.plano as Plano | undefined
 
-  const [tipoCartao, setTipoCartao] = useState<'credito' | 'debito'>('credito')
+  const [metodoPagamento, setMetodoPagamento] = useState<'credito' | 'pix'>('credito')
   const [sucesso, setSucesso] = useState(false)
   const [carregando, setCarregando] = useState(false)
 
@@ -36,22 +36,70 @@ export default function Pagamento() {
 
   function validar() {
     const errs: Record<string, string> = {}
+    
     if (!form.nomeCartao.trim()) errs.nomeCartao = 'Informe o nome no cartão.'
     if (form.numeroCartao.replace(/\s/g, '').length < 16) errs.numeroCartao = 'Número de cartão inválido.'
-    if (form.validade.length < 5) errs.validade = 'Validade inválida.'
+    
+    if (form.validade.length < 5) {
+      errs.validade = 'Validade inválida.'
+    } else {
+      const [mesStr, anoStr] = form.validade.split('/')
+      const mes = parseInt(mesStr, 10)
+      const ano = parseInt(anoStr, 10) + 2000 
+      
+      const dataAtual = new Date()
+      const mesAtual = dataAtual.getMonth() + 1
+      const anoAtual = dataAtual.getFullYear()
+
+      if (mes < 1 || mes > 12) {
+        errs.validade = 'Mês inválido.'
+      } else if (ano < anoAtual || (ano === anoAtual && mes < mesAtual)) {
+        errs.validade = 'Cartão vencido.'
+      }
+    }
+
     if (form.cvv.length < 3) errs.cvv = 'CVV inválido.'
     return errs
   }
 
   async function handlePagar(e: React.FormEvent) {
     e.preventDefault()
-    const errs = validar()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+
+    if (metodoPagamento === 'credito') {
+      const errs = validar()
+      if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    }
+
     setErrors({})
     setCarregando(true)
-    await new Promise(r => setTimeout(r, 1800))
-    setCarregando(false)
-    setSucesso(true)
+
+    try {
+      const token = localStorage.getItem('caddie_token'); 
+
+      const response = await fetch('http://localhost:5194/api/pagamento/processar-mock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          planoNome: plano?.nome,
+          preco: plano?.preco
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json(); 
+        throw new Error(errorData.mensagem || 'Falha no processamento.');
+      }
+
+      setSucesso(true)
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || 'Erro ao processar pagamento. Tente novamente.');
+    } finally {
+      setCarregando(false)
+    }
   }
 
   if (!plano) {
@@ -122,80 +170,99 @@ export default function Pagamento() {
 
         <div className="pag-form-side">
           <h1 className="pag-titulo">Dados de pagamento</h1>
-          <p className="pag-subtitulo">Pague com cartão de crédito ou débito.</p>
+          <p className="pag-subtitulo">
+            {metodoPagamento === 'credito' 
+              ? 'Pague com seu cartão de crédito.' 
+              : 'Finalize sua assinatura via Pix.'}
+          </p>
 
           <div className="pag-metodos">
             <button
-              className={`pag-metodo-btn ${tipoCartao === 'credito' ? 'ativo' : ''}`}
-              onClick={() => setTipoCartao('credito')}
+              className={`pag-metodo-btn ${metodoPagamento === 'credito' ? 'ativo' : ''}`}
+              onClick={() => setMetodoPagamento('credito')}
               type="button"
             >
               💳 Crédito
             </button>
             <button
-              className={`pag-metodo-btn ${tipoCartao === 'debito' ? 'ativo' : ''}`}
-              onClick={() => setTipoCartao('debito')}
+              className={`pag-metodo-btn ${metodoPagamento === 'pix' ? 'ativo' : ''}`}
+              onClick={() => setMetodoPagamento('pix')}
               type="button"
             >
-              💳 Débito
+              ❖ Pix
             </button>
           </div>
 
           <form onSubmit={handlePagar} noValidate>
-            <div className="pag-field">
-              <label className="pag-label">Nome no cartão</label>
-              <input
-                type="text"
-                className={`pag-input ${errors.nomeCartao ? 'pag-input-error' : ''}`}
-                placeholder="Como está escrito no cartão"
-                value={form.nomeCartao}
-                onChange={e => { setForm(p => ({ ...p, nomeCartao: e.target.value })); setErrors(p => ({ ...p, nomeCartao: '' })) }}
-              />
-              {errors.nomeCartao && <span className="pag-error">{errors.nomeCartao}</span>}
-            </div>
+            
+            {metodoPagamento === 'credito' && (
+              <>
+                <div className="pag-field">
+                  <label className="pag-label">Nome no cartão</label>
+                  <input
+                    type="text"
+                    className={`pag-input ${errors.nomeCartao ? 'pag-input-error' : ''}`}
+                    placeholder="Como está escrito no cartão"
+                    value={form.nomeCartao}
+                    onChange={e => { setForm(p => ({ ...p, nomeCartao: e.target.value })); setErrors(p => ({ ...p, nomeCartao: '' })) }}
+                  />
+                  {errors.nomeCartao && <span className="pag-error">{errors.nomeCartao}</span>}
+                </div>
 
-            <div className="pag-field">
-              <label className="pag-label">Número do cartão</label>
-              <input
-                type="text"
-                className={`pag-input ${errors.numeroCartao ? 'pag-input-error' : ''}`}
-                placeholder="0000 0000 0000 0000"
-                value={form.numeroCartao}
-                maxLength={19}
-                onChange={e => { setForm(p => ({ ...p, numeroCartao: formatarCartao(e.target.value) })); setErrors(p => ({ ...p, numeroCartao: '' })) }}
-              />
-              {errors.numeroCartao && <span className="pag-error">{errors.numeroCartao}</span>}
-            </div>
+                <div className="pag-field">
+                  <label className="pag-label">Número do cartão</label>
+                  <input
+                    type="text"
+                    className={`pag-input ${errors.numeroCartao ? 'pag-input-error' : ''}`}
+                    placeholder="0000 0000 0000 0000"
+                    value={form.numeroCartao}
+                    maxLength={19}
+                    onChange={e => { setForm(p => ({ ...p, numeroCartao: formatarCartao(e.target.value) })); setErrors(p => ({ ...p, numeroCartao: '' })) }}
+                  />
+                  {errors.numeroCartao && <span className="pag-error">{errors.numeroCartao}</span>}
+                </div>
 
-            <div className="pag-row">
-              <div className="pag-field">
-                <label className="pag-label">Validade</label>
-                <input
-                  type="text"
-                  className={`pag-input ${errors.validade ? 'pag-input-error' : ''}`}
-                  placeholder="MM/AA"
-                  value={form.validade}
-                  maxLength={5}
-                  onChange={e => { setForm(p => ({ ...p, validade: formatarValidade(e.target.value) })); setErrors(p => ({ ...p, validade: '' })) }}
-                />
-                {errors.validade && <span className="pag-error">{errors.validade}</span>}
+                <div className="pag-row">
+                  <div className="pag-field">
+                    <label className="pag-label">Validade</label>
+                    <input
+                      type="text"
+                      className={`pag-input ${errors.validade ? 'pag-input-error' : ''}`}
+                      placeholder="MM/AA"
+                      value={form.validade}
+                      maxLength={5}
+                      onChange={e => { setForm(p => ({ ...p, validade: formatarValidade(e.target.value) })); setErrors(p => ({ ...p, validade: '' })) }}
+                    />
+                    {errors.validade && <span className="pag-error">{errors.validade}</span>}
+                  </div>
+                  <div className="pag-field">
+                    <label className="pag-label">CVV</label>
+                    <input
+                      type="text"
+                      className={`pag-input ${errors.cvv ? 'pag-input-error' : ''}`}
+                      placeholder="123"
+                      value={form.cvv}
+                      maxLength={4}
+                      onChange={e => { setForm(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '') })); setErrors(p => ({ ...p, cvv: '' })) }}
+                    />
+                    {errors.cvv && <span className="pag-error">{errors.cvv}</span>}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {metodoPagamento === 'pix' && (
+              <div style={{ textAlign: 'center', padding: '24px 0', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginBottom: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                <p style={{ color: '#7a90a8', fontSize: '14px', marginBottom: '20px' }}>Escaneie o QR Code abaixo</p>
+                <div style={{ width: '180px', height: '180px', backgroundColor: '#fff', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px', boxShadow: '0 0 20px rgba(0,0,0,0.3)' }}>
+                  <span style={{ fontSize: '80px' }}>📱</span>
+                </div>
+                <p style={{ color: '#00e676', marginTop: '20px', fontWeight: '600', fontSize: '15px' }}>⚡ Aprovação instantânea</p>
               </div>
-              <div className="pag-field">
-                <label className="pag-label">CVV</label>
-                <input
-                  type="text"
-                  className={`pag-input ${errors.cvv ? 'pag-input-error' : ''}`}
-                  placeholder="123"
-                  value={form.cvv}
-                  maxLength={4}
-                  onChange={e => { setForm(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '') })); setErrors(p => ({ ...p, cvv: '' })) }}
-                />
-                {errors.cvv && <span className="pag-error">{errors.cvv}</span>}
-              </div>
-            </div>
+            )}
 
             <button type="submit" className="pag-btn" disabled={carregando}>
-              {carregando ? 'Processando...' : `Assinar por R$ ${plano.preco.toFixed(2).replace('.', ',')}/mês`}
+              {carregando ? 'Processando...' : `Confirmar Assinatura - R$ ${plano.preco.toFixed(2).replace('.', ',')}`}
             </button>
           </form>
         </div>
