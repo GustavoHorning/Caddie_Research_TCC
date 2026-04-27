@@ -59,8 +59,14 @@ export default function Assinaturas() {
   const navigate = useNavigate()
 
   function handleAssinar(plano: typeof planos[0]) {
-    sessionStorage.setItem('plano_selecionado', JSON.stringify(plano))
-    navigate('/login')
+    const token = localStorage.getItem('caddie_token')
+    
+    if (token) {
+      navigate('/pagamento', { state: { plano } })
+    } else {
+      sessionStorage.setItem('plano_selecionado', JSON.stringify(plano))
+      navigate('/login')
+    }
   }
 
   return (

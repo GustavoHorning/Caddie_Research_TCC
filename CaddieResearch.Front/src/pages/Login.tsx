@@ -1,29 +1,30 @@
 import axios from 'axios'
-import React, { useEffect } from 'react'
-import { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './Login.css'
 import EsqueciSenha from './EsqueciSenha'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useMsal } from '@azure/msal-react'
-import { EventType } from '@azure/msal-browser'
-
-function redirecionarAposLogin() {
-  const planoSalvo = sessionStorage.getItem('plano_selecionado')
-  if (planoSalvo) {
-    sessionStorage.removeItem('plano_selecionado')
-    window.location.replace('/pagamento')
-  } else {
-    window.location.replace('/home')
-  }
-}
 
 export default function Login() {
+  const navigate = useNavigate()
   const [tela, setTela] = useState<'login' | 'esqueci'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const [carregando, setCarregando] = useState(false)
+
+  function redirecionarAposLogin() {
+    const planoSalvo = sessionStorage.getItem('plano_selecionado')
+    if (planoSalvo) {
+      sessionStorage.removeItem('plano_selecionado')
+      const plano = JSON.parse(planoSalvo)
+      navigate('/pagamento', { state: { plano } })
+    } else {
+      navigate('/home')
+    }
+  }
 
   const loginGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {

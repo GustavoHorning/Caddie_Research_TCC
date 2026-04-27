@@ -28,12 +28,18 @@ public class PagamentoController : ControllerBase
             return Unauthorized(new { mensagem = "Usuário não identificado ou sessão expirada." });
         }
 
-        bool jaPossuiAssinatura = await _context.Assinaturas
-            .AnyAsync(a => a.UsuarioId == userId && a.Status == "Ativo");
+        var assinaturaAtiva = await _context.Assinaturas
+            .FirstOrDefaultAsync(a => a.UsuarioId == userId && a.Status == "Ativo");
 
-        if (jaPossuiAssinatura)
+        if (assinaturaAtiva != null)
         {
-            return BadRequest(new { mensagem = "Você já possui uma assinatura ativa no momento." });
+            if (assinaturaAtiva.PlanoNome == request.PlanoNome)
+            {
+                return BadRequest(new { mensagem = $"Você já possui o plano {request.PlanoNome} ativo." });
+            }
+
+            assinaturaAtiva.Status = "Cancelado";
+            _context.Assinaturas.Update(assinaturaAtiva);
         }
 
         var novaAssinatura = new Assinatura
@@ -43,7 +49,7 @@ public class PagamentoController : ControllerBase
             ValorPago = request.Preco,
             Status = "Ativo",
             DataInicio = DateTime.UtcNow,
-            DataVencimento = DateTime.UtcNow.AddMonths(1) 
+            DataVencimento = DateTime.UtcNow.AddMonths(1)
         };
 
         var usuario = await _context.Usuarios.FindAsync(userId);
