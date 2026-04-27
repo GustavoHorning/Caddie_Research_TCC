@@ -20,40 +20,44 @@ import CarteiraDetalhes from './pages/CarteiraDetalhes';
 import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor'
 import ClientesGestor from './pages/Dashboard/ClientesGestor'
 import Perfil from "./pages/Dashboard/Perfil";
-
+import ProtectedRoute from './pages/ProtectedRoute'
 function PaginaInicial() {
-  return (
-    <>
-      <Navbar />
-      <HeroSection />
-      <Diferenciais />
-      <Produtos />
-      <ComoFunciona />
-      <CTASection />
-      <Footer />
-    </>
-  )
+    return (
+        <>
+            <Navbar />
+            <HeroSection />
+            <Diferenciais />
+            <Produtos />
+            <ComoFunciona />
+            <CTASection />
+            <Footer />
+        </>
+    )
 }
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<PaginaInicial />} />
-        <Route path="/cadastro" element={<Cadastro />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/home" element={<DashboardLayout />} />
-        <Route path="/carteiras" element={<Carteiras />} />
-        <Route path="/carteiras/:id" element={<CarteiraDetalhes />} />
-        <Route path="/carteiras/internacional" element={<CarteiraInternacional />} />
-        <Route path="/gestor" element={<PainelGestor />} />
-        <Route path="/planos" element={<Assinaturas />} />
-        <Route path="/pagamento" element={<Pagamento />} />
-        <Route path="/gerenciar-plano" element={<GerenciarPlano />} />
-          <Route path="/home/perfil" element={<Perfil />} />
-      </Routes>
-    </BrowserRouter>
-  )
+    return (
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<PaginaInicial />} />
+                <Route path="/cadastro" element={<Cadastro />} />
+                <Route path="/login" element={<Login />} />
+
+                <Route path="/home" element={<ProtectedRoute clientOnly><DashboardLayout /></ProtectedRoute>} />
+                <Route path="/carteiras" element={<ProtectedRoute clientOnly><Carteiras /></ProtectedRoute>} />
+                <Route path="/carteiras/:id" element={<ProtectedRoute clientOnly><CarteiraDetalhes /></ProtectedRoute>} />
+                <Route path="/carteiras/internacional" element={<ProtectedRoute clientOnly><CarteiraInternacional /></ProtectedRoute>} />
+                <Route path="/planos" element={<ProtectedRoute clientOnly><Assinaturas /></ProtectedRoute>} />
+                <Route path="/pagamento" element={<ProtectedRoute clientOnly><Pagamento /></ProtectedRoute>} />
+                <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
+
+                <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+
+                <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
+
+            </Routes>
+        </BrowserRouter>
+    )
 }
 
 export default App
