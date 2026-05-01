@@ -124,3 +124,11 @@
     font-size: 1.4rem;
   }
 }
+
+@media (max-width: 380px) {
+  .carteiras-content { padding: 16px 12px; }
+  .carteiras-titulo { font-size: 1.25rem; }
+  .carteira-card { padding: 16px; }
+  .carteira-nome { font-size: 1rem; }
+  .carteira-rent-valor { font-size: 1.1rem; }
+}

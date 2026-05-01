@@ -70,7 +70,6 @@
   border: 2px solid #0d1117;
 }
 
-/* User Profile & Dropdown */
 .user-profile {
   display: flex;
   align-items: center;
@@ -107,7 +106,6 @@
   margin-top: 2px;
 }
 
-/* Cores dos Planos */
 .plan-free { background: rgba(122, 144, 168, 0.2); color: #7a90a8; }
 .plan-basic { background: rgba(0, 180, 216, 0.2); color: #00B4D8; }
 .plan-premium { background: rgba(245, 158, 11, 0.2); color: #F59E0B; }
@@ -174,4 +172,33 @@
 
 .dropdown-item.logout:hover {
   background: rgba(255, 123, 114, 0.1);
+}
+
+@media (max-width: 380px) {
+  .topbar {
+    padding: 0 12px;
+  }
+  .topbar-search {
+    width: auto;
+    flex: 1;
+    margin: 0 10px;
+    padding: 6px 8px;
+  }
+  .topbar-search input {
+    font-size: 12px;
+  }
+  .topbar-actions {
+    gap: 8px;
+  }
+  .user-info {
+    display: none;
+  }
+  .user-profile {
+    padding: 4px;
+  }
+  .avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
 }

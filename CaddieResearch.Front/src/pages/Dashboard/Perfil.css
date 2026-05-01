@@ -1,4 +1,3 @@
-
 .perfil-container {
   padding: 10px 20px; 
   max-width: 800px;
@@ -16,14 +15,14 @@
 
 .perfil-container h1 {
   color: #fff;
-  margin-bottom: 4px; /* Mais colado no subtítulo */
+  margin-bottom: 4px;
   font-size: 28px;
   font-weight: 700;
 }
 
 .perfil-subtitulo-page {
   color: #7a90a8;
-  margin-bottom: 24px; /* Reduzido o espaço antes do card */
+  margin-bottom: 24px; 
   font-size: 15px;
 }
 
@@ -31,8 +30,8 @@
   background: rgba(22, 27, 34, 0.4);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px; /* Borda um pouco mais suave */
-  padding: 28px 32px; /* Reduzi o espaço interno do card (antes era 40px) */
+  border-radius: 12px;
+  padding: 28px 32px; 
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
   width: 100%;
@@ -42,13 +41,13 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-bottom: 24px; /* Muito menos espaço vazio abaixo da foto */
-  padding-bottom: 24px; /* Muito menos espaço acima da linha */
+  margin-bottom: 24px; 
+  padding-bottom: 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .perfil-avatar-grande {
-  width: 68px; /* Ligeiramente menor e mais elegante */
+  width: 68px; 
   height: 68px;
   background: linear-gradient(135deg, #00B4D8, #0077B6);
   border-radius: 16px;
@@ -77,14 +76,14 @@
 .perfil-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px; /* Campos mais próximos uns dos outros */
-  margin-bottom: 24px; /* Espaço ajustado antes do botão de salvar */
+  gap: 16px; 
+  margin-bottom: 24px; 
 }
 
 .perfil-field {
   display: flex;
   flex-direction: column;
-  gap: 6px; /* O label agora fica coladinho no input */
+  gap: 6px;
 }
 
 .perfil-field.full-width {
@@ -93,7 +92,7 @@
 
 .perfil-field label {
   color: #c9d1d9;
-  font-size: 13px; /* Fonte levemente menor para não brigar com o input */
+  font-size: 13px;
   font-weight: 500;
   margin-left: 2px;
 }
@@ -101,8 +100,8 @@
 .perfil-field input {
   background: rgba(13, 17, 23, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px; /* Borda mais moderna */
-  padding: 12px 14px; /* Input um pouquinho mais fino */
+  border-radius: 8px; 
+  padding: 12px 14px; 
   color: #fff;
   font-size: 14px;
   box-sizing: border-box;
@@ -136,7 +135,7 @@
   background: #00B4D8;
   color: #fff;
   border: none;
-  padding: 12px 24px; /* Botão mais harmônico */
+  padding: 12px 24px; 
   border-radius: 8px;
   font-weight: 600;
   font-size: 14px;
@@ -184,33 +183,35 @@
   .perfil-container {
     padding: 20px 16px;
   }
-
   .perfil-grid {
     grid-template-columns: 1fr;
   }
-
   .perfil-field.full-width {
     grid-column: span 1;
   }
-
   .perfil-card {
     padding: 24px 20px;
   }
-
   .perfil-header-info {
     flex-direction: column;
     text-align: center;
     gap: 16px;
   }
-
   .perfil-footer {
     flex-direction: column-reverse;
     align-items: stretch;
   }
-
   .perfil-status {
     width: 100%;
     justify-content: center;
     box-sizing: border-box;
   }
+}
+
+@media (max-width: 380px) {
+  .perfil-container { padding: 16px 12px; }
+  .perfil-card { padding: 20px 16px; }
+  .perfil-avatar-grande { width: 56px; height: 56px; font-size: 24px; }
+  .perfil-header-text h2 { font-size: 1.1rem; }
+  .perfil-btn { width: 100%; padding: 12px; }
 }

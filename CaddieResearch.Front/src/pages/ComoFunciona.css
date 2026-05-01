@@ -79,3 +79,15 @@
   }
   .passo-item:last-child .passo-linha { display: none; }
 }
+
+@media (max-width: 380px) {
+  .como-funciona { padding: 3rem 1rem; }
+  .passo-item { padding: 1rem 0.5rem; }
+  .passo-numero { 
+    width: 45px; 
+    height: 45px; 
+    font-size: 0.9rem; 
+    margin-bottom: 0.8rem;
+  }
+  .passo-titulo { font-size: 1rem; }
+}

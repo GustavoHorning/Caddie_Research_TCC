@@ -111,6 +111,16 @@
   }
   .cta-btn-primary, .cta-btn-secondary { 
     width: 100%; 
-    text-align: center;
+    text-align: center; 
+  }
+}
+
+@media (max-width: 380px) {
+  .cta-section { padding: 3rem 1rem; }
+  .cta-title { font-size: 1.6rem; }
+  .cta-subtitle { font-size: 0.95rem; }
+  .cta-btn-primary, .cta-btn-secondary { 
+    padding: 0.8rem 1rem; 
+    font-size: 0.9rem; 
   }
 }

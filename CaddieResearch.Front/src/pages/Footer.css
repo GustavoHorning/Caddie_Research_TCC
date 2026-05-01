@@ -99,7 +99,7 @@
     grid-template-columns: 1fr 1fr;
   }
   .footer-logo, .footer-tagline {
-    grid-column: 1 / -1; 
+    grid-column: 1 / -1;
   }
 }
 
@@ -110,5 +110,15 @@
   .footer-bottom {
     flex-direction: column;
     text-align: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .footer { padding: 3rem 1rem 1.5rem; }
+  .footer-top { gap: 2rem; }
+  .footer-legal {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
   }
 }

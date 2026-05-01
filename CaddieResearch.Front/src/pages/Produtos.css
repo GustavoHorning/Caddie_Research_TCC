@@ -96,3 +96,11 @@
   .produtos { padding: 4rem 1rem; }
   .produtos-grid { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 380px) {
+  .produtos { padding: 3rem 1rem; }
+  .produto-card { padding: 1.5rem 1rem; }
+  .produto-titulo { font-size: 1.1rem; }
+  .produto-descricao { font-size: 0.85rem; }
+  .produto-itens li { font-size: 0.8rem; }
+}
