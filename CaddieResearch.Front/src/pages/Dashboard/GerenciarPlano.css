@@ -23,7 +23,6 @@
   color: rgba(255,255,255,0.4);
 }
 
-/* PLANO ATUAL */
 .mp-plano-atual {
   background: #1a1a1a;
   border: 1px solid rgba(255,255,255,0.08);
@@ -121,7 +120,6 @@
   border-color: rgba(239,68,68,0.4);
 }
 
-/* SECTION */
 .mp-section {
   margin-bottom: 28px;
 }
@@ -156,7 +154,6 @@
   color: #fff;
 }
 
-/* BENEFÍCIOS */
 .mp-beneficios {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -181,7 +178,6 @@
   flex-shrink: 0;
 }
 
-/* GRID DE PLANOS */
 .mp-planos-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -280,7 +276,6 @@
   opacity: 0.85;
 }
 
-/* MODAL */
 .mp-overlay {
   position: fixed;
   inset: 0;
@@ -359,7 +354,6 @@
 
 .mp-btn-confirmar-cancel:hover { background: #dc2626; }
 
-/* SUCESSO CANCELAMENTO */
 .mp-sucesso-cancel {
   display: flex;
   flex-direction: column;
@@ -419,4 +413,16 @@
   .mp-page { padding: 20px 16px; }
   .mp-plano-atual { flex-direction: column; align-items: flex-start; }
   .mp-planos-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 380px) {
+  .mp-page { padding: 16px 12px; }
+  .mp-titulo { font-size: 1.4rem; }
+  .mp-plano-atual { padding: 16px; }
+  .mp-plano-atual-icone { width: 44px; height: 44px; font-size: 1.4rem; }
+  .mp-plano-atual-nome { font-size: 1.2rem; }
+  .mp-btn-alterar, .mp-btn-cancelar { width: 100%; text-align: center; }
+  .mp-modal { padding: 24px 16px; }
+  .mp-modal-acoes { flex-direction: column; }
+  .mp-sucesso-cancel { padding: 40px 16px; }
 }

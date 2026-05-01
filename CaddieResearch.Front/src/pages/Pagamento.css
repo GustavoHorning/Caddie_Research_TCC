@@ -31,7 +31,6 @@
   z-index: 1;
 }
 
-/* RESUMO */
 .pag-resumo {
   display: flex;
   flex-direction: column;
@@ -45,6 +44,7 @@
   text-decoration: none;
   letter-spacing: 0.3px;
 }
+
 .pag-logo span { color: #00B4D8; }
 
 .pag-resumo-card {
@@ -94,6 +94,7 @@
   font-weight: 800;
   color: #00B4D8;
 }
+
 .pag-resumo-preco span {
   font-size: 0.85rem;
   font-weight: 400;
@@ -131,9 +132,9 @@
   padding: 0;
   transition: color 0.2s;
 }
+
 .pag-voltar:hover { color: #00B4D8; }
 
-/* FORM SIDE */
 .pag-form-side {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -186,7 +187,6 @@
   background: rgba(0, 180, 216, 0.08);
 }
 
-/* CAMPOS */
 .pag-field {
   margin-bottom: 16px;
   flex: 1;
@@ -237,7 +237,6 @@
   gap: 12px;
 }
 
-/* BOTÃO */
 .pag-btn {
   width: 100%;
   padding: 14px;
@@ -252,10 +251,10 @@
   margin-top: 8px;
   box-shadow: 0 0 24px rgba(0, 180, 216, 0.25);
 }
+
 .pag-btn:hover { background: #0096c7; }
 .pag-btn:disabled { background: #1a3a4a; color: #4a6070; cursor: not-allowed; box-shadow: none; }
 
-/* PIX */
 .pag-pix {
   display: flex;
   flex-direction: column;
@@ -290,6 +289,7 @@
   text-align: center;
   line-height: 1.6;
 }
+
 .pag-pix-info strong { color: #ffffff; }
 
 .pag-pix-obs {
@@ -298,7 +298,6 @@
   text-align: center;
 }
 
-/* SEGURANÇA */
 .pag-seguranca {
   margin-top: 20px;
   text-align: center;
@@ -306,7 +305,6 @@
   color: #4a6070;
 }
 
-/* SUCESSO */
 .pag-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -348,6 +346,7 @@
   color: #7a90a8;
   margin-bottom: 24px;
 }
+
 .pag-sucesso-sub strong { color: #ffffff; }
 
 .pag-sucesso-detalhe {
@@ -365,13 +364,27 @@
 
 .pag-sucesso-detalhe span:nth-child(odd) { color: #4a6070; }
 .pag-sucesso-detalhe span:nth-child(even) { color: #ffffff; font-weight: 600; text-align: right; }
-
 .pag-status-ativo { color: #00B4D8 !important; }
 
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .pag-container {
     grid-template-columns: 1fr;
   }
   .pag-form-side { padding: 24px 20px; }
+}
+
+@media (max-width: 380px) {
+  .pag-page { padding: 20px 12px; }
+  .pag-form-side { padding: 20px 16px; }
+  .pag-resumo-card { padding: 16px; }
+  .pag-titulo { font-size: 1.3rem; }
+  .pag-subtitulo { font-size: 0.8rem; margin-bottom: 16px; }
+  
+  .pag-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .pag-btn { padding: 12px; font-size: 0.9rem; }
+  .pag-metodo-btn { font-size: 0.75rem; padding: 8px; }
+  .pag-sucesso-detalhe { padding: 12px 10px; font-size: 0.75rem; }
 }

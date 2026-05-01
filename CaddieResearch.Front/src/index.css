@@ -72,3 +72,10 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #00B4D8;
 }
+
+/* RESETS GLOBAIS DE RESPONSIVIDADE (320px) */
+html, body {
+  overflow-x: hidden !important;
+  width: 100%;
+  max-width: 100vw;
+}

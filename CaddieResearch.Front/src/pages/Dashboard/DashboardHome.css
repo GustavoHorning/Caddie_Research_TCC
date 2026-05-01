@@ -1,19 +1,13 @@
-/* =============================================
-   DASHBOARD HOME — Conteudo principal
-   ============================================= */
-
 .dash-content {
   padding: 24px 28px;
 }
 
-/* ---- Topo: Banner + Promo lado a lado ---- */
 .dash-topo-row {
   display: flex;
   gap: 20px;
   margin-bottom: 24px;
 }
 
-/* ---- Banner ---- */
 .dash-banner {
   display: flex;
   align-items: center;
@@ -108,7 +102,6 @@
   opacity: 0.7;
 }
 
-/* ---- Promo Card (ao lado do banner) ---- */
 .dash-promo-card {
   border-radius: 14px;
   padding: 28px 24px;
@@ -171,14 +164,12 @@
   transform: translateY(-1px);
 }
 
-/* ---- Grid ---- */
 .dash-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
 }
 
-/* ---- Card generico ---- */
 .dash-card {
   background: #1a1a1a;
   border-radius: 14px;
@@ -216,7 +207,6 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* ---- Lista generica ---- */
 .dash-lista {
   list-style: none;
   padding: 0;
@@ -288,7 +278,6 @@
   white-space: nowrap;
 }
 
-/* ---- Eventos ---- */
 .dash-eventos-empty {
   text-align: center;
   padding: 30px 0 10px;
@@ -339,7 +328,6 @@
   color: #fff;
 }
 
-/* ---- Caddie Minuto ---- */
 .dash-minuto-item {
   padding-top: 4px;
 }
@@ -381,12 +369,10 @@
   line-height: 1.6;
 }
 
-/* ---- FIIs ---- */
 .dash-card-fiis {
   grid-column: span 1;
 }
 
-/* ---- Responsivo ---- */
 @media (max-width: 1100px) {
   .dash-grid {
     grid-template-columns: 1fr 1fr;
@@ -394,23 +380,45 @@
   .dash-topo-row {
     flex-direction: column;
   }
+  .dash-promo-card {
+    max-width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
   .dash-grid {
     grid-template-columns: 1fr;
   }
-
   .dash-banner {
     flex-direction: column;
     padding: 28px 24px;
   }
-
   .dash-banner-visual {
     display: none;
   }
-
   .dash-content {
     padding: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .dash-promo-card {
+    min-width: 100%; 
+    padding: 20px 16px;
+  }
+  .dash-banner {
+    padding: 20px 16px;
+  }
+  .dash-banner-title {
+    font-size: 1.4rem;
+  }
+  .dash-card {
+    padding: 16px;
+  }
+  .dash-lista-item {
+    gap: 8px;
+  }
+  .dash-lista-tag {
+    display: none;
   }
 }
