@@ -175,3 +175,35 @@
 .dropdown-item.logout:hover {
   background: rgba(255, 123, 114, 0.1);
 }
+
+.plan-gestor {
+  background-color: rgba(0, 180, 216, 0.2);
+  color: #00B4D8;
+  border: 1px solid #00B4D8;
+}
+
+
+.plan-free {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #7a90a8;
+}
+
+.plan-basic {
+  background-color: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+
+.plan-premium {
+  background-color: rgba(155, 89, 182, 0.2);
+  color: #9b59b6;
+  border: 1px solid rgba(155, 89, 182, 0.3);
+}
+
+.plan-black {
+  background-color: #000;
+  color: #f1c40f; /
+  border: 1px solid #f1c40f;
+  box-shadow: 0 0 8px rgba(241, 196, 15, 0.3);
+}

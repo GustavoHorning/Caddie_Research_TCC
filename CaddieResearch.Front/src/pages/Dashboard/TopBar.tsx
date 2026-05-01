@@ -73,8 +73,8 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
         <div className="user-profile" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
           <div className="user-info">
             <span className="user-name">{user?.nome || "Carregando..."}</span>
-            <span className={`user-plan plan-${user?.plano?.toLowerCase() || 'free'}`}>
-              {user?.plano || "Free"}
+            <span className={`user-plan plan-${(user?.tipoPerfil === 'Gestor' ? 'gestor' : user?.plano || 'free').toLowerCase()}`}>
+              {user?.tipoPerfil === 'Gestor' ? 'Gestor' : (user?.plano || 'Free')}
             </span>
           </div>
           <div className="avatar">
