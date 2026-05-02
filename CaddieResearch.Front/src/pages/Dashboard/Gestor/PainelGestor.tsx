@@ -4,9 +4,8 @@ import TopBar from '../TopBar'
 import api from '../../../services/api'
 import SidebarGestor from '../SidebarGestor'
 
-
-
 export default function PainelGestor() {
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false)
 
   const [carteirasDisponiveis, setCarteirasDisponiveis] = useState<any[]>([])
   const [carteiraAtivosId, setCarteiraAtivosId] = useState('')
@@ -54,6 +53,7 @@ export default function PainelGestor() {
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
   const handleSalvarAtivo = async () => {
     if (!formTicker || !formPrecoTeto) {
       mostrarNotificacao("Ticker e Preço Teto são obrigatórios!", "erro")
@@ -103,8 +103,6 @@ export default function PainelGestor() {
     }
   }
 
-  
-
   const mostrarNotificacao = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
     setToastMsg(msg);
     setToastTipo(tipo);
@@ -113,8 +111,18 @@ export default function PainelGestor() {
 
   return (
       <div className="dashboard-layout">
-        <SidebarGestor activePath="/gestor" />
-        <TopBar userName="Gestor" />
+        <SidebarGestor 
+            activePath="/gestor" 
+            isOpen={menuMobileAberto}
+            onClose={() => setMenuMobileAberto(false)}
+        />
+        {menuMobileAberto && (
+            <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>
+        )}
+        <TopBar 
+            userName="Gestor" 
+            onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)}
+        />
         <main className="dashboard-main">
           <div className="gestor-content">
 

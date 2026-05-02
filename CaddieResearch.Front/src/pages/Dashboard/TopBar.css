@@ -18,7 +18,9 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 8px 12px;
-  width: 300px;
+  width: 100%;
+  max-width: 300px;
+  margin-left: 16px;
   gap: 10px;
   color: #7a90a8;
   border: 1px solid transparent;
@@ -95,6 +97,7 @@
   color: #fff;
   font-size: 14px;
   font-weight: 500;
+  white-space: nowrap; 
 }
 
 .user-plan {
@@ -147,6 +150,7 @@
   color: #fff;
   font-weight: 600;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .dropdown-menu {
@@ -199,24 +203,28 @@
   background: rgba(255, 123, 114, 0.1);
 }
 
-@media (max-width: 380px) {
+@media (max-width: 768px) {
+  .user-info {
+    display: none;
+  }
+  .topbar-search {
+    margin-left: 12px;
+  }
+}
+
+@media (max-width: 480px) {
   .topbar {
     padding: 0 12px;
   }
   .topbar-search {
-    width: auto;
-    flex: 1;
-    margin: 0 10px;
+    margin-left: 8px;
     padding: 6px 8px;
   }
   .topbar-search input {
-    font-size: 12px;
+    font-size: 13px;
   }
   .topbar-actions {
-    gap: 8px;
-  }
-  .user-info {
-    display: none;
+    gap: 12px;
   }
   .user-profile {
     padding: 4px;
