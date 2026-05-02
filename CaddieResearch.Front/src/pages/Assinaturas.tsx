@@ -71,17 +71,18 @@ export default function Assinaturas() {
 
   return (
     <div className="ass-page">
-      <div style={{ position: 'absolute', top: '30px', left: '30px' }}>
+      {/* Container de navegação do topo (ajustado) */}
+      <div className="ass-top-nav">
         <button
             onClick={() => navigate('/')}
-            style={{ background: 'none', border: 'none', color: '#7a90a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', padding: '0', transition: 'color 0.2s' }}
-            onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
-            onMouseOut={(e) => e.currentTarget.style.color = '#7a90a8'}
+            className="ass-back-btn"
         >
-          ← Voltar para o Site
+            ← Voltar para o Site
         </button>
       </div>
+
       <div className="ass-glow" />
+
       <div className="ass-header">
         <a href="/" className="ass-logo">Caddie<span>Research</span></a>
         
@@ -89,21 +90,26 @@ export default function Assinaturas() {
         <h1 className="ass-title">Escolha seu plano</h1>
         <p className="ass-subtitle">Invista com inteligência. Cancele quando quiser.</p>
       </div>
+
       <div className="ass-grid">
         {planos.map((plano) => (
           <div key={plano.nome} className={`ass-card ${plano.destaque ? 'destaque' : ''}`}>
             {plano.destaque && <div className="ass-badge-card">Mais popular</div>}
+            
             <div className="ass-card-header">
               <div className="ass-icone">{plano.icone}</div>
               <h2 className="ass-nome">{plano.nome}</h2>
               <p className="ass-descricao">{plano.descricao}</p>
+              
               <div className="ass-preco-wrapper">
                 <span className="ass-cifrao">R$</span>
                 <span className="ass-preco">{plano.preco.toFixed(2).replace('.', ',')}</span>
                 <span className="ass-periodo">/mês</span>
               </div>
             </div>
+
             <div className="ass-divider" />
+
             <ul className="ass-lista">
               {plano.beneficios.map((b) => (
                 <li key={b} className="ass-item ass-item-ok">
@@ -116,6 +122,7 @@ export default function Assinaturas() {
                 </li>
               ))}
             </ul>
+
             <button
               className={`ass-btn ${plano.destaque ? 'ass-btn-destaque' : ''}`}
               onClick={() => handleAssinar(plano)}
@@ -125,6 +132,7 @@ export default function Assinaturas() {
           </div>
         ))}
       </div>
+
       <p className="ass-rodape">Cobrado mensalmente. Cancele quando quiser.</p>
     </div>
   )
