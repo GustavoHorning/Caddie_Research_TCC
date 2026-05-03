@@ -41,7 +41,8 @@ public class AuthController : ControllerBase
         _context.Usuarios.Add(novoUsuario);
         await _context.SaveChangesAsync();
         
-        var linkDeConfirmacao = $"http://localhost:5194/api/auth/confirmar-email?email={novoUsuario.Email}";
+        var emailCodificado = Uri.EscapeDataString(novoUsuario.Email);
+        var linkDeConfirmacao = $"http://localhost:5194/api/auth/confirmar-email?email={emailCodificado}";
         
         await _emailService.EnviarEmailConfirmacaoAsync(novoUsuario.Email, novoUsuario.Nome, linkDeConfirmacao);
 
