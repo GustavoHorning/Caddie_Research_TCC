@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./TopBar.css";
-import { useNavigate } from 'react-router-dom'; 
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   nome: string;
@@ -20,6 +20,7 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const carregarPerfil = async () => {
@@ -37,6 +38,20 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
     carregarPerfil();
       window.addEventListener('perfilAtualizado', carregarPerfil);
       return () => window.removeEventListener('perfilAtualizado', carregarPerfil);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false); 
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -70,9 +85,8 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
           <span className="badge"></span>
         </button>
 
-          <div className="user-profile" onClick={() => user && setIsDropdownOpen(!isDropdownOpen)}>
+          <div className="user-profile" ref={menuRef} onClick={() => user && setIsDropdownOpen(!isDropdownOpen)}>
 
-              {/* 👇 SE AINDA ESTIVER CARREGANDO, MOSTRA O SKELETON */}
               {!user ? (
                   <>
                       <div className="user-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '6px' }}>

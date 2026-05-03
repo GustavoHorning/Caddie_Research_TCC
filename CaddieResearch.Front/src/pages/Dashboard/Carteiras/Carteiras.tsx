@@ -6,14 +6,14 @@ import api from '../../../services/api';
 import { Link } from 'react-router-dom';
 
 const carteirasVitrine = [
-    { nome: 'Dividendos', iconeCor: '#4caf50', icone: '💸' },
-    { nome: 'FIIs', iconeCor: '#ff9800', icone: '🏢' },
-    { nome: 'Internacional', iconeCor: '#2196f3', icone: '🌎' },
-    { nome: 'Small Caps', iconeCor: '#9c27b0', icone: '🚀' },
-    { nome: 'Valor', iconeCor: '#f44336', icone: '📈' },
-    { nome: 'Fundos', iconeCor: '#00bcd4', icone: '💼' },
-    { nome: 'Renda Fixa', iconeCor: '#607d8b', icone: '🛡️' },
-    { nome: 'Reserva de Emergencia', iconeCor: '#e91e63', icone: '🐷' }
+    { nome: 'Dividendos', iconeCor: '#4caf50', icone: '💸', teaser: 'Gere renda passiva recorrente com as melhores pagadoras.', planoMinimo: 'Basic' },
+    { nome: 'FIIs', iconeCor: '#ff9800', icone: '🏢', teaser: 'Receba aluguéis mensais isentos de imposto de renda.', planoMinimo: 'Premium' },
+    { nome: 'Internacional', iconeCor: '#2196f3', icone: '🌎', teaser: 'Proteja seu patrimônio em dólar com gigantes globais.', planoMinimo: 'Black' },
+    { nome: 'Small Caps', iconeCor: '#9c27b0', icone: '🚀', teaser: 'Descubra empresas com altíssimo potencial de multiplicação.', planoMinimo: 'Black' },
+    { nome: 'Valor', iconeCor: '#f44336', icone: '📈', teaser: 'Ações descontadas com forte potencial de valorização.', planoMinimo: 'Black' },
+    { nome: 'Fundos', iconeCor: '#00bcd4', icone: '💼', teaser: 'Acesso aos melhores gestores do mercado.', planoMinimo: 'Black' },
+    { nome: 'Renda Fixa', iconeCor: '#607d8b', icone: '🛡️', teaser: 'Segurança e previsibilidade para seu patrimônio.', planoMinimo: 'Black' },
+    { nome: 'Reserva de Emergencia', iconeCor: '#e91e63', icone: '🐷', teaser: 'Liquidez diária para imprevistos do dia a dia.', planoMinimo: 'Black' }
 ];
 
 export default function Carteiras() {
@@ -52,29 +52,26 @@ export default function Carteiras() {
             <main className="dashboard-main">
                 <div className="carteiras-content">
                     <h1 className="carteiras-titulo">Carteiras disponíveis</h1>
-                    <div className="carteiras-grid">
 
+                    <div className="carteiras-grid">
                         {carregando ? (
                             carteirasVitrine.map((_, i) => (
-                                <div key={`skeleton-${i}`} className="carteira-card" style={{ display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', background: '#1e1e1e', border: '1px solid #333' }}>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                                <div key={`skeleton-${i}`} className="carteira-card">
+                                    <div className="carteira-header">
                                         <div className="skeleton skeleton-circular" style={{ width: '48px', height: '48px' }}></div>
                                         <div className="skeleton skeleton-text" style={{ width: '120px', height: '24px' }}></div>
                                     </div>
-
-                                    <div style={{ marginBottom: '20px' }}>
+                                    <div className="carteira-rentabilidade">
                                         <div className="skeleton skeleton-text" style={{ width: '140px', height: '14px', marginBottom: '12px' }}></div>
                                         <div className="skeleton skeleton-text" style={{ width: '90px', height: '36px' }}></div>
                                     </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #333', paddingTop: '15px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div className="skeleton skeleton-text" style={{ width: '50px', height: '12px' }}></div>
+                                    <div className="carteira-footer">
+                                        <div className="carteira-stat">
+                                            <div className="skeleton skeleton-text" style={{ width: '50px', height: '12px', marginBottom: '8px' }}></div>
                                             <div className="skeleton skeleton-text" style={{ width: '60px', height: '16px' }}></div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
-                                            <div className="skeleton skeleton-text" style={{ width: '50px', height: '12px' }}></div>
+                                        <div className="carteira-stat right">
+                                            <div className="skeleton skeleton-text" style={{ width: '50px', height: '12px', marginBottom: '8px' }}></div>
                                             <div className="skeleton skeleton-text" style={{ width: '60px', height: '16px' }}></div>
                                         </div>
                                     </div>
@@ -92,10 +89,7 @@ export default function Carteiras() {
                                 let rentabilidade = bloqueada ? '??,??%' : "0,00%";
 
                                 if (carteiraAPI) {
-                                    if (carteiraAPI.rentabilidade) {
-                                        rentabilidade = carteiraAPI.rentabilidade;
-                                    }
-
+                                    if (carteiraAPI.rentabilidade) rentabilidade = carteiraAPI.rentabilidade;
                                     if (carteiraAPI.ativos) {
                                         qtdComprar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Comprar').length;
                                         qtdAguardar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Aguardar').length;
@@ -107,47 +101,40 @@ export default function Carteiras() {
                                         key={i}
                                         className={`carteira-card ${bloqueada ? 'carteira-bloqueada' : ''}`}
                                         to={bloqueada ? '/gerenciar-plano' : `/carteiras/${carteiraAPI?.id}`}
-                                        style={{ textDecoration: 'none', color: 'inherit', position: 'relative', display: 'flex', flexDirection: 'column', padding: '20px', borderRadius: '12px', background: '#1e1e1e', border: '1px solid #333', overflow: 'hidden' }}
                                     >
                                         {bloqueada && (
-                                            <div className="overlay-cadeado" style={{
-                                                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                                backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
-                                                flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 10
-                                            }}>
-                                                <span style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🔒</span>
-                                                <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>Desbloquear Acesso</span>
-                                                <span style={{ color: '#00B4D8', fontSize: '0.8rem', marginTop: '4px', fontWeight: '600' }}>Exclusivo para assinantes</span>
+                                            <div className="overlay-cadeado">
+                                                <span className={`premium-badge badge-${vitrine.planoMinimo.toLowerCase()}`}>
+                                                    Exclusivo {vitrine.planoMinimo}
+                                                </span>
+                                                <h4>{vitrine.nome}</h4>
+                                                <p>{vitrine.teaser}</p>
                                             </div>
                                         )}
 
-                                        <div style={{ filter: bloqueada ? 'blur(4px) grayscale(60%)' : 'none', opacity: bloqueada ? 0.4 : 1, transition: 'all 0.3s ease', pointerEvents: bloqueada ? 'none' : 'auto' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                                                <div style={{
-                                                    backgroundColor: vitrine.iconeCor + '20',
-                                                    color: vitrine.iconeCor, padding: '12px', borderRadius: '8px',
-                                                    fontSize: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                }}>
+                                        <div className={bloqueada ? 'conteudo-bloqueado' : ''}>
+                                            <div className="carteira-header">
+                                                <div className="carteira-icon-wrap" style={{ backgroundColor: vitrine.iconeCor + '20', color: vitrine.iconeCor }}>
                                                     {vitrine.icone}
                                                 </div>
-                                                <div>
-                                                    <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>{vitrine.nome}</h3>
-                                                </div>
+                                                <h3 className="carteira-nome">{vitrine.nome}</h3>
                                             </div>
 
-                                            <div style={{ marginBottom: '20px' }}>
-                                                <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Rentabilidade Histórica</span>
-                                                <h2 style={{ margin: '5px 0 0 0', color: bloqueada ? '#888' : '#4caf50', fontSize: '1.8rem' }}>+{rentabilidade}</h2>
+                                            <div className="carteira-rentabilidade">
+                                                <span className="carteira-label">Rentabilidade Histórica</span>
+                                                <h2 className="carteira-valor" style={{ color: bloqueada ? '#8b949e' : '#4caf50' }}>
+                                                    +{rentabilidade}
+                                                </h2>
                                             </div>
 
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #333', paddingTop: '15px' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Comprar</span>
-                                                    <span style={{ color: '#fff', fontWeight: 'bold' }}>{qtdComprar} ativos</span>
+                                            <div className="carteira-footer">
+                                                <div className="carteira-stat">
+                                                    <span className="carteira-label">Comprar</span>
+                                                    <span className="carteira-stat-valor">{qtdComprar} ativos</span>
                                                 </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
-                                                    <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Aguardar</span>
-                                                    <span style={{ color: '#fff', fontWeight: 'bold' }}>{qtdAguardar} ativos</span>
+                                                <div className="carteira-stat right">
+                                                    <span className="carteira-label">Aguardar</span>
+                                                    <span className="carteira-stat-valor">{qtdAguardar} ativos</span>
                                                 </div>
                                             </div>
                                         </div>
