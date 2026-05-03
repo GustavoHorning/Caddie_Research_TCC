@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./TopBar.css";
-import { useMsal } from "@azure/msal-react";
-import { googleLogout } from "@react-oauth/google";
+import { useNavigate } from 'react-router-dom'; 
 
 interface UserProfile {
   nome: string;
   email: string;
   tipoPerfil: string;
   plano: string | null;
+  fotoPerfilUrl?: string | null;
 }
 
 interface TopBarProps {
@@ -19,7 +19,7 @@ interface TopBarProps {
 export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const { instance, accounts } = useMsal();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const carregarPerfil = async () => {
@@ -35,17 +35,17 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
     };
 
     carregarPerfil();
+      window.addEventListener('perfilAtualizado', carregarPerfil);
+      return () => window.removeEventListener('perfilAtualizado', carregarPerfil);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('caddie_token');
-    
-    if (accounts.length > 0) {
-      instance.logoutRedirect();
-    } else {
-      googleLogout();
-      window.location.href = "/login";
-    }
+
+    sessionStorage.clear();
+
+    navigate('/login');
+
   };
 
   return (
@@ -70,36 +70,91 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
           <span className="badge"></span>
         </button>
 
-        <div className="user-profile" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-          <div className="user-info">
-            <span className="user-name">{user?.nome || "Carregando..."}</span>
-            <span className={`user-plan plan-${(user?.tipoPerfil === 'Gestor' ? 'gestor' : user?.plano || 'free').toLowerCase()}`}>
-              {user?.tipoPerfil === 'Gestor' ? 'Gestor' : (user?.plano || 'Free')}
-            </span>
-          </div>
-          <div className="avatar">
-            <div className="avatar-placeholder">
-              {user?.nome?.charAt(0).toUpperCase() || "U"}
-            </div>
-          </div>
+          <div className="user-profile" onClick={() => user && setIsDropdownOpen(!isDropdownOpen)}>
 
+              {/* 👇 SE AINDA ESTIVER CARREGANDO, MOSTRA O SKELETON */}
+              {!user ? (
+                  <>
+                      <div className="user-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '6px' }}>
+                          {/* Esqueleto do Nome */}
+                          <div className="skeleton skeleton-text" style={{ width: '120px', height: '16px' }}></div>
+                          {/* Esqueleto do Plano */}
+                          <div className="skeleton skeleton-text" style={{ width: '70px', height: '12px' }}></div>
+                      </div>
+                      {/* Esqueleto da Foto */}
+                      <div className="skeleton skeleton-circular" style={{ width: '50px', height: '50px', minWidth: '50px' }}></div>
+                  </>
+              ) : (
+
+                  /* 👇 SE JÁ CARREGOU, MOSTRA OS DADOS REAIS */
+                  <>
+                      <div className="user-info">
+                          <span className="user-name">{user.nome}</span>
+                          <span className={`user-plan plan-${(user.tipoPerfil === 'Gestor' ? 'gestor' : user.plano || 'free').toLowerCase()}`}>
+          {user.tipoPerfil === 'Gestor' ? 'Gestor' : (user.plano || 'Free')}
+        </span>
+                      </div>
+
+                      <div
+                          className="avatar"
+                          style={{
+                              width: '50px',
+                              height: '50px',
+                              minWidth: '50px',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                          }}
+                      >
+                          {user.fotoPerfilUrl ? (
+                              <img
+                                  src={user.fotoPerfilUrl}
+                                  alt="Avatar"
+                                  style={{
+                                      width: '50px',
+                                      height: '50px',
+                                      objectFit: 'cover',
+                                      borderRadius: '50%',
+                                      display: 'block'
+                                  }}
+                              />
+                          ) : (
+                              <div className="avatar-placeholder" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {user.nome.charAt(0).toUpperCase()}
+                              </div>
+                          )}
+                      </div>
+                  </>
+              )}
+              
           {isDropdownOpen && (
             <div className="dropdown-menu">
-              <a href="/home/perfil" className="dropdown-item">
+              <button
+                  onClick={() => { navigate('/home/perfil'); setIsDropdownOpen(false); }}
+                  className="dropdown-item"
+                  style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit' }}
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
                 Meu Perfil
-              </a>
+              </button>
               {user?.tipoPerfil !== 'Gestor' && (
-                  <a href="/gerenciar-plano" className="dropdown-item">
+                  <button
+                      onClick={() => { navigate('/gerenciar-plano'); setIsDropdownOpen(false); }}
+                      className="dropdown-item"
+                      style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit' }}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="2" y="5" width="20" height="14" rx="2" />
                       <line x1="2" y1="10" x2="22" y2="10" />
                     </svg>
                     Assinatura
-                  </a>
+                  </button>
               )}
               <div className="dropdown-divider"></div>
               <button onClick={handleLogout} className="dropdown-item logout">

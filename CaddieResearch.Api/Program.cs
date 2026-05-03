@@ -24,6 +24,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<BlobService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var keyBytes = Encoding.ASCII.GetBytes(jwtKey!);

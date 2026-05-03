@@ -45,7 +45,17 @@ export default function ProtectedRoute({ children, roleRequired, clientOnly }: P
     }, [roleRequired, clientOnly]);
 
     if (status === 'loading') {
-        return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00B4D8', backgroundColor: '#0d1117' }}>Verificando permissões...</div>;
+        return (
+            <div style={{
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#0d1117'
+            }}>
+                <div className="skeleton skeleton-circular" style={{ width: '60px', height: '60px' }}></div>
+            </div>
+        );
     }
 
     if (status === 'unauthorized') {
