@@ -15,6 +15,22 @@ namespace CaddieResearch.Controllers
         {
             _context = context;
         }
+        
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletarAtivo(int id)
+        {
+            var ativo = await _context.Ativos.FindAsync(id);
+    
+            if (ativo == null)
+            {
+                return NotFound(new { mensagem = "Ativo não encontrado." });
+            }
+
+            _context.Ativos.Remove(ativo);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensagem = "Ativo removido com sucesso!" });
+        }
 
         [HttpPost]
         [Authorize(Roles = "Gestor")] 
