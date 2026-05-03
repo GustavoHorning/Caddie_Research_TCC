@@ -137,7 +137,8 @@ public class AuthController : ControllerBase
                 Nome = googleUser.name,
                 Email = googleUser.email,
                 EmailConfirmado = true, 
-                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "Caddie@2026!") 
+                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "Caddie@2026!"), 
+                EhSocial = true
             };
 
             _context.Usuarios.Add(usuario);
@@ -190,7 +191,8 @@ public class AuthController : ControllerBase
                 Nome = msUser!.displayName,
                 Email = emailDaMicrosoft,
                 EmailConfirmado = true,
-                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieMS@2026!") 
+                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieMS@2026!"),
+                EhSocial = true
             };
 
             _context.Usuarios.Add(usuario);

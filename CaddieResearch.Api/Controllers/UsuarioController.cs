@@ -15,11 +15,13 @@ public class UsuarioController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly TokenService _tokenService;
+    private readonly BlobService _blobService; 
 
-    public UsuarioController(AppDbContext context, TokenService tokenService)
+    public UsuarioController(AppDbContext context, TokenService tokenService, BlobService blobService)
     {
         _context = context;
         _tokenService = tokenService;
+        _blobService = blobService;
     }
 
     [HttpGet("meu-perfil")]
@@ -33,7 +35,7 @@ public class UsuarioController : ControllerBase
 
             var usuario = await _context.Usuarios
                 .Where(u => u.Id == userId)
-                .Select(u => new { u.Nome, u.Email, u.TipoPerfil, u.Plano })
+                .Select(u => new { u.Nome, u.Email, u.TipoPerfil, u.Plano, u.EhSocial, u.FotoPerfilUrl })
                 .FirstOrDefaultAsync();
 
             if (usuario == null)
@@ -82,6 +84,90 @@ public class UsuarioController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { mensagem = "Senha alterada com sucesso!" });
+    }
+    
+    [HttpPost("upload-foto")]
+    public async Task<IActionResult> UploadFoto([FromForm] IFormFile foto)
+    {
+        try
+        {
+            if (foto == null || foto.Length == 0)
+                return BadRequest(new { mensagem = "Nenhuma imagem foi enviada." });
+
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+
+            var usuario = await _context.Usuarios.FindAsync(userId);
+            if (usuario == null) return NotFound();
+
+            var urlImagem = await _blobService.UploadImagemAsync(foto, userIdString);
+
+            usuario.FotoPerfilUrl = urlImagem;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { url = urlImagem });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO UPLOAD]: {ex.Message}");
+            return StatusCode(500, new { mensagem = "Erro ao processar a imagem no servidor." });
+        }
+    }
+    
+    [HttpDelete("remover-foto")]
+    public async Task<IActionResult> RemoverFoto()
+    {
+        try
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+
+            var usuario = await _context.Usuarios.FindAsync(userId);
+            if (usuario == null) return NotFound();
+
+            if (!string.IsNullOrEmpty(usuario.FotoPerfilUrl))
+            {
+                await _blobService.ExcluirImagemAsync(usuario.FotoPerfilUrl);
+                
+                usuario.FotoPerfilUrl = null;
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { mensagem = "Foto removida com sucesso!" });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO REMOVER FOTO]: {ex.Message}");
+            return StatusCode(500, new { mensagem = "Erro ao remover a imagem do servidor." });
+        }
+    }
+    
+    [HttpDelete("excluir-conta")]
+    public async Task<IActionResult> ExcluirConta()
+    {
+        try
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+
+            var usuario = await _context.Usuarios.FindAsync(userId);
+            if (usuario == null) return NotFound();
+
+            if (!string.IsNullOrEmpty(usuario.FotoPerfilUrl))
+            {
+                await _blobService.ExcluirImagemAsync(usuario.FotoPerfilUrl);
+            }
+
+            _context.Usuarios.Remove(usuario);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensagem = "Conta excluída com sucesso." });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO EXCLUIR CONTA]: {ex.Message}");
+            return StatusCode(500, new { mensagem = "Erro ao excluir conta." });
+        }
     }
 }
 

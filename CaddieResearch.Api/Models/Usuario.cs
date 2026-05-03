@@ -32,4 +32,7 @@ public class Usuario
     [MaxLength(20)]
     public string? Plano { get; set; } 
     public ICollection<Assinatura>? Assinaturas { get; set; }
+    public bool EhSocial { get; set; } = false;
+    [MaxLength(500)]
+    public string? FotoPerfilUrl { get; set; }
 }
