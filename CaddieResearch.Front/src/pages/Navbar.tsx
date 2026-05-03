@@ -20,11 +20,15 @@ export default function Navbar() {
            <li><a href="#como-funciona" onClick={toggleMenu}>Como Funciona</a></li>
            <li><a href="#diferenciais" onClick={toggleMenu}>Diferenciais</a></li>
            <li><a href="#planos" onClick={toggleMenu}>Planos</a></li>
+
+           {/* Botões que só aparecem dentro do menu em telas MUITO pequenas */}
+           <li className="mobile-only-btn"><a href="/login" onClick={toggleMenu}>Entrar</a></li>
+           <li className="mobile-only-btn"><a href="/cadastro" className="btn-cadastro-mobile" onClick={toggleMenu}>Cadastre-se</a></li>
         </ul>
 
         <div className="navbar-actions">
-          <a href="/login" className="btn-login">Entrar</a>
-          <a href="/cadastro" className="btn-cadastro">Cadastre-se</a>
+          <a href="/login" className="btn-login desktop-btn">Entrar</a>
+          <a href="/cadastro" className="btn-cadastro desktop-btn">Cadastre-se</a>
           
           <button className="mobile-menu-btn" onClick={toggleMenu}>
             <span className={`hamburger ${menuAberto ? 'active' : ''}`}></span>

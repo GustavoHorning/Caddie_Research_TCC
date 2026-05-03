@@ -15,6 +15,7 @@
 
 .detalhe-card-rent { flex: 1; }
 .detalhe-card-titulo { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 16px; }
+
 .detalhe-rent-valor { font-size: 2rem; font-weight: 800; color: #4caf50; margin-bottom: 8px; }
 .detalhe-seta-verde { font-size: 0.85rem; margin-right: 4px; color: #4caf50; }
 .detalhe-rent-grafico { margin-bottom: 8px; }
@@ -88,6 +89,7 @@
 .detalhe-ticker-nome { font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); }
 .detalhe-ver-relatorio { font-size: 0.72rem; color: rgba(255, 255, 255, 0.3); text-decoration: none; }
 .detalhe-ver-relatorio:hover { color: #fff; }
+
 .detalhe-data-entrada { font-size: 0.72rem; color: rgba(255, 255, 255, 0.3); }
 .detalhe-var-preco { font-size: 0.72rem; color: #4caf50; }
 .detalhe-vies { font-size: 0.82rem; font-weight: 700; }
@@ -104,4 +106,13 @@
   .detalhe-abas { flex-direction: column; }
   .detalhe-aba { width: 100%; border-right: none; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
   .detalhe-aba:last-child { border-bottom: none; }
+}
+
+@media (max-width: 380px) {
+  .detalhe-content { padding: 16px 12px; }
+  .detalhe-card { padding: 16px; }
+  .detalhe-video-titulo { font-size: 1.5rem; }
+  .detalhe-aba { padding: 12px 8px; }
+  .detalhe-rent-valor { font-size: 1.5rem; }
+  .detalhe-card-header-row h3 { font-size: 0.9rem; }
 }

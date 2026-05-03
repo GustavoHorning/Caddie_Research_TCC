@@ -1,7 +1,7 @@
 .ass-page {
   min-height: 100vh;
   background-color: #0a121e;
-  padding: 60px 24px 80px;
+  padding: 40px 24px 80px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: relative;
   overflow: hidden;
@@ -18,7 +18,35 @@
   pointer-events: none;
 }
 
+/* Navegação do topo (Botão voltar) */
+.ass-top-nav {
+  max-width: 1100px;
+  margin: 0 auto 2rem auto;
+  position: relative;
+  z-index: 10;
+}
+
+.ass-back-btn {
+  background: none;
+  border: none;
+  color: #7a90a8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.ass-back-btn:hover {
+  color: #fff;
+}
+
 .ass-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   margin-bottom: 56px;
   position: relative;
@@ -26,7 +54,6 @@
 }
 
 .ass-logo {
-  display: inline-block;
   font-size: 1.3rem;
   font-weight: 700;
   color: #ffffff;
@@ -38,7 +65,6 @@
 .ass-logo span { color: #00B4D8; }
 
 .ass-badge-topo-page {
-  display: inline-block;
   background-color: rgba(0, 180, 216, 0.1);
   color: #00B4D8;
   border: 1px solid rgba(0, 180, 216, 0.3);
@@ -260,4 +286,14 @@
   .ass-grid { grid-template-columns: 1fr; }
   .ass-card.destaque { transform: none; }
   .ass-card.destaque:hover { transform: translateY(-4px); }
+}
+
+@media (max-width: 380px) {
+  .ass-page { padding: 30px 16px 60px; }
+  .ass-back-btn { font-size: 14px; }
+  .ass-header { margin-bottom: 40px; }
+  .ass-title { font-size: 1.8rem; }
+  .ass-card { padding: 24px 20px; }
+  .ass-preco { font-size: 2.2rem; }
+  .ass-btn { font-size: 0.9rem; padding: 12px; }
 }

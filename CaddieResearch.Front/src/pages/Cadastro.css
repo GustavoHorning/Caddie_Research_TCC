@@ -1,55 +1,49 @@
-.cadastro-page {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  background-color: #0a121e;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-.cadastro-form-side {
-  flex: 0 0 45%;
-  background-color: #ffffff;
+.cadastro-page {
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3rem 2rem;
-  overflow-y: auto;
-}
-
-.cadastro-painel-lado {
-  flex: 1;
+  padding: 24px 16px;
+  background-color: #0a121e;
   position: relative;
   overflow: hidden;
-  background-image: url('sua-imagem.jpg');
-  background-size: 85%;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: #0a1628;
-
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.painel-imagem-full {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center-top;
-  transform: scale(0.8);
-  transform-origin: center center;
+.cadastro-glow {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(0, 180, 216, 0.07) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .cadastro-form-container {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 40px 36px;
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
+  position: relative;
+  z-index: 1;
 }
 
 .cadastro-logo {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #0a121e;
   text-align: center;
-  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #ffffff;
   letter-spacing: 0.3px;
 }
 
@@ -58,31 +52,42 @@
 }
 
 .cadastro-titulo {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 800;
-  color: #0a121e;
-  margin-bottom: 0.3rem;
+  color: #ffffff;
+  margin-bottom: 24px;
+  letter-spacing: -0.3px;
+  text-align: center;
 }
 
 .cadastro-progresso {
-  margin-bottom: 2rem;
+  margin-bottom: 24px;
+}
+
+.cadastro-passo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
 }
 
 .cadastro-passo-label {
-  font-size: 0.8rem;
-  color: #7a90a8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #00B4D8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .cadastro-passo-titulo {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0a121e;
-  margin: 0.2rem 0 0.8rem;
+  font-size: 0.9rem;
+  color: #7a90a8;
+  margin: 0;
 }
 
 .cadastro-barra {
-  height: 3px;
-  background-color: #e5e7eb;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -100,45 +105,52 @@
 .cadastro-fields {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 16px;
 }
 
 .campo-grupo {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 6px;
 }
 
 .campo-grupo label {
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #374151;
+  color: #a0b0c0;
 }
 
 .campo-grupo input {
-  padding: 0.75rem 1rem;
-  border: 1.5px solid #e5e7eb;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   font-size: 0.95rem;
-  color: #0a121e;
-  background-color: #f9fafb;
-  transition: border-color 0.2s;
+  color: #ffffff;
   outline: none;
-  width: 100%;
+  transition: border-color 0.2s, background 0.2s;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.campo-grupo input::placeholder {
+  color: #4a6070;
 }
 
 .campo-grupo input:focus {
   border-color: #00B4D8;
-  background-color: #ffffff;
+  background: rgba(0, 180, 216, 0.05);
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
 }
 
 .campo-grupo input.input-erro {
-  border-color: #ef4444;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
 }
 
 .erro-msg {
   font-size: 0.8rem;
   color: #ef4444;
+  margin-top: -4px;
 }
 
 .senha-wrapper {
@@ -146,219 +158,186 @@
 }
 
 .senha-wrapper input {
-  padding-right: 3rem;
+  padding-right: 44px;
 }
 
 .senha-toggle {
   position: absolute;
-  right: 0.75rem;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  color: #4a6070;
+  display: flex;
+  align-items: center;
   padding: 0;
+  font-size: 1.1rem;
+}
+
+.senha-toggle:hover {
+  color: #00B4D8;
 }
 
 .senha-requisitos {
-  background-color: #f9fafb;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-  padding: 1rem;
+  padding: 14px 16px;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 6px;
 }
 
 .requisitos-titulo {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.3rem;
+  color: #a0b0c0;
+  margin-bottom: 4px;
 }
 
 .requisito {
+  font-size: 0.82rem;
+  color: #4a6070;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: #9ca3af;
+  gap: 8px;
   transition: color 0.2s;
 }
 
-
 .requisito-icone {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1.5px solid #9ca3af;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.3s ease;
+  font-size: 0.8rem;
+  width: 14px;
+  text-align: center;
 }
 
 .requisito.ok {
-  color: #16a34a;
-}
-
-.requisito.ok .requisito-icone {
-  background-color: #16a34a;
-  border-color: #16a34a;
+  color: #00B4D8;
 }
 
 .cadastro-termos {
-  font-size: 0.82rem;
-  color: #6b7280;
-  line-height: 1.6;
+  font-size: 0.8rem;
+  color: #4a6070;
+  line-height: 1.5;
+  text-align: center;
+  margin: 8px 0;
 }
 
 .cadastro-termos a {
   color: #00B4D8;
+  text-decoration: none;
+}
+
+.cadastro-termos a:hover {
   text-decoration: underline;
 }
 
 .cadastro-btn {
   width: 100%;
-  padding: 0.85rem;
-  background-color: #00B4D8;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
+  padding: 13px;
+  background: #00B4D8;
+  color: #fff;
   font-size: 1rem;
   font-weight: 700;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.15s;
+  transition: background 0.2s;
+  box-shadow: 0 0 20px rgba(0, 180, 216, 0.25);
 }
 
 .cadastro-btn:hover:not(:disabled) {
-  background-color: #0096c7;
-  transform: translateY(-1px);
+  background: #0096c7;
 }
 
 .cadastro-btn.btn-desabilitado {
-  background-color: #c0d8e0;
+  background: #1a3a4a;
+  color: #4a6070;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .cadastro-login-link {
   text-align: center;
   font-size: 0.88rem;
-  color: #6b7280;
+  color: #7a90a8;
+  margin-top: 8px;
 }
 
 .cadastro-login-link a {
   color: #00B4D8;
   font-weight: 600;
   text-decoration: none;
+  margin-left: 4px;
 }
 
 .cadastro-login-link a:hover {
   text-decoration: underline;
 }
 
-.btn-voltar {
+.btn-voltar-passo {
   background: none;
   border: none;
-  color: #6b7280;
-  font-size: 0.88rem;
+  color: #7a90a8;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: color 0.2s;
 }
 
-.btn-voltar:hover {
-  color: #0a121e;
-}
-
-
-
-.cadastro-painel-lado::before {
-  content: '';
-  position: absolute;
-  top: -150px;
-  right: -150px;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(0, 180, 216, 0.12) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.cadastro-painel-conteudo {
-  max-width: 420px;
-  position: relative;
-  z-index: 1;
-}
-
-.painel-badge {
-  display: inline-block;
-  background-color: rgba(0, 180, 216, 0.1);
-  color: #00B4D8;
-  border: 1px solid rgba(0, 180, 216, 0.3);
-  padding: 0.4rem 1rem;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  margin-bottom: 1.5rem;
-}
-
-.painel-headline {
-  font-size: clamp(1.6rem, 3vw, 2.4rem);
-  font-weight: 800;
+.btn-voltar-passo:hover {
   color: #ffffff;
-  line-height: 1.2;
-  margin-bottom: 1rem;
-  letter-spacing: -0.5px;
 }
 
-.painel-highlight {
-  color: #00B4D8;
-}
-
-.painel-subtitulo {
-  font-size: 0.95rem;
+.btn-voltar-site {
+  background: none;
+  border: none;
   color: #7a90a8;
-  line-height: 1.7;
-  margin-bottom: 2rem;
-}
-
-.painel-diferenciais {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.painel-item {
-  font-size: 0.92rem;
-  color: #a0b0c0;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  font-size: 15px;
+  padding: 0;
+  transition: color 0.2s;
 }
 
-.painel-imagem {
-  width: 100%;
-  border-radius: 12px;
-  margin-top: 2rem;
-  object-fit: cover;
-  max-height: 250px;
+.btn-voltar-site:hover {
+  color: #fff;
 }
 
-@media (max-width: 1024px) {
-  .cadastro-page {
-    flex-direction: column;
-    height: auto; 
-    min-height: 100vh;
-  }
+.success-icon-cadastro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: rgba(0, 180, 216, 0.1);
+  color: #00B4D8;
+  font-size: 2rem;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  border: 1px solid rgba(0, 180, 216, 0.3);
+}
 
-  .cadastro-form-side {
-    flex: none; 
-    width: 100%;
-    min-height: 100vh;
-    padding: 3rem 1rem;
+@media (max-width: 380px) {
+  .cadastro-form-container {
+    padding: 30px 20px;
   }
-
-  .cadastro-painel-lado {
-    display: none; 
+  .cadastro-titulo {
+    font-size: 1.4rem;
+  }
+  .cadastro-logo {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+  }
+  .campo-grupo input {
+    font-size: 0.9rem;
+    padding: 10px 12px;
+  }
+  .cadastro-btn {
+    font-size: 0.9rem;
+    padding: 12px;
   }
 }

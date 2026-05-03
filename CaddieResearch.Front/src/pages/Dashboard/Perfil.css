@@ -246,19 +246,15 @@
   .perfil-container {
     padding: 20px 16px;
   }
-
   .perfil-grid {
     grid-template-columns: 1fr;
   }
-
   .perfil-field.full-width {
     grid-column: span 1;
   }
-
   .perfil-card {
     padding: 24px 20px;
   }
-
   .perfil-header-info {
     flex-direction: column;
     text-align: center;
@@ -273,10 +269,17 @@
     flex-direction: column-reverse;
     align-items: stretch;
   }
-
   .perfil-status {
     width: 100%;
     justify-content: center;
     box-sizing: border-box;
   }
+}
+
+@media (max-width: 380px) {
+  .perfil-container { padding: 16px 12px; }
+  .perfil-card { padding: 20px 16px; }
+  .perfil-avatar-grande { width: 56px; height: 56px; font-size: 24px; }
+  .perfil-header-text h2 { font-size: 1.1rem; }
+  .perfil-btn { width: 100%; padding: 12px; }
 }
