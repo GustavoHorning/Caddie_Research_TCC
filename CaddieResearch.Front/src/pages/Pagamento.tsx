@@ -24,8 +24,33 @@ export default function Pagamento() {
 
     try {
       const token = localStorage.getItem('caddie_token');
+      let usuarioIdReal = 0;
 
-      // Chama a nossa API informando o plano e se é PIX ou Cartão
+      if (token) {
+        try {
+          const payloadBase64Url = token.split('.')[1];
+          const base64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const decodedJson = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          const payload = JSON.parse(decodedJson);
+          
+          const extractedId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] 
+                           || payload.nameid 
+                           || payload.sub 
+                           || "0";
+                           
+          usuarioIdReal = parseInt(extractedId, 10);
+        } catch (e) {
+          console.error("Falha ao decodificar o token JWT", e);
+        }
+      }
+
+      if (!usuarioIdReal || isNaN(usuarioIdReal)) {
+        throw new Error("Usuário não autenticado ou token inválido. Faça login novamente.");
+      }
+
       const response = await fetch('http://localhost:5194/api/pagamento/checkout', {
         method: 'POST',
         headers: {
@@ -35,7 +60,7 @@ export default function Pagamento() {
         body: JSON.stringify({
           plano: plano?.nome,
           metodo: metodoPagamento,
-          usuarioId: 1 // Para o TCC deixamos fixo, ou você puxa do Contexto
+          usuarioId: usuarioIdReal 
         })
       });
 
@@ -47,7 +72,6 @@ export default function Pagamento() {
       const data = await response.json();
 
       if (data.url) {
-        // Redireciona para o gateway com o produto certo (Mensal vs Único)
         window.location.href = data.url;
       } else {
         throw new Error('URL de checkout não foi gerada.');

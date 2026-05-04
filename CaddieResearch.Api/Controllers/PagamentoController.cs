@@ -1,13 +1,11 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using CaddieResearch.Api.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
+using System.Text.Json;
 using CaddieResearch.Api.Data;
 using CaddieResearch.Api.Models;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using System;
-using System.IO;
-using System.Text.Json;
+using CaddieResearch.Api.Services;
 
 namespace CaddieResearch.Api.Controllers
 {
@@ -15,141 +13,161 @@ namespace CaddieResearch.Api.Controllers
     [Route("api/[controller]")]
     public class PagamentoController : ControllerBase
     {
-        private readonly AbacatePayService _abacatePayService;
         private readonly AppDbContext _context;
-        private readonly TokenService _tokenService;
+        private static readonly ConcurrentDictionary<string, bool> _processedWebhooks = new();
+        private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
-        public PagamentoController(AbacatePayService abacatePayService, AppDbContext context, TokenService tokenService)
+        public PagamentoController(AppDbContext context)
         {
-            _abacatePayService = abacatePayService;
             _context = context;
-            _tokenService = tokenService;
         }
 
-        private int ObterUsuarioLogadoId()
-        {
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(idClaim, out int id) ? id : 0;
-        }
-
-        [Authorize]
         [HttpPost("checkout")]
-        public async Task<IActionResult> CriarCheckout([FromBody] CheckoutRequestDto dto)
+        public async Task<IActionResult> CriarCheckout(
+            [FromBody] CheckoutDto request, 
+            [FromServices] AbacatePayService abacatePayService)
         {
             try
             {
-                int usuarioId = ObterUsuarioLogadoId();
-                var urlCheckout = await _abacatePayService.GerarCheckoutAsync(dto.Plano, dto.Metodo, usuarioId);
-                return Ok(new { url = urlCheckout });
+                var url = await abacatePayService.GerarCheckoutAsync(request.Plano, request.Metodo, request.UsuarioId);
+                return Ok(new { url });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { erro = "Falha ao gerar link de pagamento", detalhe = ex.Message });
+                return BadRequest(new { erro = "Falha no gateway", detalhe = ex.Message });
             }
         }
 
-        // ==========================================
-        // 🛡️ WEBHOOK SEGURO DA ABACATEPAY
-        // ==========================================
-        [AllowAnonymous]
         [HttpPost("webhook")]
-        public async Task<IActionResult> Webhook([FromQuery] string secret)
+        public async Task<IActionResult> Webhook()
         {
-            // Validação simples para evitar requisições falsas
-            if (secret != "caddie2026") return Unauthorized();
-
             using var reader = new StreamReader(Request.Body);
-            var body = await reader.ReadToEndAsync();
-            
-            try 
+            var payload = await reader.ReadToEndAsync();
+
+            using var jsonDoc = JsonDocument.Parse(payload);
+            var root = jsonDoc.RootElement;
+
+            if (root.GetProperty("event").GetString() != "checkout.completed")
             {
-                using var jsonDoc = JsonDocument.Parse(body);
-                var root = jsonDoc.RootElement;
-                
-                if (root.TryGetProperty("event", out var eventType))
+                return Ok(); 
+            }
+
+            var checkoutNode = root.GetProperty("data").GetProperty("checkout");
+            var checkoutId = checkoutNode.GetProperty("id").GetString() ?? string.Empty;
+
+            if (string.IsNullOrEmpty(checkoutId) || !_processedWebhooks.TryAdd(checkoutId, true))
+            {
+                return Ok(new { message = "Webhook já processado ou em processamento." });
+            }
+
+            try
+            {
+                var metadata = checkoutNode.GetProperty("metadata");
+                var usuarioIdStr = metadata.GetProperty("idUsuario").GetString();
+                var planoEscolhido = metadata.GetProperty("planoEscolhido").GetString() ?? string.Empty;
+                var metodoPagamento = metadata.GetProperty("metodoPagamento").GetString() ?? string.Empty;
+
+                var amountEmCentavos = checkoutNode.GetProperty("paidAmount").GetInt32();
+                var valorPago = amountEmCentavos / 100m;
+
+                if (!int.TryParse(usuarioIdStr, out var usuarioId))
                 {
-                    string evt = eventType.GetString();
-                    if (evt == "checkout.completed" || evt == "subscription.completed")
-                    {
-                        var data = root.GetProperty("data");
-                        
-                        // A CORREÇÃO AQUI: Procurar o "checkout" primeiro!
-                        if (data.TryGetProperty("checkout", out var checkout))
-                        {
-                            if (checkout.TryGetProperty("metadata", out var metadata))
-                            {
-                                int usuarioId = int.Parse(metadata.GetProperty("idUsuario").GetString());
-                                string planoEscolhido = metadata.GetProperty("planoEscolhido").GetString();
-
-                                string planoFormatado = char.ToUpper(planoEscolhido[0]) + planoEscolhido.Substring(1).ToLower();
-
-                                // Pega o método de pagamento
-                                string metodoPgto = "Desconhecido";
-                                if (metadata.TryGetProperty("metodoPagamento", out var metodoProp))
-                                {
-                                    metodoPgto = metodoProp.GetString();
-                                    metodoPgto = char.ToUpper(metodoPgto[0]) + metodoPgto.Substring(1).ToLower();
-                                }
-
-                                var usuario = await _context.Usuarios.FindAsync(usuarioId);
-                                if (usuario != null)
-                                {
-                                    // Atualiza a tabela Usuários!
-                                    usuario.Plano = planoFormatado;
-
-                                    // Cria a Assinatura com a coluna nova
-                                    var assinatura = new Assinatura
-                                    {
-                                        UsuarioId = usuarioId,
-                                        PlanoNome = planoFormatado,
-                                        ValorPago = planoFormatado == "Black" ? 99.90m : (planoFormatado == "Premium" ? 59.90m : 29.90m),
-                                        TipoPagamento = metodoPgto,
-                                        DataInicio = DateTime.UtcNow,
-                                        DataVencimento = DateTime.UtcNow.AddMonths(1),
-                                        Status = "Ativo"
-                                    };
-                                    _context.Assinaturas.Add(assinatura);
-                                    await _context.SaveChangesAsync();
-                                }
-                            }
-                        }
-                    }
+                    _processedWebhooks.TryRemove(checkoutId, out _);
+                    return BadRequest(new { erro = "Usuário inválido no metadata." });
                 }
-                return Ok(); // Responde OK rápido para a AbacatePay não reenviar
+
+                await _semaphore.WaitAsync();
+
+                try
+                {
+                    var usuario = await _context.Usuarios.FindAsync(usuarioId);
+                    if (usuario == null)
+                    {
+                        _processedWebhooks.TryRemove(checkoutId, out _);
+                        return NotFound(new { erro = $"Usuário com ID {usuarioId} não existe no banco de dados." });
+                    }
+
+                    var assinaturasAtivas = await _context.Assinaturas
+                        .Where(a => a.UsuarioId == usuarioId && a.Status == "Ativo")
+                        .ToListAsync();
+
+                    foreach (var assinatura in assinaturasAtivas)
+                    {
+                        assinatura.Status = "Cancelado";
+                    }
+
+                    usuario.Plano = planoEscolhido;
+
+                    var novaAssinatura = new Assinatura
+                    {
+                        UsuarioId = usuarioId,
+                        PlanoNome = planoEscolhido,
+                        ValorPago = valorPago,
+                        Status = "Ativo",
+                        CheckoutId = checkoutId,
+                        TipoPagamento = metodoPagamento,
+                        DataInicio = DateTime.UtcNow,
+                        DataVencimento = DateTime.UtcNow.AddMonths(1)
+                    };
+
+                    _context.Assinaturas.Add(novaAssinatura);
+                    await _context.SaveChangesAsync();
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Erro no Webhook: {ex.Message}");
-                return Ok();
+                _processedWebhooks.TryRemove(checkoutId, out _);
+                
+                return StatusCode(500, new 
+                { 
+                    erro = "Erro interno ao processar o webhook.", 
+                    excecaoPrincipal = ex.Message,
+                    excecaoInterna = ex.InnerException?.Message,
+                    checkoutAnalisado = checkoutId
+                });
             }
+
+            return Ok();
         }
 
-        // ==========================================
-        // 🔄 FRONT-END CHAMA ISSO PARA PEGAR O NOVO JWT
-        // ==========================================
-        [Authorize]
         [HttpGet("verificar-status")]
-        public async Task<IActionResult> VerificarStatus([FromQuery] string planoDesejado)
+        [Authorize]
+        public async Task<IActionResult> VerificarStatus([FromQuery] string planoDesejado, [FromServices] TokenService tokenService)
         {
-            int usuarioId = ObterUsuarioLogadoId();
-            if (usuarioId == 0) return Unauthorized();
-
-            var usuario = await _context.Usuarios.FindAsync(usuarioId);
-            if (usuario == null) return NotFound();
-
-            if (!string.IsNullOrEmpty(usuario.Plano) && usuario.Plano.Equals(planoDesejado, StringComparison.OrdinalIgnoreCase))
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int usuarioId))
             {
-                var novoToken = _tokenService.GenerateToken(usuario);
-                return Ok(new { status = "pago", token = novoToken });
+                return Unauthorized();
             }
-            
+
+            var assinaturaAtiva = await _context.Assinaturas
+                .FirstOrDefaultAsync(a => a.UsuarioId == usuarioId 
+                                       && a.Status == "Ativo" 
+                                       && a.PlanoNome.ToLower() == planoDesejado.ToLower());
+
+            if (assinaturaAtiva != null)
+            {
+                var usuario = await _context.Usuarios.FindAsync(usuarioId);
+                if (usuario != null)
+                {
+                    var novoToken = tokenService.GenerateToken(usuario);
+                    
+                    return Ok(new { status = "pago", token = novoToken });
+                }
+            }
+
             return Ok(new { status = "pendente" });
         }
     }
 
-    public class CheckoutRequestDto
+    public class CheckoutDto
     {
-        public string Plano { get; set; }
-        public string Metodo { get; set; }
+        public string Plano { get; set; } = string.Empty;
+        public string Metodo { get; set; } = string.Empty;
+        public int UsuarioId { get; set; }
     }
 }

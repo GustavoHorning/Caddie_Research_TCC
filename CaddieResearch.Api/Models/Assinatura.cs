@@ -21,9 +21,6 @@ public class Assinatura
     [MaxLength(50)]
     public string PlanoNome { get; set; } = string.Empty; 
 
-    [MaxLength(20)]
-    public string TipoPagamento { get; set; } = "Desconhecido";
-
     [Required]
     public decimal ValorPago { get; set; }
 
@@ -34,4 +31,10 @@ public class Assinatura
     [Required]
     [MaxLength(20)]
     public string Status { get; set; } = "Ativo"; 
+
+    [MaxLength(50)]
+    public string CheckoutId { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string TipoPagamento { get; set; } = string.Empty;
 }

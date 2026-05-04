@@ -19,25 +19,22 @@ export default function PagamentoSucesso() {
       try {
         const token = localStorage.getItem('caddie_token');
         
-        // Tenta perguntar à API 5 vezes se o Webhook já chegou (Polling)
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 15; i++) {
           const res = await axios.get(`http://localhost:5194/api/pagamento/verificar-status?planoDesejado=${plano}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
 
           if (res.data.status === 'pago') {
-            // WEBHOOK CHEGOU! Salva o novo JWT e atualiza a UI
             localStorage.setItem('caddie_token', res.data.token);
             window.dispatchEvent(new Event('perfilAtualizado')); 
             setStatus('sucesso');
             return;
           }
 
-          // Espera 2.5 segundos antes de tentar de novo
-          await new Promise(resolve => setTimeout(resolve, 2500));
+          await new Promise(resolve => setTimeout(resolve, 3500));
         }
 
-        setStatus('erro'); // O webhook demorou demais
+        setStatus('erro');
       } catch (error) {
         setStatus('erro');
       }

@@ -325,3 +325,104 @@
   .mp-modal { padding: 32px 20px; }
   .mp-modal-acoes { flex-direction: column; }
 }
+
+.mp-planos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.mp-plano-card {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.mp-plano-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-4px);
+}
+
+.mp-plano-card.atual {
+  border-width: 2px;
+}
+
+.mp-plano-card-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 8px;
+  align-self: flex-start;
+}
+
+.mp-plano-card-icone {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+
+.mp-plano-card-nome {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.mp-plano-card-preco {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 16px;
+}
+
+.mp-plano-card-preco span {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: #8b949e;
+}
+
+.mp-plano-card-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.mp-plano-card-lista li {
+  font-size: 0.85rem;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mp-plano-card-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: auto;
+  border: none;
+}
+
+.mp-plano-card-btn:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.mp-plano-card-btn:not(:disabled):hover {
+  opacity: 0.85;
+}
