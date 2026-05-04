@@ -14,90 +14,47 @@ export default function Pagamento() {
   const plano = location.state?.plano as Plano | undefined
 
   const [metodoPagamento, setMetodoPagamento] = useState<'credito' | 'pix'>('credito')
-  const [sucesso, setSucesso] = useState(false)
   const [carregando, setCarregando] = useState(false)
-
-  const [form, setForm] = useState({
-    nomeCartao: '',
-    numeroCartao: '',
-    validade: '',
-    cvv: '',
-  })
-
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  function formatarCartao(valor: string) {
-    return valor.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19)
-  }
-
-  function formatarValidade(valor: string) {
-    return valor.replace(/\D/g, '').replace(/(\d{2})(\d{0,2})/, '$1/$2').slice(0, 5)
-  }
-
-  function validar() {
-    const errs: Record<string, string> = {}
-    
-    if (!form.nomeCartao.trim()) errs.nomeCartao = 'Informe o nome no cartão.'
-    if (form.numeroCartao.replace(/\s/g, '').length < 16) errs.numeroCartao = 'Número de cartão inválido.'
-    
-    if (form.validade.length < 5) {
-      errs.validade = 'Validade inválida.'
-    } else {
-      const [mesStr, anoStr] = form.validade.split('/')
-      const mes = parseInt(mesStr, 10)
-      const ano = parseInt(anoStr, 10) + 2000 
-      
-      const dataAtual = new Date()
-      const mesAtual = dataAtual.getMonth() + 1
-      const anoAtual = dataAtual.getFullYear()
-
-      if (mes < 1 || mes > 12) {
-        errs.validade = 'Mês inválido.'
-      } else if (ano < anoAtual || (ano === anoAtual && mes < mesAtual)) {
-        errs.validade = 'Cartão vencido.'
-      }
-    }
-
-    if (form.cvv.length < 3) errs.cvv = 'CVV inválido.'
-    return errs
-  }
+  const [erro, setErro] = useState<string | null>(null)
 
   async function handlePagar(e: React.FormEvent) {
     e.preventDefault()
-
-    if (metodoPagamento === 'credito') {
-      const errs = validar()
-      if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    }
-
-    setErrors({})
+    setErro(null)
     setCarregando(true)
 
     try {
-      const token = localStorage.getItem('caddie_token'); 
+      const token = localStorage.getItem('caddie_token');
 
-      const response = await fetch('http://localhost:5194/api/pagamento/processar-mock', {
+      // Chama a nossa API informando o plano e se é PIX ou Cartão
+      const response = await fetch('http://localhost:5194/api/pagamento/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          planoNome: plano?.nome,
-          preco: plano?.preco
+          plano: plano?.nome,
+          metodo: metodoPagamento,
+          usuarioId: 1 // Para o TCC deixamos fixo, ou você puxa do Contexto
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json(); 
-        throw new Error(errorData.mensagem || 'Falha no processamento.');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detalhe || errorData.erro || 'Falha no processamento com o gateway.');
       }
 
-      setSucesso(true)
+      const data = await response.json();
+
+      if (data.url) {
+        // Redireciona para o gateway com o produto certo (Mensal vs Único)
+        window.location.href = data.url;
+      } else {
+        throw new Error('URL de checkout não foi gerada.');
+      }
     } catch (error: any) {
       console.error(error);
-      alert(error.message || 'Erro ao processar pagamento. Tente novamente.');
-    } finally {
+      setErro(error.message || 'Erro ao comunicar com o servidor. Verifique sua conexão.');
       setCarregando(false)
     }
   }
@@ -114,32 +71,7 @@ export default function Pagamento() {
     )
   }
 
-  if (sucesso) {
-    return (
-      <div className="pag-page">
-        <div className="pag-glow" />
-        <div className="pag-card pag-sucesso">
-          <div className="pag-sucesso-icone">✓</div>
-          <h2 className="pag-sucesso-titulo">Pagamento confirmado!</h2>
-          <p className="pag-sucesso-sub">
-            Sua assinatura <strong>{plano.nome}</strong> foi ativada com sucesso.
-          </p>
-          <div className="pag-sucesso-detalhe">
-            <span>Plano</span><span>{plano.icone} {plano.nome}</span>
-            <span>Valor</span><span>R$ {plano.preco.toFixed(2).replace('.', ',')}/mês</span>
-            <span>Status</span><span className="pag-status-ativo">● Ativo</span>
-          </div>
-          <button className="pag-btn" style={{ marginTop: 24 }} onClick={() => navigate('/home')}>
-            Acessar minha conta
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-      
-      
     <div className="pag-page">
       <div className="pag-glow" />
       <div className="pag-container">
@@ -163,27 +95,17 @@ export default function Pagamento() {
               <span>Total hoje</span>
               <span>R$ {plano.preco.toFixed(2).replace('.', ',')}</span>
             </div>
-            <p className="pag-resumo-obs">Cobrado mensalmente. Cancele quando quiser.</p>
+            <p className="pag-resumo-obs">Cancele quando quiser.</p>
           </div>
           <button className="pag-voltar" onClick={() => navigate('/gerenciar-plano')}>
             ← Trocar de plano
           </button>
-
-          <button
-              className="pag-voltar"
-              onClick={() => navigate('/home')}
-              style={{ color: '#7a90a8', background: 'transparent', border: 'none' }}
-          >
-            Ir para o Painel
-          </button>
         </div>
 
         <div className="pag-form-side">
-          <h1 className="pag-titulo">Dados de pagamento</h1>
+          <h1 className="pag-titulo">Finalizar Assinatura</h1>
           <p className="pag-subtitulo">
-            {metodoPagamento === 'credito' 
-              ? 'Pague com seu cartão de crédito.' 
-              : 'Finalize sua assinatura via Pix.'}
+            Escolha sua forma de pagamento. O processamento é 100% seguro.
           </p>
 
           <div className="pag-metodos">
@@ -203,77 +125,39 @@ export default function Pagamento() {
             </button>
           </div>
 
-          <form onSubmit={handlePagar} noValidate>
+          <form onSubmit={handlePagar}>
             
             {metodoPagamento === 'credito' && (
-              <>
-                <div className="pag-field">
-                  <label className="pag-label">Nome no cartão</label>
-                  <input
-                    type="text"
-                    className={`pag-input ${errors.nomeCartao ? 'pag-input-error' : ''}`}
-                    placeholder="Como está escrito no cartão"
-                    value={form.nomeCartao}
-                    onChange={e => { setForm(p => ({ ...p, nomeCartao: e.target.value })); setErrors(p => ({ ...p, nomeCartao: '' })) }}
-                  />
-                  {errors.nomeCartao && <span className="pag-error">{errors.nomeCartao}</span>}
-                </div>
-
-                <div className="pag-field">
-                  <label className="pag-label">Número do cartão</label>
-                  <input
-                    type="text"
-                    className={`pag-input ${errors.numeroCartao ? 'pag-input-error' : ''}`}
-                    placeholder="0000 0000 0000 0000"
-                    value={form.numeroCartao}
-                    maxLength={19}
-                    onChange={e => { setForm(p => ({ ...p, numeroCartao: formatarCartao(e.target.value) })); setErrors(p => ({ ...p, numeroCartao: '' })) }}
-                  />
-                  {errors.numeroCartao && <span className="pag-error">{errors.numeroCartao}</span>}
-                </div>
-
-                <div className="pag-row">
-                  <div className="pag-field">
-                    <label className="pag-label">Validade</label>
-                    <input
-                      type="text"
-                      className={`pag-input ${errors.validade ? 'pag-input-error' : ''}`}
-                      placeholder="MM/AA"
-                      value={form.validade}
-                      maxLength={5}
-                      onChange={e => { setForm(p => ({ ...p, validade: formatarValidade(e.target.value) })); setErrors(p => ({ ...p, validade: '' })) }}
-                    />
-                    {errors.validade && <span className="pag-error">{errors.validade}</span>}
-                  </div>
-                  <div className="pag-field">
-                    <label className="pag-label">CVV</label>
-                    <input
-                      type="text"
-                      className={`pag-input ${errors.cvv ? 'pag-input-error' : ''}`}
-                      placeholder="123"
-                      value={form.cvv}
-                      maxLength={4}
-                      onChange={e => { setForm(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '') })); setErrors(p => ({ ...p, cvv: '' })) }}
-                    />
-                    {errors.cvv && <span className="pag-error">{errors.cvv}</span>}
-                  </div>
-                </div>
-              </>
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
+                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '12px' }}>Assinatura Mensal Automática</h3>
+                <p style={{ color: '#a0b0c0', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                  Ao escolher o cartão de crédito, sua assinatura será renovada automaticamente a cada mês. Você não precisa se preocupar em pagar boletos ou fazer transferências todo mês.
+                </p>
+              </div>
             )}
 
             {metodoPagamento === 'pix' && (
-              <div style={{ textAlign: 'center', padding: '24px 0', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginBottom: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                <p style={{ color: '#7a90a8', fontSize: '14px', marginBottom: '20px' }}>Escaneie o QR Code abaixo</p>
-                <div style={{ width: '180px', height: '180px', backgroundColor: '#fff', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px', boxShadow: '0 0 20px rgba(0,0,0,0.3)' }}>
-                  <span style={{ fontSize: '80px' }}>📱</span>
-                </div>
-                <p style={{ color: '#00e676', marginTop: '20px', fontWeight: '600', fontSize: '15px' }}>⚡ Aprovação instantânea</p>
+              <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
+                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '12px' }}>Pagamento Único (1 Mês)</h3>
+                <p style={{ color: '#a0b0c0', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                  Ao escolher o Pix, você garante o acesso ao plano por exatos 30 dias. Esta modalidade <strong>não possui renovação automática</strong>, e você precisará realizar um novo pagamento quando o plano expirar.
+                </p>
+              </div>
+            )}
+
+            {erro && (
+              <div className="pag-error" style={{ marginBottom: '16px', textAlign: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                {erro}
               </div>
             )}
 
             <button type="submit" className="pag-btn" disabled={carregando}>
-              {carregando ? 'Processando...' : `Confirmar Assinatura - R$ ${plano.preco.toFixed(2).replace('.', ',')}`}
+              {carregando ? 'Redirecionando...' : `Pagar R$ ${plano.preco.toFixed(2).replace('.', ',')} no ambiente seguro`}
             </button>
+
+            <p className="pag-seguranca" style={{ marginTop: '24px' }}>
+              🔒 Pagamento processado com segurança via AbacatePay.
+            </p>
           </form>
         </div>
       </div>

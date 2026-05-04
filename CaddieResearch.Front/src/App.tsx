@@ -21,6 +21,7 @@ import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor'
 import ClientesGestor from './pages/Dashboard/ClientesGestor'
 import Perfil from "./pages/Dashboard/Perfil";
 import ProtectedRoute from './pages/ProtectedRoute'
+import PagamentoSucesso from './pages/PagamentoSucesso';
 function PaginaInicial() {
     return (
         <>
@@ -54,6 +55,8 @@ function App() {
                 <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
 
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
+
+                <Route path="/pagamento-sucesso" element={<PagamentoSucesso />} />
 
             </Routes>
         </BrowserRouter>

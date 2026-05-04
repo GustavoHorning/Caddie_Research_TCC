@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../../../services/api'
 import './CarteiraInternacional.css'
 import Sidebar from '../Sidebar'
 import TopBar from '../TopBar'
@@ -34,22 +36,44 @@ export default function CarteiraInternacional() {
   const [abaAtiva, setAbaAtiva] = useState(0)
   const [somenteDestaque, setSomenteDestaque] = useState(false)
   const [menuMobileAberto, setMenuMobileAberto] = useState(false)
+  const navigate = useNavigate()
+
+  // --- BLOCO NOVO PARA TRAVAR A ROTA ---
+  useEffect(() => {
+    const verificarAcesso = async () => {
+      try {
+        const token = localStorage.getItem('caddie_token');
+        const res = await api.get('/usuario/meu-perfil', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Se não for Gestor nem Black, chuta pra fora!
+        if (res.data.tipoPerfil !== 'Gestor' && res.data.plano !== 'Black') {
+          navigate('/gerenciar-plano');
+        }
+      } catch (err) {
+        navigate('/login');
+      }
+    };
+    verificarAcesso();
+  }, [navigate]);
+  // -------------------------------------
 
   return (
     <div className="dashboard-layout">
-      <Sidebar 
-        activePath="/carteiras" 
-        isOpen={menuMobileAberto} 
-        onClose={() => setMenuMobileAberto(false)} 
+      <Sidebar
+        activePath="/carteiras"
+        isOpen={menuMobileAberto}
+        onClose={() => setMenuMobileAberto(false)}
       />
       
       {menuMobileAberto && (
         <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>
       )}
 
-      <TopBar 
-        userName="Usuario" 
-        onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} 
+      <TopBar
+        userName="Usuario"
+        onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)}
       />
 
       <main className="dashboard-main">
@@ -228,7 +252,6 @@ export default function CarteiraInternacional() {
               </tbody>
             </table>
           </div>
-
         </div>
       </main>
     </div>

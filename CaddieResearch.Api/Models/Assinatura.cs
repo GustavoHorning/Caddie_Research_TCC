@@ -21,6 +21,9 @@ public class Assinatura
     [MaxLength(50)]
     public string PlanoNome { get; set; } = string.Empty; 
 
+    [MaxLength(20)]
+    public string TipoPagamento { get; set; } = "Desconhecido";
+
     [Required]
     public decimal ValorPago { get; set; }
 

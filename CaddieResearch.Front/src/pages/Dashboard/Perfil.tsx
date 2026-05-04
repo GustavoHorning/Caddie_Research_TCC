@@ -17,6 +17,7 @@ export default function Perfil() {
   const [email, setEmail] = useState('');
   const [tipoPerfil, setTipoPerfil] = useState('');
   const [ehSocial, setEhSocial] = useState(false); 
+  const [vencimentoPlano, setVencimentoPlano] = useState<string | null>(null);
   const [statusPerfil, setStatusPerfil] = useState({ tipo: '', msg: '' });
 
   const [senhaAtual, setSenhaAtual] = useState('');
@@ -41,13 +42,15 @@ export default function Perfil() {
         setTipoPerfil(res.data.tipoPerfil);
         setEhSocial(res.data.ehSocial || false);
         setFotoPerfilUrl(res.data.fotoPerfilUrl || null);
+        
+        // Pega a data de vencimento que a API enviou
+        setVencimentoPlano(res.data.dataVencimento || null);
       } catch (error) {
         console.error("Erro ao carregar dados", error);
       }
     };
     carregarDados();
   }, []);
-
 
   const handleExcluirConta = async () => {
     setIsExcluindoConta(true);
@@ -129,7 +132,6 @@ export default function Perfil() {
       setStatusPerfil({ tipo: 'erro', msg: 'O nome não pode ficar em branco.' });
       return;
     }
-    
     
     try {
       const token = localStorage.getItem('caddie_token');
@@ -249,6 +251,11 @@ export default function Perfil() {
                   <h2>{nome || 'Carregando...'}</h2>
                   <p>Plano atual: <strong style={{color: '#00B4D8'}}>{tipoPerfil || 'Carregando...'}</strong></p>
 
+                  {/* MOSTRA A DATA DE VENCIMENTO AQUI */}
+                  {vencimentoPlano && tipoPerfil !== 'Gestor' && (
+                      <p style={{ marginTop: '4px' }}>Válido até: <strong>{vencimentoPlano}</strong></p>
+                  )}
+
                   {(fotoPerfilUrl || fotoPreview) && (
                       <button
                           onClick={() => setMostrarModalRemover(true)}
@@ -353,10 +360,6 @@ export default function Perfil() {
                   <p>Você entrou com uma conta vinculada ao Google ou Microsoft.</p>
                   <p>A alteração e gestão da sua senha devem ser feitas diretamente nas configurações do provedor da sua conta.</p>
                 </div>
-                
-                
-                
-                
             )}
 
             <div className="perfil-card" style={{ marginTop: '24px', border: '1px solid #ff4d4f' }}>
