@@ -5,6 +5,9 @@ using CaddieResearch.Api.Services;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace CaddieResearch.Api.Controllers;
 
@@ -34,14 +37,44 @@ public class UsuarioController : ControllerBase
                 return Unauthorized(new { mensagem = "Sessão inválida." });
 
             var usuario = await _context.Usuarios
-                .Where(u => u.Id == userId)
-                .Select(u => new { u.Nome, u.Email, u.TipoPerfil, u.Plano, u.EhSocial, u.FotoPerfilUrl })
-                .FirstOrDefaultAsync();
+                .Include(u => u.Assinaturas)
+                .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (usuario == null)
                 return NotFound(new { mensagem = "Usuário não encontrado." });
 
-            return Ok(usuario);
+            // LÓGICA DE EXPIRAÇÃO PREGUIÇOSA (LAZY EXPIRATION)
+            var assinaturaAtiva = usuario.Assinaturas?
+                .Where(a => a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
+                .OrderByDescending(a => a.DataVencimento)
+                .FirstOrDefault();
+
+            // Se não tem assinatura válida no relógio, mas a tabela do Usuário ainda diz que ele tem plano...
+            if (assinaturaAtiva == null && !string.IsNullOrEmpty(usuario.Plano))
+            {
+                // Limpa o plano do usuário
+                usuario.Plano = null;
+
+                // Muda o status da assinatura velha de "Ativo" para "Expirado"
+                if (usuario.Assinaturas != null)
+                {
+                    foreach(var ass in usuario.Assinaturas.Where(a => a.Status == "Ativo"))
+                    {
+                        ass.Status = "Expirado";
+                    }
+                }
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new {
+                usuario.Nome,
+                usuario.Email,
+                usuario.TipoPerfil,
+                Plano = assinaturaAtiva?.PlanoNome, // Retorna o plano validado pelo relógio
+                usuario.EhSocial,
+                usuario.FotoPerfilUrl,
+                dataVencimento = assinaturaAtiva != null ? assinaturaAtiva.DataVencimento.ToString("dd/MM/yyyy") : null
+            });
         }
         catch (Exception ex)
         {

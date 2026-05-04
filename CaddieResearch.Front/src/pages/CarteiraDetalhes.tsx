@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../pages/Dashboard/Sidebar';
 import TopBar from '../pages/Dashboard/TopBar';
@@ -7,6 +7,7 @@ import './CarteiraDetalhes.css';
 
 export default function CarteiraDetalhes() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [carteira, setCarteira] = useState<any>(null);
     const [carregando, setCarregando] = useState(true);
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
@@ -18,10 +19,15 @@ export default function CarteiraDetalhes() {
                 setCarregando(false);
             })
             .catch((error) => {
+                if (error.response && (error.response.status === 403 || error.response.status === 401)) {
+                    navigate('/gerenciar-plano');
+                    return;
+                }
+                
                 console.error("Erro ao buscar detalhes:", error);
                 setCarregando(false);
             });
-    }, [id]);
+    }, [id, navigate]);
 
     return (
         <div className="dashboard-layout">
