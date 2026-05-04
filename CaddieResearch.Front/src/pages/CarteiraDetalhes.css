@@ -1,18 +1,13 @@
-﻿.detalhes-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 32px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 24px;
+﻿.detalhes-content-wrapper {
+    padding: 32px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+    animation: fadeIn 0.4s ease-out;
 }
 
-.detalhes-titulo-wrap h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #fff;
-    margin: 0 0 8px 0;
-    letter-spacing: -0.5px;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .btn-voltar {
@@ -21,192 +16,354 @@
     gap: 8px;
     color: #8b949e;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    margin-bottom: 24px;
-    transition: color 0.2s;
+    margin-bottom: 28px;
+    transition: all 0.2s ease;
 }
 
 .btn-voltar:hover {
     color: #fff;
+    transform: translateX(-4px);
+}
+
+.detalhes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+}
+
+.detalhes-badge-tipo {
+    display: inline-block;
+    background: rgba(0, 180, 216, 0.15);
+    color: #00B4D8;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.detalhes-titulo-wrap h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 8px 0;
+    letter-spacing: -1px;
+    line-height: 1.1;
+}
+
+.detalhes-titulo-wrap p {
+    color: #8b949e;
+    font-size: 1rem;
+    margin: 0;
+    max-width: 600px;
 }
 
 .card-rentabilidade-destaque {
-    background: linear-gradient(145deg, #1e2029 0%, #15161c 100%);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 16px 24px;
-    border-radius: 12px;
-    text-align: right;
-    min-width: 200px;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(26, 26, 26, 0) 100%), #1a1a1a;
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    padding: 20px 28px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
-.card-rentabilidade-destaque span {
-    display: block;
+.rentabilidade-icone {
+    color: #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rentabilidade-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.rentabilidade-info span {
     font-size: 0.8rem;
     color: #8b949e;
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-weight: 600;
     margin-bottom: 4px;
 }
 
-.card-rentabilidade-destaque strong {
-    font-size: 1.8rem;
+.rentabilidade-info strong {
+    font-size: 2rem;
     color: #4caf50;
     line-height: 1;
+    font-weight: 800;
 }
+
+.detalhes-kpi-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.detalhes-kpi-item {
+    background: #111;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 16px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.kpi-label {
+    font-size: 0.8rem;
+    color: #8b949e;
+    font-weight: 600;
+}
+
+.kpi-valor {
+    font-size: 1.5rem;
+    color: #fff;
+    font-weight: 800;
+}
+
+.highlight-green { color: #4caf50; }
+.highlight-orange { color: #ff9800; }
+.highlight-red { color: #f44336; }
 
 .tabela-container {
     background: #1a1a1a;
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 16px;
-    padding: 24px;
-    overflow-x: auto;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
 }
 
-.tabela-container h2 {
+.tabela-header-premium {
+    padding: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.tabela-header-premium h2 {
     font-size: 1.25rem;
     color: #fff;
-    margin-top: 0;
-    margin-bottom: 20px;
+    margin: 0 0 4px 0;
+    font-weight: 700;
+}
+
+.tabela-subtitle {
+    font-size: 0.85rem;
+    color: #8b949e;
 }
 
 .ativos-table {
     width: 100%;
-    min-width: 600px; 
     border-collapse: collapse;
 }
 
 .ativos-table th {
     text-align: left;
-    padding: 12px 16px;
+    padding: 16px 24px;
     color: #8b949e;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .ativos-table td {
-    padding: 16px;
+    padding: 16px 24px;
     color: #fff;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     vertical-align: middle;
-    text-align: left; 
-}
-
-.ativos-table tbody tr {
-    transition: background-color 0.2s ease;
 }
 
 .ativos-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.ticker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ticker-icone {
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 180, 216, 0.15);
+    color: #00B4D8;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.9rem;
 }
 
 .ticker-destaque {
     font-weight: 700;
-    font-size: 1.1rem;
-    color: #fff;
+    font-size: 1.05rem;
+    letter-spacing: 0.5px;
 }
 
 .nome-empresa {
-    color: #aaa;
-    font-size: 0.9rem;
+    color: #8b949e;
+    font-size: 0.95rem;
 }
 
 .ativos-table th.col-valor,
 .ativos-table td.col-valor {
-    text-align: right;
+    text-align: center;
     font-family: monospace;
-    font-size: 1.05rem;
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
 .ativos-table th.col-status,
 .ativos-table td.col-status {
     text-align: center;
-    width: 120px;
+    width: 140px;
 }
 
 .status-badge {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    padding: 6px 12px;
+    gap: 6px;
+    padding: 6px 14px;
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.5px;
-    min-width: 80px; 
+    min-width: 90px;
 }
 
-@media (max-width: 768px) {
+.badge-dot {
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.badge-comprar { background: rgba(76, 175, 80, 0.12); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.2); }
+.badge-aguardar { background: rgba(255, 152, 0, 0.12); color: #ff9800; border: 1px solid rgba(255, 152, 0, 0.2); }
+.badge-vender { background: rgba(244, 67, 54, 0.12); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.2); }
+
+.estado-vazio-tabela {
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.vazio-icone {
+    font-size: 3.5rem;
+    opacity: 0.3;
+    margin-bottom: 16px;
+}
+
+.estado-vazio-tabela h3 {
+    color: #fff;
+    margin: 0 0 8px 0;
+}
+
+.estado-vazio-tabela p {
+    color: #8b949e;
+    margin: 0;
+}
+
+.detalhes-disclaimer {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 16px 24px;
+}
+
+.detalhes-disclaimer p {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #6e7681;
+}
+
+.detalhes-disclaimer strong {
+    color: #8b949e;
+}
+
+@media (max-width: 900px) {
     .detalhes-header {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 20px;
+        align-items: stretch;
+        gap: 24px;
+    }
+
+    .detalhes-titulo-wrap h1 {
+        font-size: 1.8rem;
     }
 
     .card-rentabilidade-destaque {
-        text-align: left;
-        width: 100%;
-        box-sizing: border-box;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 768px) {
+    .detalhes-content-wrapper { padding: 20px 16px; }
+
+    .detalhes-kpi-row {
+        flex-direction: column;
+        gap: 12px;
     }
 
     .tabela-container {
+        background: transparent;
+        border: none;
+        box-shadow: none;
         padding: 0;
+    }
+
+    .tabela-header-premium {
+        padding: 0 0 16px 0;
         background: transparent;
         border: none;
     }
 
-    .ativos-table,
-    .ativos-table tbody,
-    .ativos-table tr,
-    .ativos-table td {
-        display: block;
-        width: 100%;
-        box-sizing: border-box;
+    .ativos-table, .ativos-table tbody, .ativos-table tr, .ativos-table td {
+        display: block; width: 100%; box-sizing: border-box;
     }
 
-    .ativos-table {
-        min-width: 100%; 
-    }
-
-    .ativos-table thead {
-        display: none;
-    }
+    .ativos-table thead { display: none; }
 
     .ativos-table tr {
-        background: #1a1a1a;
-        margin-bottom: 16px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 16px;
+        background: #1a1a1a; margin-bottom: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px;
     }
 
     .ativos-table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        text-align: right !important; 
+        display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.03); text-align: right;
     }
 
-    .ativos-table td:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-    }
-
-    .ativos-table td.col-status,
-    .ativos-table td.col-valor {
-        width: 100% !important;
-    }
+    .ativos-table td:last-child { border-bottom: none; padding-bottom: 0; }
+    .ativos-table td.col-status, .ativos-table td.col-valor { width: 100%; text-align: right; }
 
     .ativos-table td::before {
-        content: attr(data-label);
-        color: #8b949e;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        font-weight: 600;
-        text-align: left;
+        content: attr(data-label); color: #8b949e; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; text-align: left;
     }
+
+    .ticker-wrapper { flex-direction: row-reverse; } 
 }
