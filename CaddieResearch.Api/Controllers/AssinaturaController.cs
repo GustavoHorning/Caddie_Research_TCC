@@ -13,7 +13,7 @@ namespace CaddieResearch.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // Exige que o usuário esteja logado
+    [Authorize]
     public class AssinaturaController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -23,7 +23,6 @@ namespace CaddieResearch.Api.Controllers
             _context = context;
         }
 
-        // Pega o ID do usuário de dentro do Token JWT
         private int ObterUsuarioLogadoId()
         {
             var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -36,7 +35,6 @@ namespace CaddieResearch.Api.Controllers
             int usuarioId = ObterUsuarioLogadoId();
             if (usuarioId == 0) return Unauthorized();
 
-            // Busca a assinatura ativa mais recente
             var assinatura = await _context.Assinaturas
                 .Where(a => a.UsuarioId == usuarioId && a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
                 .OrderByDescending(a => a.DataVencimento)
@@ -60,16 +58,15 @@ namespace CaddieResearch.Api.Controllers
             int usuarioId = ObterUsuarioLogadoId();
             if (usuarioId == 0) return Unauthorized();
 
-            var assinatura = await _context.Assinaturas
+            var assinaturasAtivas = await _context.Assinaturas
                 .Where(a => a.UsuarioId == usuarioId && a.Status == "Ativo")
-                .FirstOrDefaultAsync();
+                .ToListAsync();
 
-            if (assinatura != null)
+            foreach (var assinatura in assinaturasAtivas)
             {
                 assinatura.Status = "Cancelado";
             }
 
-            // A CORREÇÃO: Limpamos o plano da tabela do Usuário!
             var usuario = await _context.Usuarios.FindAsync(usuarioId);
             if (usuario != null)
             {
@@ -78,7 +75,6 @@ namespace CaddieResearch.Api.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Gera um novo JWT sem o acesso Black/Premium e manda pro React
             var novoToken = _tokenService.GenerateToken(usuario);
 
             return Ok(new { mensagem = "Plano cancelado.", token = novoToken });
