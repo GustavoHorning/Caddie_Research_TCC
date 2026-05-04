@@ -29,7 +29,6 @@ public class EmailService
                 <p>Se você não criou esta conta, pode ignorar este e-mail.</p>
             </div>";
 
-        // Envia o e-mail diretamente pela infraestrutura corporativa do Azure
         await emailClient.SendAsync(
             WaitUntil.Completed,
             senderAddress: senderAddress,

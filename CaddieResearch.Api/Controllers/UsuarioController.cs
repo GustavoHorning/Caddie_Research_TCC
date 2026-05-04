@@ -43,19 +43,15 @@ public class UsuarioController : ControllerBase
             if (usuario == null)
                 return NotFound(new { mensagem = "Usuário não encontrado." });
 
-            // LÓGICA DE EXPIRAÇÃO PREGUIÇOSA (LAZY EXPIRATION)
             var assinaturaAtiva = usuario.Assinaturas?
                 .Where(a => a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
                 .OrderByDescending(a => a.DataVencimento)
                 .FirstOrDefault();
 
-            // Se não tem assinatura válida no relógio, mas a tabela do Usuário ainda diz que ele tem plano...
             if (assinaturaAtiva == null && !string.IsNullOrEmpty(usuario.Plano))
             {
-                // Limpa o plano do usuário
                 usuario.Plano = null;
 
-                // Muda o status da assinatura velha de "Ativo" para "Expirado"
                 if (usuario.Assinaturas != null)
                 {
                     foreach(var ass in usuario.Assinaturas.Where(a => a.Status == "Ativo"))
@@ -70,7 +66,7 @@ public class UsuarioController : ControllerBase
                 usuario.Nome,
                 usuario.Email,
                 usuario.TipoPerfil,
-                Plano = assinaturaAtiva?.PlanoNome, // Retorna o plano validado pelo relógio
+                Plano = assinaturaAtiva?.PlanoNome, 
                 usuario.EhSocial,
                 usuario.FotoPerfilUrl,
                 dataVencimento = assinaturaAtiva != null ? assinaturaAtiva.DataVencimento.ToString("dd/MM/yyyy") : null

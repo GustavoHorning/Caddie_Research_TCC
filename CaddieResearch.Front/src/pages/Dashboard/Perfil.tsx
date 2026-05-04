@@ -16,6 +16,7 @@ export default function Perfil() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [tipoPerfil, setTipoPerfil] = useState('');
+  const [plano, setPlano] = useState<string | null>(null);
   const [ehSocial, setEhSocial] = useState(false); 
   const [vencimentoPlano, setVencimentoPlano] = useState<string | null>(null);
   const [statusPerfil, setStatusPerfil] = useState({ tipo: '', msg: '' });
@@ -40,10 +41,10 @@ export default function Perfil() {
         setNome(res.data.nome);
         setEmail(res.data.email);
         setTipoPerfil(res.data.tipoPerfil);
+        setPlano(res.data.plano || null);
         setEhSocial(res.data.ehSocial || false);
         setFotoPerfilUrl(res.data.fotoPerfilUrl || null);
         
-        // Pega a data de vencimento que a API enviou
         setVencimentoPlano(res.data.dataVencimento || null);
       } catch (error) {
         console.error("Erro ao carregar dados", error);
@@ -197,6 +198,10 @@ export default function Perfil() {
     }
   };
 
+  const planoExibicao = tipoPerfil === 'Gestor'
+      ? 'Gestor'
+      : plano ? plano : 'Gratuito (Free)';
+
   return (
       <div className="dashboard-layout">
         {tipoPerfil === 'Gestor' ? (
@@ -231,7 +236,6 @@ export default function Perfil() {
 
               <div className="perfil-header-info" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
 
-                {/* 1. O Avatar */}
                 <div className="perfil-avatar-wrapper" style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0 }}>
                   <div className="perfil-avatar-grande" style={{ width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A2D3E', border: '3px solid #00B4D8' }}>
                     {fotoPreview || fotoPerfilUrl ? (
@@ -249,10 +253,9 @@ export default function Perfil() {
 
                 <div className="perfil-header-text" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <h2>{nome || 'Carregando...'}</h2>
-                  <p>Plano atual: <strong style={{color: '#00B4D8'}}>{tipoPerfil || 'Carregando...'}</strong></p>
+                  <p>Plano atual: <strong style={{color: '#00B4D8'}}>{planoExibicao}</strong></p>
 
-                  {/* MOSTRA A DATA DE VENCIMENTO AQUI */}
-                  {vencimentoPlano && tipoPerfil !== 'Gestor' && (
+                  {vencimentoPlano && tipoPerfil !== 'Gestor' && plano && (
                       <p style={{ marginTop: '4px' }}>Válido até: <strong>{vencimentoPlano}</strong></p>
                   )}
 
@@ -276,7 +279,7 @@ export default function Perfil() {
 
               <div className="perfil-grid">
                 <div className="perfil-field">
-                  <label>E-mail</label>
+                  <label>Assinatura</label>
                   <input type="text" value={email} disabled />
                 </div>
 

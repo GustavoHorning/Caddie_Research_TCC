@@ -25,7 +25,6 @@ export default function ClientesGestor() {
                         <p>Gerenciamento de clientes e planos da plataforma.</p>
                     </div>
 
-                    {/* Cards de Métricas Rápidas */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '24px' }}>
                         <div className="gestor-card" style={{ textAlign: 'center', padding: '24px' }}>
                             <h4 style={{ color: '#a0aec0', marginBottom: '8px' }}>Total de Clientes</h4>

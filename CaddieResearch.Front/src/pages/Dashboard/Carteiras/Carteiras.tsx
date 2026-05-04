@@ -86,13 +86,17 @@ export default function Carteiras() {
 
                                 let qtdComprar: string | number = bloqueada ? '?' : 0;
                                 let qtdAguardar: string | number = bloqueada ? '?' : 0;
-                                let rentabilidade = bloqueada ? '??,??%' : "0,00%";
+                                let totalAtivos: number = 0;
+                                let indiceConviccao = bloqueada ? '??%' : "0%";
 
-                                if (carteiraAPI) {
-                                    if (carteiraAPI.rentabilidade) rentabilidade = carteiraAPI.rentabilidade;
-                                    if (carteiraAPI.ativos) {
-                                        qtdComprar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Comprar').length;
-                                        qtdAguardar = carteiraAPI.ativos.filter((a: any) => a.vies === 'Aguardar').length;
+                                if (carteiraAPI && carteiraAPI.ativos) {
+                                    const ativos = carteiraAPI.ativos;
+                                    totalAtivos = ativos.length;
+                                    qtdComprar = ativos.filter((a: any) => a.vies === 'Comprar').length;
+                                    qtdAguardar = ativos.filter((a: any) => a.vies === 'Aguardar').length;
+
+                                    if (totalAtivos > 0) {
+                                        indiceConviccao = `${Math.round((Number(qtdComprar) / totalAtivos) * 100)}%`;
                                     }
                                 }
 
@@ -121,9 +125,9 @@ export default function Carteiras() {
                                             </div>
 
                                             <div className="carteira-rentabilidade">
-                                                <span className="carteira-label">Rentabilidade Histórica</span>
-                                                <h2 className="carteira-valor" style={{ color: bloqueada ? '#8b949e' : '#4caf50' }}>
-                                                    +{rentabilidade}
+                                                <span className="carteira-label">Índice de Convicção</span>
+                                                <h2 className="carteira-valor" style={{ color: bloqueada ? '#8b949e' : '#00B4D8' }}>
+                                                    {indiceConviccao}
                                                 </h2>
                                             </div>
 

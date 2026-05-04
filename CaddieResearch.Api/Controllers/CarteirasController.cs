@@ -43,7 +43,6 @@ namespace CaddieResearch.Controllers
             }
             else
             {
-                // Verifica no banco de dados se a assinatura ainda está dentro da validade
                 var assinaturaValida = await _context.Assinaturas
                     .Where(a => a.UsuarioId == usuario.Id && a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
                     .OrderByDescending(a => a.DataVencimento)
@@ -69,7 +68,7 @@ namespace CaddieResearch.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize] // <-- ADICIONADO: Exige estar logado
+        [Authorize] 
         public async Task<ActionResult<Carteira>> GetCarteira(int id)
         {
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -81,7 +80,6 @@ namespace CaddieResearch.Controllers
             if (usuario == null)
                 return NotFound(new { mensagem = "Usuário não encontrado." });
 
-            // CALCULA O NÍVEL PERMITIDO IGUAL AO MÉTODO DE LISTAGEM
             bool isGestor = usuario.TipoPerfil == "Gestor" || usuario.TipoPerfil == "Admin";
             int nivelPermitido = 0;
 
@@ -116,7 +114,6 @@ namespace CaddieResearch.Controllers
                 return NotFound();
             }
 
-            // <-- A MÁGICA AQUI: Bloqueia se a carteira exigir um nível maior que o do usuário
             if (carteira.NivelAcesso > nivelPermitido)
             {
                 return StatusCode(403, new { mensagem = "Seu plano não permite acessar esta carteira." });

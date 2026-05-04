@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Assinaturas.css'
-import Navbar from "./Navbar.tsx";
+import Navbar from "./Navbar";
 
 const planos = [
   {

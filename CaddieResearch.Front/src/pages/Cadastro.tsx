@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './Cadastro.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Navbar from "./Navbar";
 
 interface Passo1 {
   nome: string;
@@ -122,17 +123,9 @@ export default function Cadastro() {
 
   return (
     <div className="cadastro-page">
+      <Navbar />
       <div className="cadastro-glow" />
       
-      <div style={{ position: 'absolute', top: '30px', left: '30px', zIndex: 10 }}>
-        <button
-            onClick={() => navigate('/')}
-            className="btn-voltar-site"
-        >
-            ← Voltar para o Site
-        </button>
-      </div>
-
       <div className="cadastro-form-container">
         <div className="cadastro-logo">
           Caddie <span className="cadastro-logo-highlight">Research</span>

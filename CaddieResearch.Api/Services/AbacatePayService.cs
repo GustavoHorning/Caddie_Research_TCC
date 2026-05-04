@@ -27,8 +27,6 @@ namespace CaddieResearch.Api.Services
 
         public async Task<string> GerarCheckoutAsync(string nomePlano, string metodo, int usuarioId)
         {
-            // Mapeia Plano + Método para o ID do Produto na AbacatePay
-            // ATENÇÃO: Amanhã você cria esses 6 produtos lá e cola os IDs aqui!
             string productId = (nomePlano.ToLower(), metodo.ToLower()) switch
             {
                 ("basic", "credito") => "prod_322yu06yqStXhpKaxhfjPQk2",
@@ -40,7 +38,6 @@ namespace CaddieResearch.Api.Services
                 _ => throw new Exception("Plano ou método de pagamento inválido.")
             };
 
-            // Se for pix, manda PIX, se for credito, manda CARD
             var metodosPagamento = metodo.ToLower() == "pix" ? new[] { "PIX" } : new[] { "CARD" };
 
             var payload = new
@@ -50,7 +47,6 @@ namespace CaddieResearch.Api.Services
                     new { id = productId, quantity = 1 }
                 },
                 methods = metodosPagamento,
-                // Redireciona de volta para o seu front-end após o pagamento
                 returnUrl = "http://localhost:5173/dashboard", 
                 completionUrl = $"http://localhost:5173/pagamento-sucesso?plano={nomePlano.ToLower()}&metodo={metodo.ToLower()}", 
                 metadata = new 

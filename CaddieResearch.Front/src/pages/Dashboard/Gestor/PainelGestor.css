@@ -38,6 +38,15 @@
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  justify-content: space-between;
+  min-height: 120px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gestor-metrica-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
 .gestor-metrica-label {
@@ -219,7 +228,10 @@
   color: #fff;
   font-size: 0.95rem;
   padding: 0 16px;
+  transition: all 0.2s ease;
+  outline: none;
 }
+
 
 .gestor-form-acoes {
   display: flex;
@@ -472,6 +484,35 @@
   color: #fff;
   font-size: 1.25rem;
   margin: 0 0 12px 0;
+}
+
+.gestor-tabela th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2); 
+}
+
+.gestor-tabela-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.gestor-tabela-wrapper::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+.gestor-tabela-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.gestor-tabela-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .gestor-modal-box p {

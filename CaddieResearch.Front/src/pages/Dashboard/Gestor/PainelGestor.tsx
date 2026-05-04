@@ -10,7 +10,8 @@ export default function PainelGestor() {
   const [carteirasDisponiveis, setCarteirasDisponiveis] = useState<any[]>([])
   const [carteiraAtivosId, setCarteiraAtivosId] = useState('')
   const [ativosTabela, setAtivosTabela] = useState<any[]>([])
-  const [termoBusca, setTermoBusca] = useState('') 
+  const [carregandoAtivos, setCarregandoAtivos] = useState(false)
+  const [termoBusca, setTermoBusca] = useState('')
 
   const [mostrarFormAtivo, setMostrarFormAtivo] = useState(false)
   const [formTicker, setFormTicker] = useState('')
@@ -37,11 +38,16 @@ export default function PainelGestor() {
   useEffect(() => {
     if (!carteiraAtivosId) return;
 
+    setCarregandoAtivos(true);
+    setMostrarFormAtivo(false); 
+    setTermoBusca(''); 
+
     api.get(`/carteiras/${carteiraAtivosId}`)
         .then(res => {
           setAtivosTabela(res.data.ativos || [])
         })
         .catch(err => console.error("Erro ao carregar ativos:", err))
+        .finally(() => setCarregandoAtivos(false)) // Tira o loading
   }, [carteiraAtivosId])
 
   const ativosFiltrados = ativosTabela.filter(ativo =>
@@ -89,8 +95,11 @@ export default function PainelGestor() {
         mostrarNotificacao("Novo ativo cadastrado com sucesso!", "sucesso")
       }
 
+      setCarregandoAtivos(true);
       const res = await api.get(`/carteiras/${carteiraAtivosId}`)
       setAtivosTabela(res.data.ativos || [])
+      setCarregandoAtivos(false);
+
       handleCancelarForm()
     } catch (error) {
       console.error(error)
@@ -118,13 +127,15 @@ export default function PainelGestor() {
       await api.delete(`/ativos/${ativoParaRemover.id}`);
       mostrarNotificacao(`${ativoParaRemover.ticker} removido da carteira!`, "sucesso");
 
+      setCarregandoAtivos(true);
       const res = await api.get(`/carteiras/${carteiraAtivosId}`);
       setAtivosTabela(res.data.ativos || []);
+      setCarregandoAtivos(false);
     } catch (error) {
       console.error(error);
       mostrarNotificacao("Erro ao remover o ativo.", "erro");
     } finally {
-      setAtivoParaRemover(null); 
+      setAtivoParaRemover(null);
     }
   }
 
@@ -168,7 +179,7 @@ export default function PainelGestor() {
 
               <div className="gestor-metrica-card">
                 <div className="gestor-metrica-header-kpi">
-                  <span className="gestor-metrica-label">Viés de Compra</span>
+                  <span className="gestor-metrica-label">Índice de Convicção</span>
                   <span className="gestor-metrica-badge" style={{ color: '#4caf50', background: 'rgba(76, 175, 80, 0.1)' }}>{pctComprar}%</span>
                 </div>
                 <span className="gestor-metrica-valor" style={{ color: '#4caf50' }}>{qtdComprar}</span>
@@ -237,7 +248,7 @@ export default function PainelGestor() {
                       <div className="gestor-campo-row">
                         <div className="gestor-campo">
                           <label>Preço Teto (R$)</label>
-                          <input type="number" placeholder="Ex: 42.50" value={formPrecoTeto} onChange={e => setFormPrecoTeto(e.target.value)} />
+                          <input type="number" step="0.01" min="0" placeholder="Ex: 42.50" value={formPrecoTeto} onChange={e => setFormPrecoTeto(e.target.value)} />
                         </div>
                         <div className="gestor-campo">
                           <label>Viés de Mercado</label>
@@ -271,7 +282,17 @@ export default function PainelGestor() {
                   </tr>
                   </thead>
                   <tbody>
-                  {ativosFiltrados.length > 0 ? (
+                  {carregandoAtivos ? (
+                      [1, 2, 3].map((skeleton) => (
+                          <tr key={`skeleton-${skeleton}`}>
+                            <td className="gestor-td-ticker"><div className="skeleton skeleton-text" style={{width: '60px', height: '20px'}}></div></td>
+                            <td className="gestor-td-empresa"><div className="skeleton skeleton-text" style={{width: '120px', height: '16px'}}></div></td>
+                            <td className="td-right"><div className="skeleton skeleton-text" style={{width: '80px', height: '20px', marginLeft: 'auto'}}></div></td>
+                            <td className="td-center"><div className="skeleton skeleton-text" style={{width: '70px', height: '24px', margin: '0 auto', borderRadius: '12px'}}></div></td>
+                            <td className="td-center"><div className="skeleton skeleton-text" style={{width: '60px', height: '24px', margin: '0 auto'}}></div></td>
+                          </tr>
+                      ))
+                  ) : ativosFiltrados.length > 0 ? (
                       ativosFiltrados.map((ativo, i) => (
                           <tr key={i}>
                             <td className="gestor-td-ticker" data-label="Ativo">{ativo.ticker}</td>
@@ -314,7 +335,7 @@ export default function PainelGestor() {
                   ) : (
                       <tr>
                         <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#8b949e' }}>
-                          Nenhum ativo encontrado para esta carteira.
+                          {termoBusca ? "Nenhum ativo encontrado para esta busca." : "Nenhum ativo cadastrado nesta carteira."}
                         </td>
                       </tr>
                   )}

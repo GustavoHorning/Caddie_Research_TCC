@@ -57,7 +57,6 @@ export default function DashboardHome() {
           </ul>
         </div>
 
-        {/* Proximos Eventos */}
         <div className="dash-card dash-card-eventos">
           <div className="dash-card-header">
             <h3>{`Pr\u00F3ximos Eventos`}</h3>

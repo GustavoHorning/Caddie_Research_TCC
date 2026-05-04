@@ -7,6 +7,8 @@ import { useGoogleLogin } from '@react-oauth/google'
 import { useMsal } from '@azure/msal-react'
 import { EventType } from '@azure/msal-browser'
 import { useNavigate } from 'react-router-dom';
+import Navbar from "./Navbar";
+
 
 function isUsuarioGestor(token: string) {
   try {
@@ -154,16 +156,7 @@ export default function Login() {
   return (
       
     <div className="wrapper">
-      <div style={{ position: 'absolute', top: '30px', left: '30px' }}>
-        <button
-            onClick={() => navigate('/')}
-            style={{ background: 'none', border: 'none', color: '#7a90a8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', padding: '0', transition: 'color 0.2s' }}
-            onMouseOver={(e) => e.currentTarget.style.color = '#fff'}
-            onMouseOut={(e) => e.currentTarget.style.color = '#7a90a8'}
-        >
-          ← Voltar para o Site
-        </button>
-      </div>
+      <Navbar />
       <div className="card">
         <div className="logo">Caddie <span>Research</span></div>
         

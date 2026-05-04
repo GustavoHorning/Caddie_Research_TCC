@@ -270,3 +270,17 @@
   .logo { font-size: 1.1rem; margin-bottom: 20px; }
   .btn-primary { font-size: 0.9rem; padding: 10px; }
 }
+
+
+.cadastro-page, .wrapper {
+  padding-top: 80px; 
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar {
+  z-index: 1000;
+}

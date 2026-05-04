@@ -3,6 +3,7 @@
   background-color: #0a121e;
   color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-align: center;
 }
 
 .produtos-container {
@@ -52,7 +53,7 @@
 
 .produto-card:hover {
   transform: translateY(-5px);
-  border-color: var(--card-color);
+  border-color: var('--card-color');
 }
 
 .produto-tag {

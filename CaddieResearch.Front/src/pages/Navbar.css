@@ -208,3 +208,17 @@
     min-width: 200px;
   }
 }
+
+.navbar-logo,
+.navbar-logo:hover,
+.navbar-logo:active,
+.navbar-logo:focus {
+  text-decoration: none !important;
+  outline: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+.logo-text, .logo-highlight {
+  text-decoration: none !important;
+}

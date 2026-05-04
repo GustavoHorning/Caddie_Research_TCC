@@ -28,11 +28,14 @@ export default function CarteiraDetalhes() {
             });
     }, [id, navigate]);
 
+    
     const ativos = carteira?.ativos || [];
     const totalAtivos = ativos.length;
     const qtdComprar = ativos.filter((a: any) => a.vies === 'Comprar').length;
-    const qtdAguardar = ativos.filter((a: any) => a.vies === 'Aguardar').length; 
+    const qtdAguardar = ativos.filter((a: any) => a.vies === 'Aguardar').length;
     const qtdVender = ativos.filter((a: any) => a.vies === 'Vender').length;
+
+    const indiceConviccao = totalAtivos > 0 ? Math.round((qtdComprar / totalAtivos) * 100) : 0;
 
     return (
         <div className="dashboard-layout">
@@ -75,37 +78,53 @@ export default function CarteiraDetalhes() {
                                     <h1>{carteira.nome}</h1>
                                     <p>Análise estratégica e recomendações atualizadas pelo nosso time de gestão.</p>
                                 </div>
+
                                 <div className="card-rentabilidade-destaque">
-                                    <div className="rentabilidade-icone">
+                                    <div className="rentabilidade-icone" style={{ background: 'rgba(0, 180, 216, 0.1)', color: '#00B4D8' }}>
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                                            <polyline points="17 6 23 6 23 12"></polyline>
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <circle cx="12" cy="12" r="6"></circle>
+                                            <circle cx="12" cy="12" r="2"></circle>
                                         </svg>
                                     </div>
                                     <div className="rentabilidade-info">
-                                        <span>Rentabilidade Histórica</span>
-                                        <strong>+{carteira.rentabilidade}%</strong>
+                                        <span>Índice de Convicção</span>
+                                        <strong style={{ color: '#00B4D8' }}>{indiceConviccao}% Compra</strong>
                                     </div>
                                 </div>
                             </div>
 
                             {totalAtivos > 0 && (
-                                <div className="detalhes-kpi-row">
-                                    <div className="detalhes-kpi-item">
-                                        <span className="kpi-label">Total de Ativos</span>
-                                        <strong className="kpi-valor">{totalAtivos}</strong>
+                                <div style={{ marginBottom: '32px' }}>
+                                    <div className="detalhes-kpi-row" style={{ marginBottom: '16px' }}>
+                                        <div className="detalhes-kpi-item">
+                                            <span className="kpi-label">Total de Ativos</span>
+                                            <strong className="kpi-valor">{totalAtivos}</strong>
+                                        </div>
+                                        <div className="detalhes-kpi-item">
+                                            <span className="kpi-label">Oportunidades (Comprar)</span>
+                                            <strong className="kpi-valor highlight-green">{qtdComprar}</strong>
+                                        </div>
+                                        <div className="detalhes-kpi-item">
+                                            <span className="kpi-label">Em Observação (Aguardar)</span>
+                                            <strong className="kpi-valor highlight-orange">{qtdAguardar}</strong>
+                                        </div>
+                                        <div className="detalhes-kpi-item">
+                                            <span className="kpi-label">Alerta de Saída (Vender)</span>
+                                            <strong className="kpi-valor highlight-red">{qtdVender}</strong>
+                                        </div>
                                     </div>
-                                    <div className="detalhes-kpi-item">
-                                        <span className="kpi-label">Oportunidades (Comprar)</span>
-                                        <strong className="kpi-valor highlight-green">{qtdComprar}</strong>
-                                    </div>
-                                    <div className="detalhes-kpi-item">
-                                        <span className="kpi-label">Em Observação (Aguardar)</span>
-                                        <strong className="kpi-valor highlight-orange">{qtdAguardar}</strong>
-                                    </div>
-                                    <div className="detalhes-kpi-item">
-                                        <span className="kpi-label">Alerta de Saída (Vender)</span>
-                                        <strong className="kpi-valor highlight-red">{qtdVender}</strong>
+
+                                    <div style={{ background: '#111', padding: '16px 20px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem', color: '#8b949e', fontWeight: 600 }}>
+                                            <span>Distribuição de Viés</span>
+                                            <span>Atualizado hoje</span>
+                                        </div>
+                                        <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                                            <div style={{ width: `${(qtdComprar / totalAtivos) * 100}%`, backgroundColor: '#4caf50', transition: 'width 1s ease-in-out' }} title={`Comprar: ${qtdComprar}`}></div>
+                                            <div style={{ width: `${(qtdAguardar / totalAtivos) * 100}%`, backgroundColor: '#ff9800', transition: 'width 1s ease-in-out' }} title={`Aguardar: ${qtdAguardar}`}></div>
+                                            <div style={{ width: `${(qtdVender / totalAtivos) * 100}%`, backgroundColor: '#f44336', transition: 'width 1s ease-in-out' }} title={`Vender: ${qtdVender}`}></div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -193,7 +212,7 @@ export default function CarteiraDetalhes() {
                     {!carregando && carteira && (
                         <div className="detalhes-disclaimer">
                             <p>
-                                <strong>Aviso Legal:</strong> As informações apresentadas nesta carteira têm caráter exclusivamente informativo e não constituem garantia de retornos futuros. O "Preço Teto" representa o valor máximo recomendado para aquisição do ativo visando margem de segurança, mas a decisão final de investimento é de inteira responsabilidade do cliente. Rentabilidade passada não é garantia de rentabilidade futura.
+                                <strong>Aviso Legal:</strong> As informações apresentadas nesta carteira têm caráter exclusivamente informativo e não constituem garantia de retornos futuros. O "Preço Teto" representa o valor máximo recomendado para aquisição do ativo visando margem de segurança, mas a decisão final de investimento é de inteira responsabilidade do cliente. <strong>O "Índice de Convicção" reflete o percentual de ativos com viés de compra no momento atual.</strong>
                             </p>
                         </div>
                     )}

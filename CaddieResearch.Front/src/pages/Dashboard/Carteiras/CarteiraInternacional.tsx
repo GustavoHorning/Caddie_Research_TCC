@@ -38,7 +38,6 @@ export default function CarteiraInternacional() {
   const [menuMobileAberto, setMenuMobileAberto] = useState(false)
   const navigate = useNavigate()
 
-  // --- BLOCO NOVO PARA TRAVAR A ROTA ---
   useEffect(() => {
     const verificarAcesso = async () => {
       try {
@@ -47,7 +46,6 @@ export default function CarteiraInternacional() {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        // Se não for Gestor nem Black, chuta pra fora!
         if (res.data.tipoPerfil !== 'Gestor' && res.data.plano !== 'Black') {
           navigate('/gerenciar-plano');
         }
@@ -57,7 +55,6 @@ export default function CarteiraInternacional() {
     };
     verificarAcesso();
   }, [navigate]);
-  // -------------------------------------
 
   return (
     <div className="dashboard-layout">

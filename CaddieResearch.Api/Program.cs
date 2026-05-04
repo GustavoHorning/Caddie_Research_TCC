@@ -7,23 +7,18 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adicionando os Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Banco de Dados na Azure SQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Os seus serviços atuais
 builder.Services.AddScoped<BlobService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<TokenService>();
 
-// O serviço de Pagamentos do AbacatePay
 builder.Services.AddHttpClient<AbacatePayService>();
 
-// Configuração do JWT
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "chave-fallback-super-longa-para-desenvolvimento-local";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -40,7 +35,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Liberação de CORS (para o React conseguir conversar com a API na nuvem)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
