@@ -1,7 +1,7 @@
 ﻿import React from 'react'
 import './Gestor/PainelGestor.css'
-import SidebarGestor from '../Dashboard/SidebarGestor'
-import TopBar from '../Dashboard/TopBar'
+import SidebarGestor from '../../components/SidebarGestor'
+import TopBar from '../../components/TopBar'
 
 const mockClientes = [
     { id: 1, nome: 'João Silva', email: 'joao.silva@email.com', plano: 'Black', status: 'Ativo', data: '10/01/2026' },

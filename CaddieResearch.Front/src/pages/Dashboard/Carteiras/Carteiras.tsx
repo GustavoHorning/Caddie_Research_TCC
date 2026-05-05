@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Carteiras.css'
-import Sidebar from '../Sidebar'
-import TopBar from '../TopBar'
+import Sidebar from '../../../components/Sidebar'
+import TopBar from '../../../components/TopBar'
 import api from '../../../services/api';
 import { Link } from 'react-router-dom';
 

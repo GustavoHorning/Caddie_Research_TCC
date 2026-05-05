@@ -2,7 +2,7 @@ import { useState } from 'react'
 import './DashboardLayout.css'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
-import DashboardHome from './DashboardHome'
+import DashboardHome from '../pages/Dashboard/DashboardHome'
 
 export default function DashboardLayout() {
   const [menuMobileAberto, setMenuMobileAberto] = useState(false)

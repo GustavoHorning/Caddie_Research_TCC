@@ -7,7 +7,7 @@ import { useGoogleLogin } from '@react-oauth/google'
 import { useMsal } from '@azure/msal-react'
 import { EventType } from '@azure/msal-browser'
 import { useNavigate } from 'react-router-dom';
-import Navbar from "./Navbar";
+import Navbar from "../components/Navbar";
 
 
 function isUsuarioGestor(token: string) {

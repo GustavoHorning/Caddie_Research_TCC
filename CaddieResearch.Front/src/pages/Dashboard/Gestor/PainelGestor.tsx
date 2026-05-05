@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import './PainelGestor.css'
-import TopBar from '../TopBar'
+import TopBar from '../../../components/TopBar'
 import api from '../../../services/api'
-import SidebarGestor from '../SidebarGestor'
+import SidebarGestor from '../../../components/SidebarGestor'
 
 export default function PainelGestor() {
   const [menuMobileAberto, setMenuMobileAberto] = useState(false)

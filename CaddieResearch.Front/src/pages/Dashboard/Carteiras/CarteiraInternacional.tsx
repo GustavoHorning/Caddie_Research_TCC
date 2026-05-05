@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../../services/api'
 import './CarteiraInternacional.css'
-import Sidebar from '../Sidebar'
-import TopBar from '../TopBar'
+import Sidebar from '../../../components/Sidebar'
+import TopBar from '../../../components/TopBar'
 
 const subcarteiras = [
   { nome: 'Dollar Income', ativos: 5 },

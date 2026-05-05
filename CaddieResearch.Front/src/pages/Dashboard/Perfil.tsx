@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './Perfil.css';
-import Sidebar from './Sidebar';
-import TopBar from './TopBar';
+import Sidebar from '../../components/Sidebar';
+import TopBar from '../../components/TopBar';
 import { useNavigate } from 'react-router-dom';
-import SidebarGestor from './SidebarGestor';
+import SidebarGestor from '../../components/SidebarGestor';
 
 export default function Perfil() {
   const [mostrarModalExcluirConta, setMostrarModalExcluirConta] = useState(false);

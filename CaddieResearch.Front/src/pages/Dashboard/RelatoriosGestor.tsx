@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react'
 import './Gestor/PainelGestor.css' 
-import SidebarGestor from '../Dashboard/SidebarGestor'
-import TopBar from '../Dashboard/TopBar'
+import SidebarGestor from '../../components/SidebarGestor'
+import TopBar from '../../components/TopBar'
 
 const relatoriosRecentes = [
     { id: 1, titulo: 'Análise VALE3 - Abril 2026', carteira: 'Dividendos', tempo: 'há 2 dias' },

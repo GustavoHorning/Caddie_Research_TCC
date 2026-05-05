@@ -1,8 +1,8 @@
 ﻿import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import Sidebar from '../pages/Dashboard/Sidebar';
-import TopBar from '../pages/Dashboard/TopBar';
+import Sidebar from '../components/Sidebar';
+import TopBar from '../components/TopBar';
 import './CarteiraDetalhes.css';
 
 export default function CarteiraDetalhes() {

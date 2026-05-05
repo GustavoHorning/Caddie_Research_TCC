@@ -2,7 +2,7 @@ import { useState } from 'react';
 import './Cadastro.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import Navbar from "./Navbar";
+import Navbar from "../components/Navbar";
 
 interface Passo1 {
   nome: string;

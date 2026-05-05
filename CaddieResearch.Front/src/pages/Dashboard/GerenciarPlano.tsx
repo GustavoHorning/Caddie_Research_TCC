@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useNavigate, Link } from 'react-router-dom'
-import Sidebar from '../../pages/Dashboard/Sidebar'
-import TopBar from '../../pages/Dashboard/TopBar'
+import Sidebar from '../../components/Sidebar'
+import TopBar from '../../components/TopBar'
 
 import './GerenciarPlano.css'
 import '../Assinaturas.css'
