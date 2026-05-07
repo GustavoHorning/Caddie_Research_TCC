@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import './Pagamento.css'
-
+import api from '../services/api'
 export default function PagamentoSucesso() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -20,7 +19,7 @@ export default function PagamentoSucesso() {
         const token = localStorage.getItem('caddie_token');
         
         for (let i = 0; i < 15; i++) {
-          const res = await axios.get(`http://localhost:5194/api/pagamento/verificar-status?planoDesejado=${plano}`, {
+          const res = await api.get(`/api/pagamento/verificar-status?planoDesejado=${plano}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
 

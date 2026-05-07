@@ -1,7 +1,7 @@
 import React from 'react'
 import { useState } from 'react'
-import axios from 'axios'
 import './Login.css'
+import api from '../services/api'
 
 interface Props {
   onVoltar: () => void
@@ -39,7 +39,7 @@ export default function EsqueciSenha({ onVoltar }: Props) {
     setCarregando(true)
 
     try {
-      await axios.post('http://localhost:5194/api/auth/esqueci-senha', { Email: email });
+      await api.post('/api/auth/esqueci-senha', { Email: email });
       setEtapa('enviado'); 
     } catch (error: any) {
       if (error.response && error.response.data && error.response.data.mensagem) {
@@ -77,7 +77,7 @@ export default function EsqueciSenha({ onVoltar }: Props) {
     setCarregando(true)
 
     try {
-      await axios.post('http://localhost:5194/api/auth/redefinir-senha', {
+      await api.post('/api/auth/redefinir-senha', {
         Email: email,
         Token: codigo, 
         NovaSenha: novaSenha

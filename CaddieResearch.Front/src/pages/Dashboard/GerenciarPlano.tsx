@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import axios from 'axios'
 import { useNavigate, Link } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import TopBar from '../../components/TopBar'
+import api from '../../services/api'
 
 import './GerenciarPlano.css'
 import '../Assinaturas.css'
@@ -44,7 +44,7 @@ export default function MeuPlano() {
     const fetchPlanoAtual = async () => {
       try {
         const token = localStorage.getItem('caddie_token')
-        const response = await axios.get('http://localhost:5194/api/assinatura/atual', {
+        const response = await api.get('/api/assinatura/atual', {
           headers: { Authorization: `Bearer ${token}` }
         })
         setPlanoAtualNome(response.data.plano)
@@ -68,7 +68,7 @@ export default function MeuPlano() {
   async function handleCancelar() {
     try {
       const token = localStorage.getItem('caddie_token')
-      const response = await axios.post('http://localhost:5194/api/assinatura/cancelar', {}, {
+      const response = await api.post('/api/assinatura/cancelar', {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
 

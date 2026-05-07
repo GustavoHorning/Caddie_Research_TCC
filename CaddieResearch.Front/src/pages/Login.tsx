@@ -1,4 +1,3 @@
-import axios from 'axios'
 import React, { useEffect } from 'react'
 import { useState } from 'react'
 import './Login.css'
@@ -8,6 +7,7 @@ import { useMsal } from '@azure/msal-react'
 import { EventType } from '@azure/msal-browser'
 import { useNavigate } from 'react-router-dom';
 import Navbar from "../components/Navbar";
+import api from '../services/api';
 
 
 function isUsuarioGestor(token: string) {
@@ -63,7 +63,7 @@ export default function Login() {
     onSuccess: async (tokenResponse) => {
       setCarregando(true)
       try {
-        const response = await axios.post('http://localhost:5194/api/auth/login-google', {
+        const response = await api.post('/api/auth/login-google', {
           Token: tokenResponse.access_token
         })
         localStorage.setItem('caddie_token', response.data.token)
@@ -99,7 +99,7 @@ export default function Login() {
 
   const enviarTokenMicrosoftParaOCSharp = async (token: string) => {
     try {
-      const response = await axios.post('http://localhost:5194/api/auth/login-microsoft', {
+      const response = await api.post('/api/auth/login-microsoft', {
         Token: token
       })
       localStorage.setItem('caddie_token', response.data.token)
@@ -127,7 +127,7 @@ export default function Login() {
     setCarregando(true)
 
     try {
-      const response = await axios.post('http://localhost:5194/api/auth/login', {
+      const response = await api.post('/api/auth/login', {
         Email: email,
         Senha: password
       })

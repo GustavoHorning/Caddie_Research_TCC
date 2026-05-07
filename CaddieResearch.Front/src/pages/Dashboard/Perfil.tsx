@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import './Perfil.css';
 import Sidebar from '../../components/Sidebar';
 import TopBar from '../../components/TopBar';
 import { useNavigate } from 'react-router-dom';
 import SidebarGestor from '../../components/SidebarGestor';
+import api from '../../services/api';
 
 export default function Perfil() {
   const [mostrarModalExcluirConta, setMostrarModalExcluirConta] = useState(false);
@@ -35,7 +35,7 @@ export default function Perfil() {
     const carregarDados = async () => {
       try {
         const token = localStorage.getItem('caddie_token');
-        const res = await axios.get('http://localhost:5194/api/usuario/meu-perfil', {
+        const res = await api.get('/api/usuario/meu-perfil', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setNome(res.data.nome);
@@ -57,7 +57,7 @@ export default function Perfil() {
     setIsExcluindoConta(true);
     try {
       const token = localStorage.getItem('caddie_token');
-      await axios.delete('http://localhost:5194/api/usuario/excluir-conta', {
+      await api.delete('/api/usuario/excluir-conta',{
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -87,7 +87,7 @@ export default function Perfil() {
 
     try {
       const token = localStorage.getItem('caddie_token');
-      const res = await axios.post('http://localhost:5194/api/usuario/upload-foto', formData, {
+      const res = await api.post('/api/usuario/upload-foto', formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data' 
@@ -112,7 +112,7 @@ export default function Perfil() {
 
     try {
       const token = localStorage.getItem('caddie_token');
-      await axios.delete('http://localhost:5194/api/usuario/remover-foto', {
+      await api.delete('/api/usuario/remover-foto', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -136,7 +136,7 @@ export default function Perfil() {
     
     try {
       const token = localStorage.getItem('caddie_token');
-      await axios.put('http://localhost:5194/api/usuario/atualizar',
+      await api.put('/api/usuario/atualizar',
           JSON.stringify(nome),
           { headers: {
               'Authorization': `Bearer ${token}`,
@@ -168,7 +168,7 @@ export default function Perfil() {
 
     try {
       const token = localStorage.getItem('caddie_token');
-      await axios.put('http://localhost:5194/api/usuario/alterar-senha',
+      await api.put('/api/usuario/alterar-senha',
           { SenhaAtual: senhaAtual, NovaSenha: novaSenha },
           { headers: { Authorization: `Bearer ${token}` }}
       );

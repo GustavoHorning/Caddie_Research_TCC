@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import './Cadastro.css';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Navbar from "../components/Navbar";
+import api from '../services/api';
 
 interface Passo1 {
   nome: string;
@@ -64,7 +64,7 @@ export default function Cadastro() {
     if (senhaValida) {
       setCarregando(true);
       try {
-        await axios.post('http://localhost:5194/api/auth/cadastrar', {
+        await api.post('/api/auth/cadastrar', {
           Nome: dados.nome,
           Email: dados.email,
           Senha: senha.senha

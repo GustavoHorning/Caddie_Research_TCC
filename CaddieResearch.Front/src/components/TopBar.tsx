@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
 import "./TopBar.css";
 import { useNavigate } from 'react-router-dom';
+import api from "../services/api.tsx";
 
 interface UserProfile {
   nome: string;
@@ -26,7 +26,7 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
     const carregarPerfil = async () => {
       try {
         const token = localStorage.getItem('caddie_token');
-        const response = await axios.get('http://localhost:5194/api/usuario/meu-perfil', {
+        const response = await api.get('/api/usuario/meu-perfil',  {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUser(response.data);
