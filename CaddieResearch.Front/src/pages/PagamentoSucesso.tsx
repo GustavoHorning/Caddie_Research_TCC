@@ -9,6 +9,7 @@ export default function PagamentoSucesso() {
   const effectRan = useRef(false)
   
   const plano = searchParams.get('plano')
+  
 
   useEffect(() => {
     if (effectRan.current) return
