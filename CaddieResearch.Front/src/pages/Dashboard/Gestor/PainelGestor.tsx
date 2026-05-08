@@ -23,9 +23,10 @@ export default function PainelGestor() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastTipo, setToastTipo] = useState<'sucesso' | 'erro'>('sucesso');
   const [ativoParaRemover, setAtivoParaRemover] = useState<{id: number, ticker: string} | null>(null);
-
+  const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
+  
   useEffect(() => {
-    api.get('/carteiras')
+    api.get('/api/carteiras', configSeguranca)
         .then(res => {
           setCarteirasDisponiveis(res.data)
           if (res.data.length > 0) {
@@ -40,14 +41,14 @@ export default function PainelGestor() {
 
     setCarregandoAtivos(true);
     setMostrarFormAtivo(false); 
-    setTermoBusca(''); 
+    setTermoBusca('');
 
-    api.get(`/carteiras/${carteiraAtivosId}`)
+    api.get(`/api/carteiras/${carteiraAtivosId}`, configSeguranca)
         .then(res => {
           setAtivosTabela(res.data.ativos || [])
         })
         .catch(err => console.error("Erro ao carregar ativos:", err))
-        .finally(() => setCarregandoAtivos(false)) // Tira o loading
+        .finally(() => setCarregandoAtivos(false))
   }, [carteiraAtivosId])
 
   const ativosFiltrados = ativosTabela.filter(ativo =>
@@ -88,15 +89,15 @@ export default function PainelGestor() {
 
     try {
       if (ativoEditandoId) {
-        await api.put(`/ativos/${ativoEditandoId}`, payload)
+        await api.put(`/api/ativos/${ativoEditandoId}`, payload, configSeguranca)        
         mostrarNotificacao("Recomendação atualizada com sucesso!", "sucesso")
       } else {
-        await api.post('/ativos', payload)
+        await api.post('/api/ativos', payload, configSeguranca)
         mostrarNotificacao("Novo ativo cadastrado com sucesso!", "sucesso")
       }
 
       setCarregandoAtivos(true);
-      const res = await api.get(`/carteiras/${carteiraAtivosId}`)
+      const res = await api.get(`/api/carteiras/${carteiraAtivosId}`, configSeguranca)
       setAtivosTabela(res.data.ativos || [])
       setCarregandoAtivos(false);
 
@@ -124,11 +125,11 @@ export default function PainelGestor() {
     if (!ativoParaRemover) return;
 
     try {
-      await api.delete(`/ativos/${ativoParaRemover.id}`);
+      await api.delete(`/api/ativos/${ativoParaRemover.id}`, configSeguranca);
       mostrarNotificacao(`${ativoParaRemover.ticker} removido da carteira!`, "sucesso");
 
       setCarregandoAtivos(true);
-      const res = await api.get(`/carteiras/${carteiraAtivosId}`);
+      const res = await api.get(`/api/carteiras/${carteiraAtivosId}`, configSeguranca);
       setAtivosTabela(res.data.ativos || []);
       setCarregandoAtivos(false);
     } catch (error) {

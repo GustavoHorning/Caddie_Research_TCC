@@ -22,7 +22,10 @@ export default function Carteiras() {
     const [carregando, setCarregando] = useState(true);
 
     useEffect(() => {
-        api.get('/carteiras')
+        const token = localStorage.getItem('caddie_token');
+        api.get('/api/carteiras', {
+            headers: { Authorization: `Bearer ${token}` }
+        })
             .then((response) => {
                 setCarteirasAutorizadas(response.data);
                 setCarregando(false);

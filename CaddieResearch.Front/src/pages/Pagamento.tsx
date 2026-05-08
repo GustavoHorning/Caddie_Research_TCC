@@ -50,8 +50,9 @@ export default function Pagamento() {
       if (!usuarioIdReal || isNaN(usuarioIdReal)) {
         throw new Error("Usuário não autenticado ou token inválido. Faça login novamente.");
       }
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://caddieresearch-api-gnewb5eebrckadfk.brazilsouth-01.azurewebsites.net';
-      const response = await fetch(`${baseUrl}/api/pagamento/checkout`, {        
+      const urlLocal = 'http://localhost:5194';
+      const urlAzure = 'https://caddieresearch-api-gnewb5eebrckadfk.brazilsouth-01.azurewebsites.net';
+      const baseUrl = import.meta.env.DEV ? urlLocal : urlAzure;      const response = await fetch(`${baseUrl}/api/pagamento/checkout`, {        
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

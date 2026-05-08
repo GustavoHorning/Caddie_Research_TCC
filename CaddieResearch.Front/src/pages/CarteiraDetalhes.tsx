@@ -13,7 +13,11 @@ export default function CarteiraDetalhes() {
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
     useEffect(() => {
-        api.get(`/carteiras/${id}`)
+        const token = localStorage.getItem('caddie_token');
+
+        api.get(`/api/carteiras/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
             .then((response) => {
                 setCarteira(response.data);
                 setCarregando(false);

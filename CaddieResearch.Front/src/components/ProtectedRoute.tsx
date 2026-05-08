@@ -21,7 +21,9 @@ export default function ProtectedRoute({ children, roleRequired, clientOnly }: P
             }
 
             try {
-                const res = await api.get('/usuario/meu-perfil');
+                const res = await api.get('/api/usuario/meu-perfil', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
                 const tipoPerfil = res.data.tipoPerfil;
 
                 if (roleRequired === 'Gestor' && tipoPerfil !== 'Gestor') {
