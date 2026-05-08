@@ -53,7 +53,7 @@
 
 .produto-card:hover {
   transform: translateY(-5px);
-  border-color: var('--card-color');
+  //border-color: var(--card-color);
 }
 
 .produto-tag {
