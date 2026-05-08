@@ -20,6 +20,8 @@ public class Usuario
     public string SenhaHash { get; set; } = string.Empty;
     
     public bool EmailConfirmado { get; set; } = false; 
+    [MaxLength(100)]
+    public string? TokenConfirmacaoEmail { get; set; }
 
     [Required]
     [MaxLength(20)]

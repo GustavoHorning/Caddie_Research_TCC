@@ -18,6 +18,7 @@ import Perfil from "./pages/Dashboard/Perfil";
 
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ConfirmarEmail from "./pages/ConfirmarEmail.tsx";
 
 function App() {
     return (
@@ -27,6 +28,7 @@ function App() {
                 <Route path="/cadastro" element={<Cadastro />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/planos" element={<Assinaturas />} />
+                <Route path="/confirmar-email" element={<ConfirmarEmail />} />
                 <Route path="/pagamento-sucesso" element={<PagamentoSucesso />} />
 
                 <Route path="/home" element={<ProtectedRoute clientOnly><DashboardLayout /></ProtectedRoute>} />
