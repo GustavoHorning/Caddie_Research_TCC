@@ -39,6 +39,7 @@ namespace CaddieResearch.Api.Services
             };
 
             var metodosPagamento = metodo.ToLower() == "pix" ? new[] { "PIX" } : new[] { "CARD" };
+            string frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
 
             var payload = new
             {
@@ -47,8 +48,8 @@ namespace CaddieResearch.Api.Services
                     new { id = productId, quantity = 1 }
                 },
                 methods = metodosPagamento,
-                returnUrl = "http://localhost:5173/dashboard", 
-                completionUrl = $"http://localhost:5173/pagamento-sucesso?plano={nomePlano.ToLower()}&metodo={metodo.ToLower()}", 
+                returnUrl = $"{frontendUrl}/dashboard",
+                completionUrl = $"{frontendUrl}/pagamento-sucesso?plano={nomePlano.ToLower()}&metodo={metodo.ToLower()}",                
                 metadata = new 
                 { 
                     origem = "caddie-research-tcc",
