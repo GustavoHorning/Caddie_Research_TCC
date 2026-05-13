@@ -4,7 +4,7 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import './CarteiraDetalhes.css';
-
+import CardAtivo from '../components/CardAtivo'; 
 export default function CarteiraDetalhes() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -146,64 +146,22 @@ export default function CarteiraDetalhes() {
                         </div>
 
                         {carregando ? (
-                            <table className="ativos-table">
-                                <thead>
-                                <tr>
-                                    <th>Ativo</th>
-                                    <th>Empresa</th>
-                                    <th className="col-valor">Preço Teto</th>
-                                    <th className="col-status">Viés</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {[1, 2, 3, 4, 5].map((item) => (
-                                    <tr key={item}>
-                                        <td data-label="Ativo"><div className="skeleton skeleton-text" style={{ width: '60px', height: '24px', borderRadius: '6px' }}></div></td>
-                                        <td data-label="Empresa"><div className="skeleton skeleton-text" style={{ width: '140px', height: '16px' }}></div></td>
-                                        <td className="col-valor" data-label="Preço Teto"><div className="skeleton skeleton-text" style={{ width: '80px', height: '16px', marginLeft: 'auto' }}></div></td>
-                                        <td className="col-status" data-label="Viés"><div className="skeleton skeleton-text" style={{ width: '90px', height: '28px', borderRadius: '20px', margin: '0 auto' }}></div></td>
-                                    </tr>
+                            <div className="ativos-grid">
+                                {[1, 2, 3, 4].map(i => (
+                                    <div key={i} className="skeleton" style={{ height: '220px', borderRadius: '12px' }}></div>
                                 ))}
-                                </tbody>
-                            </table>
+                            </div>
                         ) : totalAtivos > 0 ? (
-                            <table className="ativos-table">
-                                <thead>
-                                <tr>
-                                    <th>Ativo</th>
-                                    <th>Empresa</th>
-                                    <th className="col-valor">Preço Teto (R$)</th>
-                                    <th className="col-status">Viés Analítico</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {ativos.map((ativo: any, index: number) => {
-                                    const isComprar = ativo.vies === 'Comprar';
-                                    const isVender = ativo.vies === 'Vender';
-
-                                    return (
-                                        <tr key={index}>
-                                            <td data-label="Ativo">
-                                                <div className="ticker-wrapper">
-                                                    <div className="ticker-icone">{ativo.ticker.substring(0, 1)}</div>
-                                                    <span className="ticker-destaque">{ativo.ticker}</span>
-                                                </div>
-                                            </td>
-                                            <td className="nome-empresa" data-label="Empresa">{ativo.nomeEmpresa || '---'}</td>
-                                            <td className="col-valor" data-label="Preço Teto">
-                                                {ativo.precoTeto?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
-                                            </td>
-                                            <td className="col-status" data-label="Viés Analítico">
-                                                <span className={`status-badge badge-${ativo.vies.toLowerCase()}`}>
-                                                    {isComprar && <span className="badge-dot"></span>}
-                                                    {ativo.vies}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                </tbody>
-                            </table>
+                            <div className="ativos-grid">
+                                {ativos.map((ativo: any, index: number) => (
+                                    <CardAtivo
+                                        key={index}
+                                        ticker={ativo.ticker}
+                                        vies={ativo.vies}
+                                        precoTeto={ativo.precoTeto}
+                                    />
+                                ))}
+                            </div>
                         ) : (
                             <div className="estado-vazio-tabela">
                                 <div className="vazio-icone">📭</div>

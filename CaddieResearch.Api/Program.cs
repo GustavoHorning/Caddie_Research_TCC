@@ -18,6 +18,10 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddHttpClient<AbacatePayService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<AcoesService>();
+
+builder.Services.AddScoped<AcoesService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "chave-fallback-super-longa-para-desenvolvimento-local";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -1,0 +1,106 @@
+﻿/* CardAtivo.css */
+.card-ativo {
+    background: #1e1e24; /* Fundo escuro do card */
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    color: #ffffff;
+}
+
+.card-ativo:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.ativo-header {
+    display: flex; /* Isso coloca a logo ao lado do texto! */
+    align-items: center;
+    gap: 12px;
+}
+
+.ativo-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: contain;
+    background: #ffffff;
+    padding: 4px;
+}
+
+.ativo-logo-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #00B4D8;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.ativo-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.ativo-symbol {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.ativo-name {
+    font-size: 12px;
+    color: #8b949e;
+}
+
+.ativo-realtime {
+    /* Removemos o fundo estranho e deixamos limpo */
+    display: flex;
+    flex-direction: column;
+}
+
+.preco-label {
+    font-size: 11px;
+    color: #8b949e;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.ativo-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.ativo-price {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.ativo-change {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.ativo-change.positive { color: #10b981; }
+.ativo-change.negative { color: #ef4444; }
+
+.ativo-recomendacao {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-ativo.error, .card-ativo.skeleton {
+    align-items: center;
+    justify-content: center;
+    color: #8b949e;
+}
