@@ -22,6 +22,8 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<AcoesService>();
 
 builder.Services.AddScoped<AcoesService>();
+builder.Services.AddHttpClient<InternacionalService>();
+builder.Services.AddScoped<InternacionalService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "chave-fallback-super-longa-para-desenvolvimento-local";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
