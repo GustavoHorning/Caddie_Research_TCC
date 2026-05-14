@@ -4,7 +4,9 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import './CarteiraDetalhes.css';
-import CardAtivo from '../components/CardAtivo'; 
+import CardAtivo from '../components/CardAtivo';
+import CardInternacional from '../components/CardInternacional'; 
+
 export default function CarteiraDetalhes() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -38,6 +40,7 @@ export default function CarteiraDetalhes() {
     const qtdComprar = ativos.filter((a: any) => a.vies === 'Comprar').length;
     const qtdAguardar = ativos.filter((a: any) => a.vies === 'Aguardar').length;
     const qtdVender = ativos.filter((a: any) => a.vies === 'Vender').length;
+    const isInternacional = carteira?.id === 3;
 
     const indiceConviccao = totalAtivos > 0 ? Math.round((qtdComprar / totalAtivos) * 100) : 0;
 
@@ -154,12 +157,21 @@ export default function CarteiraDetalhes() {
                         ) : totalAtivos > 0 ? (
                             <div className="ativos-grid">
                                 {ativos.map((ativo: any, index: number) => (
-                                    <CardAtivo
-                                        key={index}
-                                        ticker={ativo.ticker}
-                                        vies={ativo.vies}
-                                        precoTeto={ativo.precoTeto}
-                                    />
+                                    isInternacional ? (
+                                        <CardInternacional
+                                            key={index}
+                                            ticker={ativo.ticker}
+                                            vies={ativo.vies}
+                                            precoTeto={ativo.precoTeto}
+                                        />
+                                    ) : (
+                                        <CardAtivo
+                                            key={index}
+                                            ticker={ativo.ticker}
+                                            vies={ativo.vies}
+                                            precoTeto={ativo.precoTeto}
+                                        />
+                                    )
                                 ))}
                             </div>
                         ) : (
