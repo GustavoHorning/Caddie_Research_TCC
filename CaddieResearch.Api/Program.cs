@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using SeuProjeto.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,8 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddHttpClient<AbacatePayService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<AcoesService>();
+builder.Services.AddHttpClient<TaxasMacroeconomicasService>();
+
 
 builder.Services.AddScoped<AcoesService>();
 builder.Services.AddHttpClient<InternacionalService>();

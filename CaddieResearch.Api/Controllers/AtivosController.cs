@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using CaddieResearch.Models;
 using CaddieResearch.Api.Data;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System;
 
 namespace CaddieResearch.Controllers
 {
@@ -16,6 +19,8 @@ namespace CaddieResearch.Controllers
             _context = context;
         }
         
+        
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletarAtivo(int id)
         {
@@ -58,7 +63,13 @@ namespace CaddieResearch.Controllers
 
             ativoBanco.PrecoTeto = ativoAtualizado.PrecoTeto;
             ativoBanco.Vies = ativoAtualizado.Vies;
-    
+            ativoBanco.NomeEmpresa = ativoAtualizado.NomeEmpresa; 
+            ativoBanco.Rentabilidade = ativoAtualizado.Rentabilidade;
+            ativoBanco.Vencimento = ativoAtualizado.Vencimento;
+            ativoBanco.Liquidez = ativoAtualizado.Liquidez;
+
+            ativoBanco.DataEntrada = ativoAtualizado.DataEntrada;
+            ativoBanco.Categoria = ativoAtualizado.Categoria;
 
             await _context.SaveChangesAsync();
 
