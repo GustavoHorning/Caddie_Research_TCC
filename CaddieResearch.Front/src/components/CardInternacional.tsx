@@ -16,9 +16,11 @@ interface CardInternacionalProps {
     ticker: string;
     vies?: string;
     precoTeto?: number;
+    dataEntrada?: string;
+    categoria?: string;
 }
 
-export default function CardInternacional({ ticker, vies, precoTeto }: CardInternacionalProps) {
+export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada, categoria }: CardInternacionalProps) {
     const [cotacao, setCotacao] = useState<CotacaoIntProps | null>(null);
     const [carregando, setCarregando] = useState(true);
     const [imgErro, setImgErro] = useState(false);
@@ -47,7 +49,7 @@ export default function CardInternacional({ ticker, vies, precoTeto }: CardInter
             <div className="card-ativo error" style={{ minHeight: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                 <span style={{ fontSize: '28px', marginBottom: '8px' }}>⚠️</span>
                 <span style={{ color: '#8b949e', fontSize: '14px' }}>
-                    Ativo <strong style={{ color: '#fff' }}>{ticker}</strong> indisponível ou não encontrado.
+                    Ativo <strong style={{ color: '#fff' }}>{ticker}</strong> indisponível.
                 </span>
             </div>
         );
@@ -56,8 +58,11 @@ export default function CardInternacional({ ticker, vies, precoTeto }: CardInter
     const isPositivo = cotacao.changePercent >= 0;
     const corVies = vies === 'Comprar' ? '#10b981' : vies === 'Vender' ? '#ef4444' : '#f59e0b';
 
+    const viesExibicao = vies === 'Comprar' ? 'Alocar' : vies === 'Vender' ? 'Vender' : 'Aguardar';
+    const dataFormatada = dataEntrada ? dataEntrada.substring(0, 10).split('-').reverse().join('/') : '--/--/----';
+
     return (
-        <div className="card-ativo">
+        <div className="card-ativo" style={{ borderTop: '3px solid #3b82f6' }}>
             <div className="ativo-header">
                 {cotacao.logoUrl && !imgErro ? (
                     <img
@@ -72,51 +77,45 @@ export default function CardInternacional({ ticker, vies, precoTeto }: CardInter
                     </div>
                 )}
 
-                <div className="ativo-info">
-                    <h3 className="ativo-symbol" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        {cotacao.symbol}
+                <div className="ativo-info" style={{ overflow: 'hidden' }}>
+                    <h3 className="ativo-symbol" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', margin: 0, width: '100%' }}>
+                        <span style={{ lineHeight: '1.2', flex: 1 }}>{cotacao.symbol}</span>
                         <span style={{
-                            fontSize: '9px',
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            color: '#a1a1aa',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontWeight: 600,
-                            letterSpacing: '0.5px'
+                            fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
+                            padding: '3px 6px', borderRadius: '4px', fontWeight: 700,
+                            letterSpacing: '0.5px', flexShrink: 0, marginTop: '2px'
                         }}>
                             EUA
                         </span>
                     </h3>
-                    <span className="ativo-name" style={{ color: '#8b949e' }}>
-                        {cotacao.shortName ? cotacao.shortName.substring(0, 20) : "Bolsa Americana"}
+                    <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>
+                        {categoria ? `Setor: ${categoria}` : (cotacao.shortName ? cotacao.shortName.substring(0, 20) : "Bolsa Americana")}
                     </span>
                 </div>
             </div>
 
-            <div className="ativo-realtime">
-                <span className="preco-label" style={{
-                    color: '#8b949e',
-                    fontSize: '10px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    fontWeight: 600,
-                    display: 'block',
-                    marginBottom: '4px'
-                }}>
+            <div className="ativo-realtime" style={{ marginTop: '16px' }}>
+                <span className="preco-label" style={{ color: '#8b949e', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                     Cotação Atual (USD)
                 </span>
 
-                <div className="ativo-footer">
-                    <div className="ativo-price" style={{ color: '#ffffff', fontWeight: 'bold' }}>
+                <div className="ativo-footer" style={{ marginTop: '4px' }}>
+                    <div className="ativo-price" style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '1.4rem' }}>
                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cotacao.priceUsd)}
                     </div>
                     <div className={`ativo-change ${isPositivo ? 'positive' : 'negative'}`}>
                         {isPositivo ? '▲' : '▼'} {Math.abs(cotacao.changePercent).toFixed(2)}%
                     </div>
                 </div>
-                <div style={{ fontSize: '11px', color: '#6e7681', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: 500 }}>
+
+                <div style={{ fontSize: '11px', color: '#6e7681', marginTop: '12px', display: 'flex', justifyContent: 'space-between', fontWeight: 500, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
                     <span>≈ {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cotacao.priceBrl)}</span>
                     <span>Dólar: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cotacao.exchangeRate)}</span>
+                </div>
+
+                {/* Data de Entrada */}
+                <div style={{ fontSize: '11px', color: '#8b949e', marginTop: '12px', textAlign: 'center', backgroundColor: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '6px' }}>
+                    Recomendado em: <strong style={{color: '#e6edf3'}}>{dataFormatada}</strong>
                 </div>
             </div>
 
@@ -132,18 +131,13 @@ export default function CardInternacional({ ticker, vies, precoTeto }: CardInter
                     )}
                     {vies && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', alignItems: 'center' }}>
-                            {/* E aqui */}
-                            <span style={{ color: '#8b949e', fontWeight: 500 }}>Viés:</span>
+                            <span style={{ color: '#8b949e', fontWeight: 500 }}>Recomendação:</span>
                             <span style={{
-                                backgroundColor: corVies,
-                                color: 'white',
-                                padding: '2px 10px',
-                                borderRadius: '12px',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                boxShadow: `0 0 8px ${corVies}40` 
+                                backgroundColor: corVies, color: 'white', padding: '4px 12px',
+                                borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px',
+                                boxShadow: `0 0 10px ${corVies}40`
                             }}>
-                                {vies}
+                                {viesExibicao}
                             </span>
                         </div>
                     )}

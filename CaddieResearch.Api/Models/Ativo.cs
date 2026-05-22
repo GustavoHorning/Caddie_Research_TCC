@@ -10,24 +10,23 @@ namespace CaddieResearch.Models {
         public int Id { get; set; }
 
         [Required]
-        [MaxLength(10)]
+        [MaxLength(100)]
         public string Ticker { get; set; } 
 
-        [Required]
         [MaxLength(100)]
-        public string NomeEmpresa { get; set; } 
+        public string? NomeEmpresa { get; set; } 
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal PrecoEntrada { get; set; } 
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal PrecoTeto { get; set; } 
+        public decimal? PrecoTeto { get; set; } 
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal PrecoAtual { get; set; }
+        public decimal? PrecoAtual { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal DyEsperado { get; set; }
+        public decimal? DyEsperado { get; set; }
 
         [Required]
         [MaxLength(20)]
@@ -39,5 +38,19 @@ namespace CaddieResearch.Models {
         public int CarteiraId { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public Carteira? Carteira { get; set; }
+        
+        [MaxLength(50)]
+        public string? Rentabilidade { get; set; }
+
+        [MaxLength(50)]
+        public string? Vencimento { get; set; }
+
+        [MaxLength(50)]
+        public string? Liquidez { get; set; }
+        
+        public DateTime? DataEntrada { get; set; }
+
+        [MaxLength(50)]
+        public string? Categoria { get; set; }
     }
 }

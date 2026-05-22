@@ -5,7 +5,8 @@ import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import './CarteiraDetalhes.css';
 import CardAtivo from '../components/CardAtivo';
-import CardInternacional from '../components/CardInternacional'; 
+import CardInternacional from '../components/CardInternacional';
+import CardRendaFixa from '../components/CardRendaFixa';
 
 export default function CarteiraDetalhes() {
     const { id } = useParams();
@@ -13,6 +14,8 @@ export default function CarteiraDetalhes() {
     const [carteira, setCarteira] = useState<any>(null);
     const [carregando, setCarregando] = useState(true);
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+
+    const [taxasMacro, setTaxasMacro] = useState({ selic: '---', cdi: '---' });
 
     useEffect(() => {
         const token = localStorage.getItem('caddie_token');
@@ -32,15 +35,23 @@ export default function CarteiraDetalhes() {
                 console.error("Erro ao buscar detalhes:", error);
                 setCarregando(false);
             });
+
+        if (['6', '7', '8'].includes(id || '')) {
+            api.get('/api/indicadores/macro')
+                .then(res => setTaxasMacro(res.data))
+                .catch(err => console.error("Erro ao buscar indicadores macro", err));
+        }
     }, [id, navigate]);
 
-    
+
     const ativos = carteira?.ativos || [];
     const totalAtivos = ativos.length;
     const qtdComprar = ativos.filter((a: any) => a.vies === 'Comprar').length;
     const qtdAguardar = ativos.filter((a: any) => a.vies === 'Aguardar').length;
     const qtdVender = ativos.filter((a: any) => a.vies === 'Vender').length;
+
     const isInternacional = carteira?.id === 3;
+    const isRendaFixaOuFundo = [6, 7, 8].includes(carteira?.id);
 
     const indiceConviccao = totalAtivos > 0 ? Math.round((qtdComprar / totalAtivos) * 100) : 0;
 
@@ -122,6 +133,23 @@ export default function CarteiraDetalhes() {
                                         </div>
                                     </div>
 
+                                    {isRendaFixaOuFundo && !carregando && totalAtivos > 0 && (
+                                        <div className="detalhes-kpi-row macro-cards-wrapper">
+                                            <div className="detalhes-kpi-item">
+                                    <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#00B4D8' }}>
+                                        <span className="pulse-dot"></span> SELIC Oficial
+                                    </span>
+                                                <strong className="kpi-valor">{taxasMacro.selic}</strong>
+                                            </div>
+                                            <div className="detalhes-kpi-item">
+                                    <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c4b5fd' }}>
+                                        📊 Taxa CDI
+                                    </span>
+                                                <strong className="kpi-valor">{taxasMacro.cdi}</strong>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div style={{ background: '#111', padding: '16px 20px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem', color: '#8b949e', fontWeight: 600 }}>
                                             <span>Distribuição de Viés</span>
@@ -145,8 +173,14 @@ export default function CarteiraDetalhes() {
                     <div className="tabela-container">
                         <div className="tabela-header-premium">
                             <h2>Ativos Recomendados</h2>
-                            <span className="tabela-subtitle">Preços teto e viés de mercado atualizados</span>
+                            <span className="tabela-subtitle">
+                                {isRendaFixaOuFundo
+                                    ? "Taxas, liquidez e recomendações atualizadas"
+                                    : "Preços teto e viés de mercado atualizados"}
+                            </span>
                         </div>
+
+                        
 
                         {carregando ? (
                             <div className="ativos-grid">
@@ -156,23 +190,53 @@ export default function CarteiraDetalhes() {
                             </div>
                         ) : totalAtivos > 0 ? (
                             <div className="ativos-grid">
-                                {ativos.map((ativo: any, index: number) => (
-                                    isInternacional ? (
-                                        <CardInternacional
-                                            key={index}
-                                            ticker={ativo.ticker}
-                                            vies={ativo.vies}
-                                            precoTeto={ativo.precoTeto}
-                                        />
-                                    ) : (
+                                {ativos.map((ativo: any, index: number) => {
+
+                                    if (isRendaFixaOuFundo || ativo.rentabilidade) {
+                                        let tipoCard: 'renda-fixa' | 'fundo' | 'reserva' = 'renda-fixa';
+                                        if (carteira?.id === 6) tipoCard = 'fundo';
+                                        if (carteira?.id === 8) tipoCard = 'reserva';
+
+                                        return (
+                                            <CardRendaFixa
+                                                key={index}
+                                                tipo={tipoCard}
+                                                nome={ativo.ticker}
+                                                rentabilidade={ativo.rentabilidade || "--"}
+                                                vencimento={ativo.vencimento}
+                                                liquidez={ativo.liquidez}
+                                                cnpj={ativo.nomeEmpresa}
+                                                vies={ativo.vies}
+                                                dataEntrada={ativo.dataEntrada}
+                                                categoria={ativo.categoria}
+                                            />
+                                        );
+                                    }
+
+                                    if (isInternacional) {
+                                        return (
+                                            <CardInternacional
+                                                key={index}
+                                                ticker={ativo.ticker}
+                                                vies={ativo.vies}
+                                                precoTeto={ativo.precoTeto}
+                                                dataEntrada={ativo.dataEntrada}
+                                                categoria={ativo.categoria}
+                                            />
+                                        );
+                                    }
+
+                                    return (
                                         <CardAtivo
                                             key={index}
                                             ticker={ativo.ticker}
                                             vies={ativo.vies}
                                             precoTeto={ativo.precoTeto}
+                                            dataEntrada={ativo.dataEntrada}
+                                            categoria={ativo.categoria}
                                         />
-                                    )
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="estado-vazio-tabela">
