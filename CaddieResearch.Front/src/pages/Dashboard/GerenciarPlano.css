@@ -426,3 +426,48 @@
 .mp-plano-card-btn:not(:disabled):hover {
   opacity: 0.85;
 }
+.dash-card-watchlist {
+  grid-column: span 1;
+}
+
+.dash-watchlist-vazio {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.dash-watchlist-vazio p {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 6px;
+}
+
+.dash-watchlist-vazio span {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  display: block;
+  line-height: 1.5;
+}
+
+.dash-watchlist-empty {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.dash-watchlist-remove {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.dash-watchlist-remove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}

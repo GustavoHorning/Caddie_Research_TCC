@@ -16,12 +16,16 @@ interface CardAtivoProps {
     precoTeto?: number;
     dataEntrada?: string;
     categoria?: string;
+    nomeEmpresa?: string;
+    nomeCarteira?: string;
 }
 
-export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, categoria }: CardAtivoProps) {
+export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, categoria, nomeEmpresa, nomeCarteira }: CardAtivoProps) {
     const [cotacao, setCotacao] = useState<CotacaoProps | null>(null);
     const [carregando, setCarregando] = useState(true);
     const [imgErro, setImgErro] = useState(false);
+    const [favoritado, setFavoritado] = useState(false);
+    const [loadingFav, setLoadingFav] = useState(false);
 
     useEffect(() => {
         const buscarCotacao = async () => {
@@ -36,7 +40,56 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
             }
         };
         buscarCotacao();
+        verificarFavorito();
     }, [ticker]);
+
+    async function verificarFavorito() {
+        try {
+            const token = localStorage.getItem('caddie_token');
+            const response = await fetch('http://localhost:5194/api/favoritos', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setFavoritado(data.some((f: any) => f.ticker === ticker));
+            }
+        } catch (e) {
+            console.error('Erro ao verificar favorito', e);
+        }
+    }
+
+    async function toggleFavorito() {
+        setLoadingFav(true);
+        try {
+            const token = localStorage.getItem('caddie_token');
+            if (favoritado) {
+                await fetch(`http://localhost:5194/api/favoritos/${ticker}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setFavoritado(false);
+            } else {
+                await fetch('http://localhost:5194/api/favoritos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        ticker,
+                        nomeEmpresa: nomeEmpresa || cotacao?.shortName || '',
+                        categoria: categoria || '',
+                        nomeCarteira: nomeCarteira || ''
+                    })
+                });
+                setFavoritado(true);
+            }
+        } catch (e) {
+            console.error('Erro ao favoritar', e);
+        } finally {
+            setLoadingFav(false);
+        }
+    }
 
     if (carregando) {
         return <div className="card-ativo skeleton" style={{ minHeight: '180px' }}>Carregando {ticker}...</div>;
@@ -55,7 +108,6 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
 
     const isPositivo = cotacao.regularMarketChangePercent >= 0;
     const corVies = vies === 'Comprar' ? '#10b981' : vies === 'Vender' ? '#ef4444' : '#f59e0b';
-
     const viesExibicao = vies === 'Comprar' ? 'Alocar' : vies === 'Vender' ? 'Vender' : 'Aguardar';
     const dataFormatada = dataEntrada ? dataEntrada.substring(0, 10).split('-').reverse().join('/') : '--/--/----';
 
@@ -76,15 +128,29 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                 <div className="ativo-info" style={{ overflow: 'hidden' }}>
                     <h3 className="ativo-symbol" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', margin: 0, width: '100%' }}>
                         <span style={{ lineHeight: '1.2', flex: 1 }}>{cotacao.symbol}</span>
-                        {categoria && (
-                            <span style={{
-                                fontSize: '9px', background: 'rgba(0, 180, 216, 0.15)', color: '#00B4D8',
-                                padding: '3px 6px', borderRadius: '4px', fontWeight: 700,
-                                letterSpacing: '0.5px', flexShrink: 0, marginTop: '2px'
-                            }}>
-                                {categoria.toUpperCase()}
-                            </span>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                            {categoria && (
+                                <span style={{
+                                    fontSize: '9px', background: 'rgba(0, 180, 216, 0.15)', color: '#00B4D8',
+                                    padding: '3px 6px', borderRadius: '4px', fontWeight: 700,
+                                    letterSpacing: '0.5px', marginTop: '2px'
+                                }}>
+                                    {categoria.toUpperCase()}
+                                </span>
+                            )}
+                            <button
+                                onClick={toggleFavorito}
+                                disabled={loadingFav}
+                                title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
+                                style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    fontSize: '16px', padding: '2px', opacity: loadingFav ? 0.5 : 1,
+                                    transition: 'transform 0.15s ease'
+                                }}
+                            >
+                                {favoritado ? '⭐' : '☆'}
+                            </button>
+                        </div>
                     </h3>
                     <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>
                         {cotacao.shortName ? cotacao.shortName.substring(0, 25) : "Bolsa B3"}
@@ -103,7 +169,6 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                     </div>
                 </div>
 
-                {/* Data de Entrada */}
                 <div style={{ fontSize: '11px', color: '#8b949e', marginTop: '16px', textAlign: 'center', backgroundColor: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '6px' }}>
                     Recomendado em: <strong style={{color: '#e6edf3'}}>{dataFormatada}</strong>
                 </div>

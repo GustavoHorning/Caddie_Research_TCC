@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import './CardAtivo.css';
 
 interface CardRendaFixaProps {
@@ -11,9 +11,13 @@ interface CardRendaFixaProps {
     vies?: string;
     dataEntrada?: string;
     categoria?: string;
+    nomeCarteira?: string;
 }
 
-export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, liquidez, cnpj, vies, dataEntrada, categoria }: CardRendaFixaProps) {
+export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, liquidez, cnpj, vies, dataEntrada, categoria, nomeCarteira }: CardRendaFixaProps) {
+    const [favoritado, setFavoritado] = useState(false);
+    const [loadingFav, setLoadingFav] = useState(false);
+
     const corVies = vies === 'Comprar' || vies === 'Alocar' ? '#10b981' : vies?.includes('Vender') || vies === 'Resgatar' ? '#ef4444' : '#f59e0b';
 
     let viesExibicao = vies;
@@ -41,6 +45,59 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
     const dataFormatada = dataEntrada ? dataEntrada.substring(0, 10).split('-').reverse().join('/') : '--/--/----';
     const vencimentoFormatado = vencimento ? vencimento.split('-').reverse().join('/') : 'N/A';
 
+    useEffect(() => {
+        verificarFavorito();
+    }, [nome]);
+
+    async function verificarFavorito() {
+        try {
+            const token = localStorage.getItem('caddie_token');
+            const response = await fetch('http://localhost:5194/api/favoritos', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setFavoritado(data.some((f: any) => f.ticker === nome));
+            }
+        } catch (e) {
+            console.error('Erro ao verificar favorito', e);
+        }
+    }
+
+    async function toggleFavorito() {
+        setLoadingFav(true);
+        try {
+            const token = localStorage.getItem('caddie_token');
+            if (favoritado) {
+                await fetch(`http://localhost:5194/api/favoritos/${nome}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setFavoritado(false);
+            } else {
+                await fetch('http://localhost:5194/api/favoritos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        ticker: nome,
+                        nomeEmpresa: cnpj || '',
+                        categoria: categoria || tipo,
+                        rentabilidade: rentabilidade || '',
+                        nomeCarteira: nomeCarteira || ''
+                    })
+                });
+                setFavoritado(true);
+            }
+        } catch (e) {
+            console.error('Erro ao favoritar', e);
+        } finally {
+            setLoadingFav(false);
+        }
+    }
+
     return (
         <div className="card-ativo" style={{ borderTop: `3px solid ${config.cor}` }}>
             <div className="ativo-header">
@@ -48,16 +105,29 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
                     {config.icone}
                 </div>
                 <div className="ativo-info" style={{ overflow: 'hidden' }}>
-                    <h3 className="ativo-symbol" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        {nome ? (nome.length > 22 ? nome.substring(0, 22) + '...' : nome) : 'Ativo'}
-
-                        <span style={{
-                            fontSize: '9px', background: config.bgTag, color: config.cor,
-                            padding: '2px 6px', borderRadius: '4px', fontWeight: 600,
-                            letterSpacing: '0.5px', flexShrink: 0
-                        }}>
-                            {config.labelTag}
+                    <h3 className="ativo-symbol" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', margin: 0, width: '100%' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {nome ? (nome.length > 22 ? nome.substring(0, 22) + '...' : nome) : 'Ativo'}
+                            <span style={{
+                                fontSize: '9px', background: config.bgTag, color: config.cor,
+                                padding: '2px 6px', borderRadius: '4px', fontWeight: 600,
+                                letterSpacing: '0.5px', flexShrink: 0
+                            }}>
+                                {config.labelTag}
+                            </span>
                         </span>
+                        <button
+                            onClick={toggleFavorito}
+                            disabled={loadingFav}
+                            title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: '16px', padding: '2px', opacity: loadingFav ? 0.5 : 1,
+                                transition: 'transform 0.15s ease', flexShrink: 0
+                            }}
+                        >
+                            {favoritado ? '⭐' : '☆'}
+                        </button>
                     </h3>
                     <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>
                         {tipo === 'fundo' && cnpj ? `CNPJ: ${cnpj}` : (categoria || 'Ativo de Rendimento')}
@@ -78,7 +148,6 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
                         <span style={{ color: '#8b949e', fontSize: '10px', display: 'block', marginBottom: '2px', fontWeight: 600 }}>LIQUIDEZ</span>
                         <strong style={{ color: tipo === 'reserva' ? '#10b981' : '#e6edf3' }}>{liquidez || 'N/A'}</strong>
                     </div>
-
                     <div style={{ textAlign: 'right' }}>
                         {tipo !== 'fundo' ? (
                             <>
