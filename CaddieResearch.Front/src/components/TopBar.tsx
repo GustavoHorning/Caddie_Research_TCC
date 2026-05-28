@@ -3,6 +3,7 @@ import "./TopBar.css";
 import { useNavigate } from 'react-router-dom';
 import api from "../services/api.tsx";
 import AtendimentoWidget from './AtendimentoWidget'
+import GlobalSearch from './GlobalSearch'; 
 
 interface UserProfile {
   nome: string;
@@ -19,10 +20,11 @@ interface TopBarProps {
 
 export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isAtendimentoOpen, setIsAtendimentoOpen] = useState(false); {/* Foi adicionado aqui */}
+  const [isAtendimentoOpen, setIsAtendimentoOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     const carregarPerfil = async () => {
@@ -58,6 +60,17 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
     navigate('/login');
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <>
       <header className="topbar">
@@ -71,12 +84,15 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
             </svg>
           </button>
 
-          <div className="topbar-search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input type="text" placeholder="Buscar ativos, relatórios..." />
+          <div className="topbar-search search-trigger" onClick={() => setIsSearchOpen(true)}>
+            <div className="search-trigger-left">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span className="search-text-desktop">Buscar ativos, relatórios...</span>
+            </div>
+            <span className="ctrl-k-badge">Ctrl K</span>
           </div>
         </div>
 
@@ -168,6 +184,8 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
           </div>
         </div>
       </header>
+
+      {isSearchOpen && <GlobalSearch onClose={() => setIsSearchOpen(false)} />}
 
       <AtendimentoWidget
         isOpen={isAtendimentoOpen}
