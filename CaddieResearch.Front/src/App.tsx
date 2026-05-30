@@ -13,6 +13,7 @@ import CarteiraDetalhes from './pages/CarteiraDetalhes';
 import Carteiras from './pages/Dashboard/Carteiras/Carteiras';
 import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternacional';
 import PainelGestor from './pages/Dashboard/Gestor/PainelGestor';
+import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor';
 import GerenciarPlano from './pages/Dashboard/GerenciarPlano';
 import Perfil from "./pages/Dashboard/Perfil";
 
@@ -40,6 +41,7 @@ function App() {
                 <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
 
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
+                <Route path="/gestor/relatorios" element={<RelatoriosGestor />} />
             </Routes>
         </BrowserRouter>
     )

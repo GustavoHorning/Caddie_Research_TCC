@@ -66,4 +66,41 @@ public class BlobService
             Console.WriteLine($"[ERRO AZURE EXCLUIR]: {ex.Message}");
         }
     }
+
+    public async Task<string> UploadPdfAsync(IFormFile arquivo)
+    {
+        var blobServiceClient = new BlobServiceClient(_connectionString);
+        var containerClient = blobServiceClient.GetBlobContainerClient("relatorios-pdfs");
+        
+        await containerClient.CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.Blob);
+
+        var nomeArquivo = $"{Guid.NewGuid()}_{Path.GetFileName(arquivo.FileName)}";
+        var blobClient = containerClient.GetBlobClient(nomeArquivo);
+
+        using var stream = arquivo.OpenReadStream();
+        await blobClient.UploadAsync(stream, new Azure.Storage.Blobs.Models.BlobHttpHeaders { ContentType = "application/pdf" });
+
+        return blobClient.Uri.ToString();
+    }
+
+    public async Task ExcluirPdfAsync(string urlPdf)
+    {
+        if (string.IsNullOrEmpty(urlPdf)) return;
+
+        try
+        {
+            var uri = new Uri(urlPdf);
+            var nomeArquivo = Path.GetFileName(uri.LocalPath);
+
+            var blobServiceClient = new BlobServiceClient(_connectionString);
+            var containerClient = blobServiceClient.GetBlobContainerClient("relatorios-pdfs");
+            var blobClient = containerClient.GetBlobClient(nomeArquivo);
+
+            await blobClient.DeleteIfExistsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO AZURE EXCLUIR PDF]: {ex.Message}");
+        }
+    }
 }
