@@ -18,12 +18,15 @@ interface CardInternacionalProps {
     precoTeto?: number;
     dataEntrada?: string;
     categoria?: string;
+    nomeCarteira?: string;
 }
 
-export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada, categoria }: CardInternacionalProps) {
+export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada, categoria, nomeCarteira }: CardInternacionalProps) {
     const [cotacao, setCotacao] = useState<CotacaoIntProps | null>(null);
     const [carregando, setCarregando] = useState(true);
     const [imgErro, setImgErro] = useState(false);
+    const [favoritado, setFavoritado] = useState(false);
+    const [loadingFav, setLoadingFav] = useState(false);
 
     useEffect(() => {
         const buscarCotacao = async () => {
@@ -38,7 +41,56 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
             }
         };
         buscarCotacao();
+        verificarFavorito();
     }, [ticker]);
+
+    async function verificarFavorito() {
+        try {
+            const token = localStorage.getItem('caddie_token');
+            const response = await fetch('http://localhost:5194/api/favoritos', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setFavoritado(data.some((f: any) => f.ticker === ticker));
+            }
+        } catch (e) {
+            console.error('Erro ao verificar favorito', e);
+        }
+    }
+
+    async function toggleFavorito() {
+        setLoadingFav(true);
+        try {
+            const token = localStorage.getItem('caddie_token');
+            if (favoritado) {
+                await fetch(`http://localhost:5194/api/favoritos/${ticker}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setFavoritado(false);
+            } else {
+                await fetch('http://localhost:5194/api/favoritos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        ticker,
+                        nomeEmpresa: cotacao?.shortName || '',
+                        categoria: categoria || 'Internacional',
+                        nomeCarteira: nomeCarteira || ''
+                    })
+                });
+                setFavoritado(true);
+            }
+        } catch (e) {
+            console.error('Erro ao favoritar', e);
+        } finally {
+            setLoadingFav(false);
+        }
+    }
 
     if (carregando) {
         return <div className="card-ativo skeleton" style={{ minHeight: '180px' }}></div>;
@@ -57,7 +109,6 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
 
     const isPositivo = cotacao.changePercent >= 0;
     const corVies = vies === 'Comprar' ? '#10b981' : vies === 'Vender' ? '#ef4444' : '#f59e0b';
-
     const viesExibicao = vies === 'Comprar' ? 'Alocar' : vies === 'Vender' ? 'Vender' : 'Aguardar';
     const dataFormatada = dataEntrada ? dataEntrada.substring(0, 10).split('-').reverse().join('/') : '--/--/----';
 
@@ -80,13 +131,27 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
                 <div className="ativo-info" style={{ overflow: 'hidden' }}>
                     <h3 className="ativo-symbol" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', margin: 0, width: '100%' }}>
                         <span style={{ lineHeight: '1.2', flex: 1 }}>{cotacao.symbol}</span>
-                        <span style={{
-                            fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
-                            padding: '3px 6px', borderRadius: '4px', fontWeight: 700,
-                            letterSpacing: '0.5px', flexShrink: 0, marginTop: '2px'
-                        }}>
-                            EUA
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                            <span style={{
+                                fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6',
+                                padding: '3px 6px', borderRadius: '4px', fontWeight: 700,
+                                letterSpacing: '0.5px', marginTop: '2px'
+                            }}>
+                                EUA
+                            </span>
+                            <button
+                                onClick={toggleFavorito}
+                                disabled={loadingFav}
+                                title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
+                                style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    fontSize: '16px', padding: '2px', opacity: loadingFav ? 0.5 : 1,
+                                    transition: 'transform 0.15s ease'
+                                }}
+                            >
+                                {favoritado ? '⭐' : '☆'}
+                            </button>
+                        </div>
                     </h3>
                     <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>
                         {categoria ? `Setor: ${categoria}` : (cotacao.shortName ? cotacao.shortName.substring(0, 20) : "Bolsa Americana")}
@@ -113,7 +178,6 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
                     <span>Dólar: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cotacao.exchangeRate)}</span>
                 </div>
 
-                {/* Data de Entrada */}
                 <div style={{ fontSize: '11px', color: '#8b949e', marginTop: '12px', textAlign: 'center', backgroundColor: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '6px' }}>
                     Recomendado em: <strong style={{color: '#e6edf3'}}>{dataFormatada}</strong>
                 </div>

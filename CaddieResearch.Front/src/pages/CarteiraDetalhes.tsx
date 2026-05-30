@@ -43,7 +43,6 @@ export default function CarteiraDetalhes() {
         }
     }, [id, navigate]);
 
-
     const ativos = carteira?.ativos || [];
     const totalAtivos = ativos.length;
     const qtdComprar = ativos.filter((a: any) => a.vies === 'Comprar').length;
@@ -136,15 +135,15 @@ export default function CarteiraDetalhes() {
                                     {isRendaFixaOuFundo && !carregando && totalAtivos > 0 && (
                                         <div className="detalhes-kpi-row macro-cards-wrapper">
                                             <div className="detalhes-kpi-item">
-                                    <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#00B4D8' }}>
-                                        <span className="pulse-dot"></span> SELIC Oficial
-                                    </span>
+                                                <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#00B4D8' }}>
+                                                    <span className="pulse-dot"></span> SELIC Oficial
+                                                </span>
                                                 <strong className="kpi-valor">{taxasMacro.selic}</strong>
                                             </div>
                                             <div className="detalhes-kpi-item">
-                                    <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c4b5fd' }}>
-                                        📊 Taxa CDI
-                                    </span>
+                                                <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c4b5fd' }}>
+                                                    📊 Taxa CDI
+                                                </span>
                                                 <strong className="kpi-valor">{taxasMacro.cdi}</strong>
                                             </div>
                                         </div>
@@ -180,8 +179,6 @@ export default function CarteiraDetalhes() {
                             </span>
                         </div>
 
-                        
-
                         {carregando ? (
                             <div className="ativos-grid">
                                 {[1, 2, 3, 4].map(i => (
@@ -209,6 +206,7 @@ export default function CarteiraDetalhes() {
                                                 vies={ativo.vies}
                                                 dataEntrada={ativo.dataEntrada}
                                                 categoria={ativo.categoria}
+                                                nomeCarteira={carteira?.nome}
                                             />
                                         );
                                     }
@@ -222,6 +220,7 @@ export default function CarteiraDetalhes() {
                                                 precoTeto={ativo.precoTeto}
                                                 dataEntrada={ativo.dataEntrada}
                                                 categoria={ativo.categoria}
+                                                nomeCarteira={carteira?.nome}
                                             />
                                         );
                                     }
@@ -234,6 +233,8 @@ export default function CarteiraDetalhes() {
                                             precoTeto={ativo.precoTeto}
                                             dataEntrada={ativo.dataEntrada}
                                             categoria={ativo.categoria}
+                                            nomeEmpresa={ativo.nomeEmpresa}
+                                            nomeCarteira={carteira?.nome}
                                         />
                                     );
                                 })}

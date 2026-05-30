@@ -422,3 +422,75 @@
     display: none;
   }
 }
+.dash-watchlist-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dash-watchlist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.dash-watchlist-item:last-child {
+  border-bottom: none;
+}
+
+.dash-watchlist-ticker-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 70px;
+}
+
+.dash-watchlist-ticker {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dash-watchlist-cat {
+  font-size: 0.65rem;
+  color: #00B4D8;
+  background: rgba(0, 180, 216, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.dash-watchlist-dados {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.dash-watchlist-preco {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dash-watchlist-var {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dash-watchlist-var.positivo {
+  color: #10b981;
+}
+
+.dash-watchlist-var.negativo {
+  color: #ef4444;
+}
+
+.dash-watchlist-indisponivel {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.3);
+}

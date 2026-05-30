@@ -1,14 +1,94 @@
+import { useState, useEffect } from 'react'
 import './DashboardHome.css'
 
 const ultimasAtualizacoes = [
-  { icon: 'RE', titulo: 'Radar Econ\u00F4mico', subtitulo: 'Edi\u00E7\u00E3o #48', tag: 'Relat\u00F3rio', tempo: 'h\u00E1 2 dias' },
-  { icon: 'RF', titulo: 'Caddie Renda Fixa', subtitulo: 'Edi\u00E7\u00E3o #237', tag: 'Relat\u00F3rio', tempo: 'h\u00E1 2 dias' },
-  { icon: 'ET', titulo: 'ETFs Internacionais', subtitulo: 'Edi\u00E7\u00E3o #281', tag: 'Relat\u00F3rio', tempo: 'h\u00E1 2 dias' },
-  { icon: 'CC', titulo: 'Caddie Call #2026', subtitulo: 'A replica\u00E7\u00E3o e os investimentos.', tag: '', tempo: '' },
+  { icon: 'RE', titulo: 'Radar Econômico', subtitulo: 'Edição #48', tag: 'Relatório', tempo: 'há 2 dias' },
+  { icon: 'RF', titulo: 'Caddie Renda Fixa', subtitulo: 'Edição #237', tag: 'Relatório', tempo: 'há 2 dias' },
+  { icon: 'ET', titulo: 'ETFs Internacionais', subtitulo: 'Edição #281', tag: 'Relatório', tempo: 'há 2 dias' },
+  { icon: 'CC', titulo: 'Caddie Call #2026', subtitulo: 'A replicação e os investimentos.', tag: '', tempo: '' },
 ]
 
+interface Favorito {
+  id: number
+  ticker: string
+  nomeEmpresa?: string
+  categoria?: string
+  rentabilidade?: string
+  nomeCarteira?: string
+}
+
+interface Cotacao {
+  regularMarketPrice: number
+  regularMarketChangePercent: number
+  shortName: string
+}
 
 export default function DashboardHome() {
+  const [favoritos, setFavoritos] = useState<Favorito[]>([])
+  const [cotacoes, setCotacoes] = useState<Record<string, Cotacao>>({})
+  const [carregando, setCarregando] = useState(true)
+
+  useEffect(() => {
+    carregarFavoritos()
+  }, [])
+
+  async function carregarFavoritos() {
+    try {
+      const token = localStorage.getItem('caddie_token')
+      const response = await fetch('http://localhost:5194/api/favoritos', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setFavoritos(data)
+        carregarCotacoes(data)
+      }
+    } catch (e) {
+      console.error('Erro ao carregar favoritos', e)
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  async function carregarCotacoes(favs: Favorito[]) {
+    const novasCotacoes: Record<string, Cotacao> = {}
+    await Promise.all(
+      favs.map(async (f) => {
+        try {
+          const token = localStorage.getItem('caddie_token')
+          const res = await fetch(`http://localhost:5194/api/acoes/cotacao/${f.ticker}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (res.ok) {
+            const data = await res.json()
+            novasCotacoes[f.ticker] = data
+          }
+        } catch (e) {
+          console.error(`Erro ao buscar cotação de ${f.ticker}`, e)
+        }
+      })
+    )
+    setCotacoes(novasCotacoes)
+  }
+
+  async function removerFavorito(ticker: string) {
+    try {
+      const token = localStorage.getItem('caddie_token')
+      await fetch(`http://localhost:5194/api/favoritos/${ticker}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setFavoritos(prev => prev.filter(f => f.ticker !== ticker))
+      setCotacoes(prev => {
+        const novo = { ...prev }
+        delete novo[ticker]
+        return novo
+      })
+    } catch (e) {
+      console.error('Erro ao remover favorito', e)
+    }
+  }
+
   return (
     <div className="dash-content">
       <div className="dash-topo-row">
@@ -31,7 +111,7 @@ export default function DashboardHome() {
         <div className="dash-promo-card dash-promo-whatsapp">
           <span className="dash-promo-beta">BETA</span>
           <h3>Converse com a Caddie no WhatsApp</h3>
-          <p>Tire suas dúvidassobre as carteiras e ativos recomendados com o nosso suporte</p>
+          <p>Tire suas dúvidas sobre as carteiras e ativos recomendados com o nosso suporte</p>
           <a href="#" className="dash-promo-btn">COMECE A USAR</a>
         </div>
       </div>
@@ -39,7 +119,7 @@ export default function DashboardHome() {
       <section className="dash-grid">
         <div className="dash-card dash-card-atualizacoes">
           <div className="dash-card-header">
-            <h3>{'\u00DAltimas Atualiza\u00E7\u00F5es'}</h3>
+            <h3>Últimas Atualizações</h3>
             <button className="dash-card-toggle">v</button>
           </div>
           <ul className="dash-lista">
@@ -59,7 +139,7 @@ export default function DashboardHome() {
 
         <div className="dash-card dash-card-eventos">
           <div className="dash-card-header">
-            <h3>{`Pr\u00F3ximos Eventos`}</h3>
+            <h3>Próximos Eventos</h3>
             <span className="dash-card-icon">E</span>
           </div>
           <div className="dash-eventos-empty">
@@ -87,6 +167,68 @@ export default function DashboardHome() {
               O foco da semana foi a inclusão de novos ativos na carteira de Dividendos, refletindo a estratégia de capturar valor no longo prazo.
             </p>
           </div>
+        </div>
+
+        <div className="dash-card dash-card-watchlist">
+          <div className="dash-card-header">
+            <h3>⭐ Minha Watchlist</h3>
+            <span className="dash-card-sub-header">Seus ativos favoritos</span>
+          </div>
+          {carregando ? (
+            <p className="dash-watchlist-empty">Carregando...</p>
+          ) : favoritos.length === 0 ? (
+            <div className="dash-watchlist-vazio">
+              <p>Nenhum ativo favoritado ainda.</p>
+              <span>Acesse as carteiras e clique em ⭐ para adicionar ativos aqui.</span>
+            </div>
+          ) : (
+            <ul className="dash-watchlist-lista">
+              {favoritos.map((f) => {
+                const cotacao = cotacoes[f.ticker]
+                const isPositivo = cotacao ? cotacao.regularMarketChangePercent >= 0 : null
+                return (
+                  <li key={f.id} className="dash-watchlist-item">
+                    <div className="dash-watchlist-ticker-box">
+                      <span className="dash-watchlist-ticker">{f.ticker}</span>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {f.categoria && <span className="dash-watchlist-cat">{f.categoria}</span>}
+                        {f.nomeCarteira && (
+                          <span className="dash-watchlist-cat" style={{ background: 'rgba(255,255,255,0.06)', color: '#7a90a8' }}>
+                            {f.nomeCarteira}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="dash-watchlist-dados">
+                      {cotacao ? (
+                        <>
+                          <span className="dash-watchlist-preco">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cotacao.regularMarketPrice)}
+                          </span>
+                          <span className={`dash-watchlist-var ${isPositivo ? 'positivo' : 'negativo'}`}>
+                            {isPositivo ? '▲' : '▼'} {Math.abs(cotacao.regularMarketChangePercent).toFixed(2)}%
+                          </span>
+                        </>
+                      ) : f.rentabilidade ? (
+                        <span className="dash-watchlist-preco" style={{ color: '#93c5fd', fontSize: '0.8rem' }}>
+                          {f.rentabilidade}
+                        </span>
+                      ) : (
+                        <span className="dash-watchlist-indisponivel">—</span>
+                      )}
+                    </div>
+                    <button
+                      className="dash-watchlist-remove"
+                      onClick={() => removerFavorito(f.ticker)}
+                      title="Remover da watchlist"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       </section>
     </div>
