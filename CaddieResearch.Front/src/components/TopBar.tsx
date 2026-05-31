@@ -21,6 +21,7 @@ interface TopBarProps {
 export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAtendimentoOpen, setIsAtendimentoOpen] = useState(false);
+  const [hasNewMessage, setHasNewMessage] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,14 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Simula mensagem automática após 4s
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isAtendimentoOpen) setHasNewMessage(true);
+    }, 4000);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleLogout = () => {
@@ -112,11 +121,12 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
             </svg>
           </button>
 
-          <button className="icon-btn" title="Atendimento" onClick={() => setIsAtendimentoOpen(!isAtendimentoOpen)}>
+          <button className="icon-btn" title="Atendimento" onClick={() => { setIsAtendimentoOpen(!isAtendimentoOpen); setHasNewMessage(false); }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 18v-6a9 9 0 0118 0v6" />
               <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" />
             </svg>
+            {hasNewMessage && <span className="badge badge-pulse"></span>}
           </button>
 
           <div className="user-profile" ref={menuRef} onClick={() => user && setIsDropdownOpen(!isDropdownOpen)}>
