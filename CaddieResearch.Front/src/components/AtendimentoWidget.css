@@ -319,6 +319,24 @@
 .chat-send-btn:hover { background: #0096c7; }
 .chat-send-btn:disabled { background: rgba(255,255,255,0.1); cursor: not-allowed; }
 
+/* ── MENSAGEM DO CLIENTE (direita) ── */
+.chat-bubble-cliente {
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeInUp 0.3s ease;
+}
+
+.chat-bubble-texto-cliente {
+  background: rgba(0,180,216,0.15);
+  border: 1px solid rgba(0,180,216,0.2);
+  border-radius: 12px 4px 12px 12px;
+  padding: 11px 14px;
+  color: #e0f7fc;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  max-width: 230px;
+}
+
 /* ── ANIMAÇÃO DE ENTRADA DA MENSAGEM ── */
 .chat-bubble-gestor {
   animation: fadeInUp 0.3s ease;

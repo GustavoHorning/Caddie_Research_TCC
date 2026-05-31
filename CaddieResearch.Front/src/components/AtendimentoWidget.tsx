@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import './AtendimentoWidget.css'
 import logo from '../assets/logo.png'
+import api from '../services/api'
 
 interface Props {
   isOpen: boolean
@@ -8,33 +9,48 @@ interface Props {
   userName: string
 }
 
+interface MensagemItem {
+  id: number
+  conteudo: string
+  ehGestor: boolean
+  dataEnvio: string
+}
+
 type View = 'menu' | 'chat'
 
 export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) {
   const ref = useRef<HTMLDivElement>(null)
+  const mensagensEndRef = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<View>('menu')
   const [mensagem, setMensagem] = useState('')
   const [showSecondMessage, setShowSecondMessage] = useState(false)
+  const [conversaId, setConversaId] = useState<number | null>(null)
+  const [mensagens, setMensagens] = useState<MensagemItem[]>([])
+  const [enviando, setEnviando] = useState(false)
 
+  const token = localStorage.getItem('caddie_token')
+  const headers = { Authorization: `Bearer ${token}` }
+
+  // Fecha ao clicar fora
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose()
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
     if (isOpen) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen, onClose])
 
-  // Reseta para o menu quando fechar
+  // Reseta ao fechar
   useEffect(() => {
     if (!isOpen) {
       setView('menu')
       setShowSecondMessage(false)
+      setMensagens([])
+      setConversaId(null)
     }
   }, [isOpen])
 
-  // Exibe a segunda mensagem com delay de 4s ao entrar no chat
+  // Segunda mensagem automática após 10s
   useEffect(() => {
     if (view === 'chat') {
       setShowSecondMessage(false)
@@ -42,6 +58,59 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
       return () => clearTimeout(timer)
     }
   }, [view])
+
+  // Scroll automático para última mensagem
+  useEffect(() => {
+    mensagensEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [mensagens])
+
+  // Abre ou recupera conversa no backend
+  const abrirConversa = useCallback(async () => {
+    try {
+      const res = await api.post('/api/chat/abrir', { assunto: 'Investimentos' }, { headers })
+      setConversaId(res.data.conversaId)
+    } catch (err) {
+      console.error('Erro ao abrir conversa:', err)
+    }
+  }, [])
+
+  // Busca mensagens (polling)
+  const buscarMensagens = useCallback(async (id: number) => {
+    try {
+      const res = await api.get(`/api/chat/${id}/mensagens`, { headers })
+      setMensagens(res.data)
+    } catch (err) {
+      console.error('Erro ao buscar mensagens:', err)
+    }
+  }, [])
+
+  // Abre conversa ao entrar no chat
+  useEffect(() => {
+    if (view === 'chat') abrirConversa()
+  }, [view])
+
+  // Polling a cada 4 segundos
+  useEffect(() => {
+    if (!conversaId) return
+    buscarMensagens(conversaId)
+    const interval = setInterval(() => buscarMensagens(conversaId), 4000)
+    return () => clearInterval(interval)
+  }, [conversaId])
+
+  // Envia mensagem
+  const enviarMensagem = async () => {
+    if (!mensagem.trim() || !conversaId || enviando) return
+    setEnviando(true)
+    try {
+      await api.post(`/api/chat/${conversaId}/mensagem`, { conteudo: mensagem }, { headers })
+      setMensagem('')
+      await buscarMensagens(conversaId)
+    } catch (err) {
+      console.error('Erro ao enviar mensagem:', err)
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   return (
     <div className={`atendimento-overlay ${isOpen ? 'open' : ''}`}>
@@ -65,8 +134,8 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
           <div className="atendimento-body">
             <div className="atendimento-message">
               <div className="atendimento-avatar">
-              <img src={logo} alt="Caddie Research" />
-            </div>
+                <img src={logo} alt="Caddie Research" />
+              </div>
               <div className="atendimento-bubble">
                 <p>Olá <strong>{userName}</strong>, é um prazer te-lo por aqui. Em que posso ajudar hoje?</p>
                 <span className="atendimento-time">Caddie Research · agora</span>
@@ -97,8 +166,8 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
           <>
             <div className="chat-identificacao">
               <div className="chat-logo-avatar">
-              <img src={logo} alt="Caddie Research" />
-            </div>
+                <img src={logo} alt="Caddie Research" />
+              </div>
               <div>
                 <span className="chat-nome">Caddie Research</span>
                 <span className="chat-status">
@@ -108,6 +177,7 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
             </div>
 
             <div className="chat-mensagens">
+              {/* Mensagens automáticas de boas-vindas */}
               <div className="chat-bubble-gestor">
                 <div className="chat-bubble-avatar">
                   <img src={logo} alt="Caddie Research" />
@@ -120,13 +190,29 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
               {showSecondMessage && (
                 <div className="chat-bubble-gestor">
                   <div className="chat-bubble-avatar">
-                  <img src={logo} alt="Caddie Research" />
-                </div>
+                    <img src={logo} alt="Caddie Research" />
+                  </div>
                   <div className="chat-bubble-texto">
                     Deixe sua dúvida técnica aqui que nossos analistas ou até mesmo nossos gestores terão prazer em lhe responder 💬
                   </div>
                 </div>
               )}
+
+              {/* Mensagens reais do banco */}
+              {mensagens.map(msg => (
+                <div key={msg.id} className={msg.ehGestor ? 'chat-bubble-gestor' : 'chat-bubble-cliente'}>
+                  {msg.ehGestor && (
+                    <div className="chat-bubble-avatar">
+                      <img src={logo} alt="Caddie Research" />
+                    </div>
+                  )}
+                  <div className={msg.ehGestor ? 'chat-bubble-texto' : 'chat-bubble-texto-cliente'}>
+                    {msg.conteudo}
+                  </div>
+                </div>
+              ))}
+
+              <div ref={mensagensEndRef} />
             </div>
 
             <div className="chat-input-area">
@@ -136,12 +222,13 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
                 placeholder="Digite sua mensagem..."
                 value={mensagem}
                 onChange={e => setMensagem(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && mensagem.trim() && setMensagem('')}
+                onKeyDown={e => e.key === 'Enter' && enviarMensagem()}
+                disabled={enviando}
               />
               <button
                 className="chat-send-btn"
-                onClick={() => mensagem.trim() && setMensagem('')}
-                disabled={!mensagem.trim()}
+                onClick={enviarMensagem}
+                disabled={!mensagem.trim() || enviando}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="22" y1="2" x2="11" y2="13" />
