@@ -16,6 +16,14 @@ interface MensagemItem {
   dataEnvio: string
 }
 
+interface ConversaHistorico {
+  id: number
+  assunto: string
+  status: string
+  dataAbertura: string
+  totalMensagens: number
+}
+
 type View = 'menu' | 'chat'
 
 export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) {
@@ -27,6 +35,8 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
   const [conversaId, setConversaId] = useState<number | null>(null)
   const [mensagens, setMensagens] = useState<MensagemItem[]>([])
   const [enviando, setEnviando] = useState(false)
+  const [conversaEncerrada, setConversaEncerrada] = useState(false)
+  const [historico, setHistorico] = useState<ConversaHistorico[]>([])
 
   const token = localStorage.getItem('caddie_token')
   const headers = { Authorization: `Bearer ${token}` }
@@ -47,6 +57,7 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
       setShowSecondMessage(false)
       setMensagens([])
       setConversaId(null)
+      setConversaEncerrada(false)
     }
   }, [isOpen])
 
@@ -64,6 +75,21 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
     mensagensEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [mensagens])
 
+  // Busca histórico de conversas
+  const buscarHistorico = useCallback(async () => {
+    try {
+      const res = await api.get('/api/chat/minhas-conversas', { headers })
+      setHistorico(res.data)
+    } catch (err) {
+      console.error('Erro ao buscar histórico:', err)
+    }
+  }, [])
+
+  // Abre histórico ao abrir o widget
+  useEffect(() => {
+    if (isOpen) buscarHistorico()
+  }, [isOpen])
+
   // Abre ou recupera conversa no backend
   const abrirConversa = useCallback(async () => {
     try {
@@ -77,16 +103,27 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
   // Busca mensagens (polling)
   const buscarMensagens = useCallback(async (id: number) => {
     try {
-      const res = await api.get(`/api/chat/${id}/mensagens`, { headers })
-      setMensagens(res.data)
+      const [msgRes, statusRes] = await Promise.all([
+        api.get(`/api/chat/${id}/mensagens`, { headers }),
+        api.get(`/api/chat/${id}/status`, { headers })
+      ])
+      setMensagens(msgRes.data)
+      setConversaEncerrada(statusRes.data.status === 'Fechada')
     } catch (err) {
       console.error('Erro ao buscar mensagens:', err)
     }
   }, [])
 
-  // Abre conversa ao entrar no chat
+  // Abre conversa do histórico diretamente
+  const abrirConversaHistorico = (id: number, encerrada: boolean) => {
+    setConversaId(id)
+    setConversaEncerrada(encerrada)
+    setView('chat')
+  }
+
+  // Abre conversa ao entrar no chat (nova)
   useEffect(() => {
-    if (view === 'chat') abrirConversa()
+    if (view === 'chat' && !conversaId) abrirConversa()
   }, [view])
 
   // Polling a cada 4 segundos
@@ -158,6 +195,29 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
                 Falar sobre Minha Conta
               </button>
             </div>
+          {/* ── HISTÓRICO ── */}
+          {historico.length > 0 && (
+            <div className="atendimento-historico">
+              <span className="atendimento-historico-titulo">Conversas anteriores</span>
+              {historico.map(c => (
+                <button
+                  key={c.id}
+                  className="atendimento-historico-item"
+                  onClick={() => abrirConversaHistorico(c.id, c.status === 'Fechada')}
+                >
+                  <div className="historico-item-info">
+                    <span className="historico-item-assunto">{c.assunto}</span>
+                    <span className="historico-item-data">
+                      {new Date(c.dataAbertura).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <span className={`historico-item-status ${c.status === 'Fechada' ? 'fechada' : 'aberta'}`}>
+                    {c.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           </div>
         )}
 
@@ -207,34 +267,61 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
                     </div>
                   )}
                   <div className={msg.ehGestor ? 'chat-bubble-texto' : 'chat-bubble-texto-cliente'}>
+                    {msg.ehGestor && <span className="chat-bubble-remetente">Analista Caddie</span>}
                     {msg.conteudo}
                   </div>
                 </div>
               ))}
 
+              {conversaEncerrada && (
+                <div className="chat-encerrado-banner">
+                  <p className="chat-encerrado-titulo">O chat foi encerrado.</p>
+                  <button
+                    className="chat-novo-chat-btn"
+                    onClick={() => {
+                      setConversaId(null)
+                      setMensagens([])
+                      setConversaEncerrada(false)
+                      setShowSecondMessage(false)
+                      setView('menu')
+                    }}
+                  >
+                    Para iniciar um novo chat, clique aqui.
+                  </button>
+                </div>
+              )}
+
               <div ref={mensagensEndRef} />
             </div>
 
             <div className="chat-input-area">
-              <input
-                className="chat-input"
-                type="text"
-                placeholder="Digite sua mensagem..."
-                value={mensagem}
-                onChange={e => setMensagem(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && enviarMensagem()}
-                disabled={enviando}
-              />
-              <button
-                className="chat-send-btn"
-                onClick={enviarMensagem}
-                disabled={!mensagem.trim() || enviando}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </button>
+              {conversaEncerrada ? (
+                <div className="chat-encerrado">
+                  ✓ Conversa encerrada
+                </div>
+              ) : (
+                <>
+                  <input
+                    className="chat-input"
+                    type="text"
+                    placeholder="Digite sua mensagem..."
+                    value={mensagem}
+                    onChange={e => setMensagem(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && enviarMensagem()}
+                    disabled={enviando}
+                  />
+                  <button
+                    className="chat-send-btn"
+                    onClick={enviarMensagem}
+                    disabled={!mensagem.trim() || enviando}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

@@ -309,6 +309,48 @@
 .caixa-chat-input button:hover { background: #0096c7; }
 .caixa-chat-input button:disabled { background: rgba(255,255,255,0.1); cursor: not-allowed; }
 
+.caixa-btn-limpar {
+  background: #c0392b;
+  border: none;
+  cursor: pointer;
+  padding: 7px 10px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.caixa-btn-limpar:hover { background: #e74c3c; transform: scale(1.1); }
+
+.caixa-btn-encerrar {
+  margin-left: 8px;
+  background: rgba(244,67,54,0.1);
+  border: 1px solid rgba(244,67,54,0.3);
+  color: #f44336;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.caixa-btn-encerrar:hover {
+  background: rgba(244,67,54,0.2);
+  border-color: #f44336;
+}
+
+.caixa-conversa-encerrada {
+  flex: 1;
+  text-align: center;
+  color: #4a6070;
+  font-size: 0.875rem;
+  padding: 11px 0;
+}
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }

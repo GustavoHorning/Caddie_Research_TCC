@@ -52,6 +52,28 @@ export default function CaixaEntradaGestor() {
     }
   }
 
+  const deletarConversa = async (id: number) => {
+    try {
+      await api.delete(`/api/chat/${id}`, { headers })
+      if (conversaSelecionada?.id === id) setConversaSelecionada(null)
+      await carregarConversas()
+    } catch (err) {
+      console.error('Erro ao deletar conversa:', err)
+    }
+  }
+
+  const encerrarConversa = async () => {
+    if (!conversaSelecionada) return
+    if (!confirm('Tem certeza que deseja encerrar esta conversa?')) return
+    try {
+      await api.put(`/api/chat/${conversaSelecionada.id}/encerrar`, {}, { headers })
+      setConversaSelecionada({ ...conversaSelecionada, status: 'Fechada' })
+      await carregarConversas()
+    } catch (err) {
+      console.error('Erro ao encerrar conversa:', err)
+    }
+  }
+
   const enviarResposta = async () => {
     if (!resposta.trim() || !conversaSelecionada || enviando) return
     setEnviando(true)
@@ -129,7 +151,20 @@ export default function CaixaEntradaGestor() {
                     <div className="caixa-item-assunto">{c.assunto}</div>
                     <div className="caixa-item-data">{formatarData(c.dataAbertura)}</div>
                   </div>
-                  {c.naoLidas > 0 && (
+                  {c.status === 'Fechada' ? (
+                    <button
+                      className="caixa-btn-limpar"
+                      title="Limpar histórico"
+                      onClick={e => { e.stopPropagation(); deletarConversa(c.id); }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                      </svg>
+                    </button>
+                  ) : c.naoLidas > 0 && (
                     <span className="caixa-badge-nao-lidas">{c.naoLidas}</span>
                   )}
                 </div>
@@ -157,6 +192,11 @@ export default function CaixaEntradaGestor() {
                   <span className={`caixa-status-tag ${conversaSelecionada.status === 'Aberta' ? 'aberta' : 'fechada'}`}>
                     {conversaSelecionada.status}
                   </span>
+                  {conversaSelecionada.status === 'Aberta' && (
+                    <button className="caixa-btn-encerrar" onClick={encerrarConversa}>
+                      Encerrar conversa
+                    </button>
+                  )}
                 </div>
 
                 <div className="caixa-chat-mensagens">
@@ -185,6 +225,9 @@ export default function CaixaEntradaGestor() {
                 </div>
 
                 <div className="caixa-chat-input">
+                  {conversaSelecionada.status === 'Fechada' ? (
+                    <div className="caixa-conversa-encerrada">✓ Conversa encerrada</div>
+                  ) : (
                   <input
                     type="text"
                     placeholder="Digite sua resposta..."
@@ -193,7 +236,8 @@ export default function CaixaEntradaGestor() {
                     onKeyDown={e => e.key === 'Enter' && enviarResposta()}
                     disabled={enviando}
                   />
-                  <button onClick={enviarResposta} disabled={!resposta.trim() || enviando}>
+                  )}
+                  <button onClick={enviarResposta} disabled={!resposta.trim() || enviando || conversaSelecionada.status === 'Fechada'}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="22" y1="2" x2="11" y2="13" />
                       <polygon points="22 2 15 22 11 13 2 9 22 2" />
