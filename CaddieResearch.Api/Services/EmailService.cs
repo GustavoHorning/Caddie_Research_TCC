@@ -70,4 +70,56 @@ public class EmailService
             htmlContent: htmlContent
         );
     }
+
+    public async Task EnviarHistoricoChatAsync(string emailDestino, string nomeDestino, string assunto, List<(string Remetente, bool EhGestor, string Conteudo, DateTime DataEnvio)> mensagens)
+    {
+        var connectionString = _configuration["AzureEmail:ConnectionString"];
+        var senderAddress    = _configuration["AzureEmail:Sender"];
+
+        if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(senderAddress))
+            return; // Não configurado localmente — ignora silenciosamente
+
+        var emailClient = new EmailClient(connectionString);
+
+        var linhasMensagens = string.Join("", mensagens.Select(m =>
+        {
+            var cor       = m.EhGestor ? "#1a2f45" : "#003d5c";
+            var remetente = m.EhGestor ? "Analista Caddie" : nomeDestino;
+            var justify   = m.EhGestor ? "flex-start" : "flex-end";
+            return $@"
+                <div style='display:flex; justify-content:{justify}; margin-bottom:12px;'>
+                    <div style='max-width:75%; background:{cor}; padding:10px 14px; border-radius:12px;'>
+                        <div style='font-size:11px; color:#00B4D8; font-weight:bold; margin-bottom:4px;'>{remetente}</div>
+                        <div style='color:#e0f0f8; font-size:14px;'>{m.Conteudo}</div>
+                        <div style='font-size:10px; color:#7a90a8; margin-top:4px; text-align:right;'>{m.DataEnvio.ToLocalTime():dd/MM/yyyy HH:mm}</div>
+                    </div>
+                </div>";
+        }));
+
+        var htmlContent = $@"
+            <div style='font-family:Inter,Arial,sans-serif; background:#0a121e; padding:32px; border-radius:12px;'>
+                <div style='text-align:center; margin-bottom:24px;'>
+                    <h2 style='color:#00B4D8; margin:0;'>Caddie Research</h2>
+                    <p style='color:#7a90a8; margin:4px 0 0;'>Histórico de atendimento</p>
+                </div>
+                <div style='background:#0d1520; border-radius:10px; padding:16px; margin-bottom:24px;'>
+                    <p style='color:#c9d1d9; margin:0;'>Olá <strong style='color:#fff;'>{nomeDestino}</strong>,</p>
+                    <p style='color:#7a90a8; margin:8px 0 0;'>Segue o histórico do seu atendimento sobre <strong style='color:#00B4D8;'>{assunto}</strong>.</p>
+                </div>
+                <div style='background:#0d1520; border-radius:10px; padding:20px;'>
+                    {linhasMensagens}
+                </div>
+                <p style='color:#4a6070; font-size:12px; text-align:center; margin-top:24px;'>
+                    Este é um e-mail automático do Caddie Research. Por favor, não responda.
+                </p>
+            </div>";
+
+        await emailClient.SendAsync(
+            WaitUntil.Completed,
+            senderAddress: senderAddress,
+            recipientAddress: emailDestino,
+            subject: $"Caddie Research - Histórico do seu atendimento: {assunto}",
+            htmlContent: htmlContent
+        );
+    }
 }
