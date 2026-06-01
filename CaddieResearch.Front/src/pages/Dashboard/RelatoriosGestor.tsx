@@ -24,22 +24,18 @@ interface Relatorio {
 export default function RelatoriosGestor() {
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
     
-    // Dados da API
     const [relatorios, setRelatorios] = useState<Relatorio[]>([]);
     const [carteirasLista, setCarteirasLista] = useState<Carteira[]>([]);
     const [carregando, setCarregando] = useState(false);
     const [termoBusca, setTermoBusca] = useState('');
 
-    // Controle de Modais
     const [mostrarForm, setMostrarForm] = useState(false);
     const [relatorioEditandoId, setRelatorioEditandoId] = useState<number | null>(null);
     const [relatorioParaRemover, setRelatorioParaRemover] = useState<{id: number, titulo: string} | null>(null);
 
-    // Notificações Toast
     const [toastMsg, setToastMsg] = useState('');
     const [toastTipo, setToastTipo] = useState<'sucesso' | 'erro'>('sucesso');
 
-    // Estados do Formulário
     const [titulo, setTitulo] = useState('');
     const [assunto, setAssunto] = useState('');
     const [conteudoTexto, setConteudoTexto] = useState('');
@@ -47,7 +43,6 @@ export default function RelatoriosGestor() {
     const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
     const [loadingForm, setLoadingForm] = useState(false);
 
-    // Configuração de Autenticação (Puxando padrão do projeto)
     const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
 
     useEffect(() => {
@@ -137,7 +132,6 @@ export default function RelatoriosGestor() {
 
         try {
             if (relatorioEditandoId) {
-                // Ao enviar FormData com axios, não podemos passar configSeguranca inteiro como 3º param, precisamos mesclar
                 await api.put(`/api/relatorios/${relatorioEditandoId}`, formData, {
                     headers: { ...configSeguranca.headers, 'Content-Type': 'multipart/form-data' }
                 });
