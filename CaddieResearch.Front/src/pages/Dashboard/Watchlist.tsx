@@ -85,61 +85,60 @@ export default function Watchlist() {
     }
   }
 
-  function getFavoritosFiltrados(): Favorito[] {
-    if (abaAtiva === 'todos') return favoritos
-    if (abaAtiva === 'acoes') return favoritos.filter(f =>
-      f.categoria?.toLowerCase().includes('ação') ||
-      f.categoria?.toLowerCase().includes('acao') ||
-      f.categoria?.toLowerCase().includes('ações') ||
-      f.categoria?.toLowerCase().includes('acoes') ||
-      f.categoria?.toLowerCase().includes('b3')
+  function filtroRendaFixa(f: Favorito): boolean {
+    const cat = f.categoria?.toLowerCase() || ''
+    return (
+      cat.includes('renda fixa') ||
+      cat.includes('cri') ||
+      cat.includes('cra') ||
+      cat.includes('debenture') ||
+      cat.includes('debênture') ||
+      cat.includes('tesouro') ||
+      cat.includes('lci') ||
+      cat.includes('lca') ||
+      cat.includes('cdb') ||
+      cat.includes('atrelado') ||
+      cat.includes('inflação') ||
+      cat.includes('inflacao') ||
+      cat.includes('prefixado') ||
+      cat.includes('selic')
     )
-    if (abaAtiva === 'rendafixa') return favoritos.filter(f =>
-      f.categoria?.toLowerCase().includes('renda fixa') ||
-      f.categoria?.toLowerCase().includes('cri') ||
-      f.categoria?.toLowerCase().includes('cra') ||
-      f.categoria?.toLowerCase().includes('debenture') ||
-      f.categoria?.toLowerCase().includes('debênture') ||
-      f.categoria?.toLowerCase().includes('tesouro') ||
-      f.categoria?.toLowerCase().includes('lci') ||
-      f.categoria?.toLowerCase().includes('lca') ||
-      f.categoria?.toLowerCase().includes('cdb')
+  }
+
+  function filtroAcoes(f: Favorito): boolean {
+    const cat = f.categoria?.toLowerCase() || ''
+    return (
+      cat.includes('ação') ||
+      cat.includes('acao') ||
+      cat.includes('ações') ||
+      cat.includes('acoes') ||
+      cat.includes('b3')
     )
-    if (abaAtiva === 'internacional') return favoritos.filter(f =>
-      f.categoria?.toLowerCase().includes('internacional') ||
-      f.categoria?.toLowerCase().includes('etf') ||
-      f.categoria?.toLowerCase().includes('usd') ||
+  }
+
+  function filtroInternacional(f: Favorito): boolean {
+    const cat = f.categoria?.toLowerCase() || ''
+    return (
+      cat.includes('internacional') ||
+      cat.includes('etf') ||
+      cat.includes('usd') ||
       f.ticker?.includes('.')
     )
+  }
+
+  function getFavoritosFiltrados(): Favorito[] {
+    if (abaAtiva === 'todos') return favoritos
+    if (abaAtiva === 'acoes') return favoritos.filter(filtroAcoes)
+    if (abaAtiva === 'rendafixa') return favoritos.filter(filtroRendaFixa)
+    if (abaAtiva === 'internacional') return favoritos.filter(filtroInternacional)
     return favoritos
   }
 
   function contarPorCategoria(cat: Aba): number {
     if (cat === 'todos') return favoritos.length
-    if (cat === 'acoes') return favoritos.filter(f =>
-      f.categoria?.toLowerCase().includes('ação') ||
-      f.categoria?.toLowerCase().includes('acao') ||
-      f.categoria?.toLowerCase().includes('ações') ||
-      f.categoria?.toLowerCase().includes('acoes') ||
-      f.categoria?.toLowerCase().includes('b3')
-    ).length
-    if (cat === 'rendafixa') return favoritos.filter(f =>
-      f.categoria?.toLowerCase().includes('renda fixa') ||
-      f.categoria?.toLowerCase().includes('cri') ||
-      f.categoria?.toLowerCase().includes('cra') ||
-      f.categoria?.toLowerCase().includes('debenture') ||
-      f.categoria?.toLowerCase().includes('debênture') ||
-      f.categoria?.toLowerCase().includes('tesouro') ||
-      f.categoria?.toLowerCase().includes('lci') ||
-      f.categoria?.toLowerCase().includes('lca') ||
-      f.categoria?.toLowerCase().includes('cdb')
-    ).length
-    if (cat === 'internacional') return favoritos.filter(f =>
-      f.categoria?.toLowerCase().includes('internacional') ||
-      f.categoria?.toLowerCase().includes('etf') ||
-      f.categoria?.toLowerCase().includes('usd') ||
-      f.ticker?.includes('.')
-    ).length
+    if (cat === 'acoes') return favoritos.filter(filtroAcoes).length
+    if (cat === 'rendafixa') return favoritos.filter(filtroRendaFixa).length
+    if (cat === 'internacional') return favoritos.filter(filtroInternacional).length
     return 0
   }
 
