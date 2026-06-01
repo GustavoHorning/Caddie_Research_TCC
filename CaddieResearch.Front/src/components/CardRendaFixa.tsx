@@ -126,7 +126,7 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
                                 transition: 'transform 0.15s ease', flexShrink: 0
                             }}
                         >
-                            {favoritado ? '⭐' : '☆'}
+                            {favoritado ? '⭐' : <span style={{ color: '#f1f0ed', opacity: 0.6 }}>★</span>}
                         </button>
                     </h3>
                     <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>

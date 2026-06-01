@@ -148,7 +148,7 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                                     transition: 'transform 0.15s ease'
                                 }}
                             >
-                                {favoritado ? '⭐' : '☆'}
+                                {favoritado ? '⭐' : <span style={{ color: '#f1f0ed', opacity: 0.6 }}>★</span>}
                             </button>
                         </div>
                     </h3>

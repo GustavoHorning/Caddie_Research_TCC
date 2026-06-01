@@ -16,6 +16,7 @@ import PainelGestor from './pages/Dashboard/Gestor/PainelGestor';
 import CaixaEntradaGestor from './pages/Dashboard/Gestor/CaixaEntradaGestor';
 import GerenciarPlano from './pages/Dashboard/GerenciarPlano';
 import Perfil from "./pages/Dashboard/Perfil";
+import Watchlist from './pages/Dashboard/Watchlist';
 
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/pagamento" element={<ProtectedRoute clientOnly><Pagamento /></ProtectedRoute>} />
                 <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
                 <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+                <Route path="/watchlist" element={<ProtectedRoute clientOnly><DashboardLayout><Watchlist /></DashboardLayout></ProtectedRoute>} />
 
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
                 <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
