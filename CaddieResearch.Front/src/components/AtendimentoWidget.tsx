@@ -38,8 +38,9 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
   const [conversaEncerrada, setConversaEncerrada] = useState(false)
   const [historico, setHistorico] = useState<ConversaHistorico[]>([])
 
-  const token = localStorage.getItem('caddie_token')
-  const headers = { Authorization: `Bearer ${token}` }
+  const getHeaders = () => ({
+    Authorization: `Bearer ${localStorage.getItem('caddie_token')}`
+  })
 
   // Fecha ao clicar fora
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
   // Busca histórico de conversas
   const buscarHistorico = useCallback(async () => {
     try {
-      const res = await api.get('/api/chat/minhas-conversas', { headers })
+      const res = await api.get('/api/chat/minhas-conversas', { headers: getHeaders() })
       setHistorico(res.data)
     } catch (err) {
       console.error('Erro ao buscar histórico:', err)
@@ -93,7 +94,7 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
   // Abre ou recupera conversa no backend
   const abrirConversa = useCallback(async () => {
     try {
-      const res = await api.post('/api/chat/abrir', { assunto: 'Investimentos' }, { headers })
+      const res = await api.post('/api/chat/abrir', { assunto: 'Investimentos' }, { headers: getHeaders() })
       setConversaId(res.data.conversaId)
     } catch (err) {
       console.error('Erro ao abrir conversa:', err)
@@ -104,8 +105,8 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
   const buscarMensagens = useCallback(async (id: number) => {
     try {
       const [msgRes, statusRes] = await Promise.all([
-        api.get(`/api/chat/${id}/mensagens`, { headers }),
-        api.get(`/api/chat/${id}/status`, { headers })
+        api.get(`/api/chat/${id}/mensagens`, { headers: getHeaders() }),
+        api.get(`/api/chat/${id}/status`, { headers: getHeaders() })
       ])
       setMensagens(msgRes.data)
       setConversaEncerrada(statusRes.data.status === 'Fechada')
@@ -139,7 +140,7 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
     if (!mensagem.trim() || !conversaId || enviando) return
     setEnviando(true)
     try {
-      await api.post(`/api/chat/${conversaId}/mensagem`, { conteudo: mensagem }, { headers })
+      await api.post(`/api/chat/${conversaId}/mensagem`, { conteudo: mensagem }, { headers: getHeaders() })
       setMensagem('')
       await buscarMensagens(conversaId)
     } catch (err) {
