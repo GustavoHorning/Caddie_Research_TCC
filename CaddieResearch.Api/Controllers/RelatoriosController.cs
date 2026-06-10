@@ -3,6 +3,7 @@ using CaddieResearch.Api.Models;
 using CaddieResearch.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CaddieResearch.Api.Controllers;
 
@@ -90,5 +91,67 @@ public class RelatoriosController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpGet("{id}/download")]
+    public async Task<IActionResult> Download(int id)
+    {
+        var relatorio = await _context.Relatorios
+            .Include(r => r.Carteira)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (relatorio == null || string.IsNullOrEmpty(relatorio.ArquivoPdfUrl)) 
+            return NotFound("Relatório não encontrado ou sem anexo.");
+
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim)) 
+            return Unauthorized("Você precisa estar logado.");
+
+        int usuarioId = int.Parse(userIdClaim);
+
+        var usuario = await _context.Usuarios
+            .Include(u => u.Assinaturas)
+            .FirstOrDefaultAsync(u => u.Id == usuarioId);
+
+        if (usuario == null) return Unauthorized();
+
+        int nivelAcessoUsuario = 0;
+
+        if (usuario.TipoPerfil == "Gestor")
+        {
+            nivelAcessoUsuario = 999;
+        }
+        else
+        {
+            var assinaturaAtiva = usuario.Assinaturas?.FirstOrDefault(a => a.Status == "Ativo");
+
+            if (assinaturaAtiva != null)
+            {
+                string plano = assinaturaAtiva.PlanoNome.ToLower();
+                if (plano.Contains("black")) nivelAcessoUsuario = 3;
+                else if (plano.Contains("premium")) nivelAcessoUsuario = 2;
+                else if (plano.Contains("basic")) nivelAcessoUsuario = 1;
+            }
+        }
+
+        int nivelExigido = relatorio.Carteira?.NivelAcesso ?? 1;
+
+        if (nivelAcessoUsuario < nivelExigido)
+        {
+            return StatusCode(403, new { 
+                erro = "Acesso Negado", 
+                mensagem = $"Seu plano atual não permite acessar os relatórios da carteira {relatorio.Carteira?.Nome}. Faça um upgrade para liberar este conteúdo." 
+            });
+        }
+
+        try
+        {
+            var stream = await _blobService.DownloadPdfAsync(relatorio.ArquivoPdfUrl);
+            return File(stream, "application/pdf", $"{relatorio.Titulo}.pdf");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro ao processar o arquivo no servidor: {ex.Message}");
+        }
     }
 }

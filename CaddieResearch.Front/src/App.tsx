@@ -9,6 +9,7 @@ import Assinaturas from './pages/Assinaturas';
 import Pagamento from './pages/Pagamento';
 import PagamentoSucesso from './pages/PagamentoSucesso';
 import CarteiraDetalhes from './pages/CarteiraDetalhes';
+import Relatorios from './pages/Dashboard/Relatorios';
 
 import Carteiras from './pages/Dashboard/Carteiras/Carteiras';
 import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternacional';
@@ -42,6 +43,7 @@ function App() {
                 <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
                 <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
                 <Route path="/watchlist" element={<ProtectedRoute clientOnly><DashboardLayout><Watchlist /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/relatorios" element={<Relatorios />} />
 
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
                 <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />

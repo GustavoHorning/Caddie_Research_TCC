@@ -72,7 +72,7 @@ public class BlobService
         var blobServiceClient = new BlobServiceClient(_connectionString);
         var containerClient = blobServiceClient.GetBlobContainerClient("relatorios-pdfs");
         
-        await containerClient.CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.Blob);
+        await containerClient.CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.None);
 
         var nomeArquivo = $"{Guid.NewGuid()}_{Path.GetFileName(arquivo.FileName)}";
         var blobClient = containerClient.GetBlobClient(nomeArquivo);
@@ -81,6 +81,19 @@ public class BlobService
         await blobClient.UploadAsync(stream, new Azure.Storage.Blobs.Models.BlobHttpHeaders { ContentType = "application/pdf" });
 
         return blobClient.Uri.ToString();
+    }
+
+    public async Task<Stream> DownloadPdfAsync(string urlPdf)
+    {
+        var uri = new Uri(urlPdf);
+        var nomeArquivo = Path.GetFileName(uri.LocalPath);
+
+        var blobServiceClient = new BlobServiceClient(_connectionString);
+        var containerClient = blobServiceClient.GetBlobContainerClient("relatorios-pdfs");
+        var blobClient = containerClient.GetBlobClient(nomeArquivo);
+
+        var response = await blobClient.DownloadAsync();
+        return response.Value.Content;
     }
 
     public async Task ExcluirPdfAsync(string urlPdf)
