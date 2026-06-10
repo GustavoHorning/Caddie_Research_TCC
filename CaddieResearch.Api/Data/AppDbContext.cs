@@ -14,6 +14,19 @@ public class AppDbContext : DbContext
     public DbSet<Carteira> Carteiras { get; set; }
     public DbSet<Ativo> Ativos { get; set; }
     public DbSet<Assinatura> Assinaturas { get; set; }
-    public DbSet<Favorito> Favoritos { get; set; } 
+    public DbSet<Favorito> Favoritos { get; set; }
     public DbSet<Relatorio> Relatorios { get; set; }
+    public DbSet<Conversa> Conversas { get; set; }
+    public DbSet<Mensagem> Mensagens { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Mensagem>()
+            .HasOne(m => m.Remetente)
+            .WithMany()
+            .HasForeignKey(m => m.RemetenteId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
 }

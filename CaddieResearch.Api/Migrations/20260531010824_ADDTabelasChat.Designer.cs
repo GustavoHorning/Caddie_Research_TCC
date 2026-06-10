@@ -4,6 +4,7 @@ using CaddieResearch.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CaddieResearch.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260531010824_ADDTabelasChat")]
+    partial class ADDTabelasChat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -177,42 +180,6 @@ namespace CaddieResearch.Api.Migrations
                     b.HasIndex("RemetenteId");
 
                     b.ToTable("Mensagens");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.Relatorio", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ArquivoPdfUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Assunto")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CarteiraId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ConteudoTexto")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DataPublicacao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CarteiraId");
-
-                    b.ToTable("Relatorios");
                 });
 
             modelBuilder.Entity("CaddieResearch.Api.Models.Usuario", b =>
@@ -415,17 +382,6 @@ namespace CaddieResearch.Api.Migrations
                     b.Navigation("Conversa");
 
                     b.Navigation("Remetente");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.Relatorio", b =>
-                {
-                    b.HasOne("CaddieResearch.Models.Carteira", "Carteira")
-                        .WithMany()
-                        .HasForeignKey("CarteiraId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Carteira");
                 });
 
             modelBuilder.Entity("CaddieResearch.Models.Ativo", b =>
