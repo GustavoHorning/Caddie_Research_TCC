@@ -9,10 +9,12 @@ import Assinaturas from './pages/Assinaturas';
 import Pagamento from './pages/Pagamento';
 import PagamentoSucesso from './pages/PagamentoSucesso';
 import CarteiraDetalhes from './pages/CarteiraDetalhes';
+import Relatorios from './pages/Dashboard/Relatorios';
 
 import Carteiras from './pages/Dashboard/Carteiras/Carteiras';
 import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternacional';
 import PainelGestor from './pages/Dashboard/Gestor/PainelGestor';
+import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor';
 import CaixaEntradaGestor from './pages/Dashboard/Gestor/CaixaEntradaGestor';
 import GerenciarPlano from './pages/Dashboard/GerenciarPlano';
 import Perfil from "./pages/Dashboard/Perfil";
@@ -41,9 +43,13 @@ function App() {
                 <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
                 <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
                 <Route path="/watchlist" element={<ProtectedRoute clientOnly><DashboardLayout><Watchlist /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/relatorios" element={<Relatorios />} />
 
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
                 <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
+                <Route path="/gestor/relatorios" element={<RelatoriosGestor />} />
+
+
             </Routes>
         </BrowserRouter>
     )

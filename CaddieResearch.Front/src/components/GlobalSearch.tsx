@@ -2,13 +2,12 @@
 import './GlobalSearch.css';
 import PdfViewerModal from './PdfViewerModal';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
-const mockResultados = [
-    { id: 1, tipo: 'Relatório', titulo: 'Oportunidades em Energia e Petróleo', tags: ['PETR4', 'ENBR3', 'PRIO3'], data: '27 Mai 2026', url: '/relatorios/1' },
-    { id: 2, tipo: 'Tese', titulo: 'Por que comprar Petrobras agora?', tags: ['PETR4', 'DIVIDENDOS'], data: '15 Mai 2026', url: '/teses/2' },
-    { id: 3, tipo: 'Carteira', titulo: 'Carteira Top 10 Dividendos', tags: ['VALE3', 'PETR4', 'BBAS3'], data: '01 Mai 2026', url: '/carteiras/1' },
-    { id: 4, tipo: 'Relatório', titulo: 'Resultados do 1T26 do Banco do Brasil', tags: ['BBAS3', 'BANCOS'], data: '10 Mai 2026', url: '/relatorios/4' },
-    { id: 5, tipo: 'Tese', titulo: 'A Queda da Selic e o Impacto nos FIIs', tags: ['FIIs', 'MACRO', 'SELIC'], data: '20 Abr 2026', url: '/teses/5' },
+const mockOutros = [
+    { id: 'm2', tipo: 'Tese', titulo: 'Por que comprar Petrobras agora?', tags: ['PETR4', 'DIVIDENDOS'], data: '15 Mai 2026', url: '/teses/2' },
+    { id: 'm3', tipo: 'Carteira', titulo: 'Carteira Top 10 Dividendos', tags: ['VALE3', 'PETR4', 'BBAS3'], data: '01 Mai 2026', url: '/carteiras/1' },
+    { id: 'm5', tipo: 'Tese', titulo: 'A Queda da Selic e o Impacto nos FIIs', tags: ['FIIs', 'MACRO', 'SELIC'], data: '20 Abr 2026', url: '/teses/5' },
 ];
 
 export default function GlobalSearch({ onClose }: { onClose: () => void }) {
@@ -17,20 +16,65 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
     const [filtroAtivo, setFiltroAtivo] = useState('Todos');
     const [isSearching, setIsSearching] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [resultadosApi, setResultadosApi] = useState<any[]>([]);
+    
     const inputRef = useRef<HTMLInputElement>(null);
     const [documentoAtivo, setDocumentoAtivo] = useState<{url: string, titulo: string} | null>(null);
     const navigate = useNavigate();
+
+    const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
 
     useEffect(() => {
         setIsSearching(true);
         const timer = setTimeout(() => {
             setTermoDebounced(termoBusca);
-            setIsSearching(false);
-            setSelectedIndex(0);
         }, 400);
 
         return () => clearTimeout(timer);
     }, [termoBusca]);
+
+    useEffect(() => {
+        const buscarNaApi = async () => {
+            if (termoDebounced.length === 0) {
+                setResultadosApi([]);
+                setIsSearching(false);
+                return;
+            }
+
+            try {
+                const res = await api.get(`/api/relatorios/busca?termo=${encodeURIComponent(termoDebounced)}`, configSeguranca);
+                
+                const mapeados = res.data.map((r: any) => ({
+                    id: `api_${r.id}`,
+                    realId: r.id,     
+                    tipo: 'Relatório',
+                    titulo: r.titulo,
+                    tags: [r.carteira?.nome || 'Geral', r.assunto],
+                    data: new Date(r.dataPublicacao).toLocaleDateString('pt-BR'),
+                    arquivoPdfUrl: r.arquivoPdfUrl,
+                    url: '/relatorios'
+                }));
+                
+                setResultadosApi(mapeados);
+            } catch (error) {
+                console.error("Erro na busca da API:", error);
+            } finally {
+                setIsSearching(false);
+                setSelectedIndex(0);
+            }
+        };
+
+        buscarNaApi();
+    }, [termoDebounced]);
+
+    const mockFiltrado = mockOutros.filter(item => 
+        item.titulo.toLowerCase().includes(termoDebounced.toLowerCase()) ||
+        item.tags.some(tag => tag.toLowerCase().includes(termoDebounced.toLowerCase()))
+    );
+
+    const resultadosFiltrados = [...resultadosApi, ...mockFiltrado].filter(item =>
+        filtroAtivo === 'Todos' || item.tipo === filtroAtivo
+    );
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,22 +103,26 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
         if (inputRef.current) inputRef.current.focus();
     }, []);
 
-    const resultadosFiltrados = mockResultados.filter(item =>
-        (filtroAtivo === 'Todos' || item.tipo === filtroAtivo) &&
-        (item.titulo.toLowerCase().includes(termoDebounced.toLowerCase()) ||
-            item.tags.some(tag => tag.toLowerCase().includes(termoDebounced.toLowerCase())))
-    );
-
     const handleOpenResult = (item: any) => {
-        if (item.tipo === 'Relatório' || item.tipo === 'Tese') {
+        if (item.tipo === 'Relatório') {
+            navigate(`/relatorios?highlight=${item.realId}`);
+            onClose();
+        } else if (item.tipo === 'Tese') {
             setDocumentoAtivo({
                 url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
                 titulo: item.titulo
             });
-        } else if (item.tipo === 'Carteira') {
-            navigate(item.url);
+        } else {
+            navigate(item.url || '/dashboard');
             onClose();
         }
+    };
+
+    const handleCloseViewer = () => {
+        if (documentoAtivo?.url && documentoAtivo.url.startsWith('blob:')) {
+            window.URL.revokeObjectURL(documentoAtivo.url); 
+        }
+        setDocumentoAtivo(null);
     };
 
     return (
@@ -116,7 +164,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                         </div>
                     ) : isSearching ? (
                         <div className="search-empty-state">
-                            <span style={{ animation: 'pulse 1.5s infinite' }}>Buscando...</span>
+                            <span style={{ animation: 'pulse 1.5s infinite' }}>Buscando na base de dados...</span>
                         </div>
                     ) : resultadosFiltrados.length > 0 ? (
                         resultadosFiltrados.map((item, index) => (
@@ -130,7 +178,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                                     <span className="result-type">{item.tipo}</span>
                                     <h4 className="result-title">{item.titulo}</h4>
                                     <div className="result-tags">
-                                        {item.tags.map(tag => (
+                                        {item.tags.map((tag: string) => (
                                             <span key={tag} className={`tag ${tag.toLowerCase().includes(termoDebounced.toLowerCase()) ? 'highlight' : ''}`}>
                                                 {tag}
                                             </span>
@@ -146,7 +194,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                     ) : (
                         <div className="search-empty-state">
                             <span>Nenhum resultado encontrado para "{termoDebounced}".</span>
-                            <p style={{fontSize: '0.8rem', marginTop: '8px', opacity: 0.5}}>Tente termos como "PETR4", "Dividendos" ou "Tese".</p>
+                            <p style={{fontSize: '0.8rem', marginTop: '8px', opacity: 0.5}}>Tente termos internos de PDFs ou nomes de empresas.</p>
                         </div>
                     )}
                 </div>
@@ -155,9 +203,10 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                     <span>Use as setas <strong>↑ ↓</strong> para navegar e <strong>Enter ↵</strong> para abrir.</span>
                 </div>
             </div>
+            
             <PdfViewerModal
                 isOpen={documentoAtivo !== null}
-                onClose={() => setDocumentoAtivo(null)}
+                onClose={handleCloseViewer}
                 pdfUrl={documentoAtivo?.url || ''}
                 titulo={documentoAtivo?.titulo || ''}
             />

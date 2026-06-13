@@ -4,6 +4,7 @@ using CaddieResearch.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CaddieResearch.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260530212714_CriacaoTabelaRelatorios")]
+    partial class CriacaoTabelaRelatorios
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,37 +72,6 @@ namespace CaddieResearch.Api.Migrations
                     b.ToTable("Assinaturas");
                 });
 
-            modelBuilder.Entity("CaddieResearch.Api.Models.Conversa", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Assunto")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("DataAbertura")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("Conversas");
-                });
-
             modelBuilder.Entity("CaddieResearch.Api.Models.Favorito", b =>
                 {
                     b.Property<int>("Id")
@@ -142,43 +114,6 @@ namespace CaddieResearch.Api.Migrations
                     b.ToTable("Favoritos");
                 });
 
-            modelBuilder.Entity("CaddieResearch.Api.Models.Mensagem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Conteudo")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<int>("ConversaId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("DataEnvio")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("EhGestor")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("Lida")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("RemetenteId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConversaId");
-
-                    b.HasIndex("RemetenteId");
-
-                    b.ToTable("Mensagens");
-                });
-
             modelBuilder.Entity("CaddieResearch.Api.Models.Relatorio", b =>
                 {
                     b.Property<int>("Id")
@@ -196,9 +131,6 @@ namespace CaddieResearch.Api.Migrations
 
                     b.Property<int>("CarteiraId")
                         .HasColumnType("int");
-
-                    b.Property<string>("ConteudoPdfTexto")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConteudoTexto")
                         .IsRequired()
@@ -379,17 +311,6 @@ namespace CaddieResearch.Api.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("CaddieResearch.Api.Models.Conversa", b =>
-                {
-                    b.HasOne("CaddieResearch.Api.Models.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
-                });
-
             modelBuilder.Entity("CaddieResearch.Api.Models.Favorito", b =>
                 {
                     b.HasOne("CaddieResearch.Api.Models.Usuario", "Usuario")
@@ -399,25 +320,6 @@ namespace CaddieResearch.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.Mensagem", b =>
-                {
-                    b.HasOne("CaddieResearch.Api.Models.Conversa", "Conversa")
-                        .WithMany("Mensagens")
-                        .HasForeignKey("ConversaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CaddieResearch.Api.Models.Usuario", "Remetente")
-                        .WithMany()
-                        .HasForeignKey("RemetenteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Conversa");
-
-                    b.Navigation("Remetente");
                 });
 
             modelBuilder.Entity("CaddieResearch.Api.Models.Relatorio", b =>
@@ -440,11 +342,6 @@ namespace CaddieResearch.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Carteira");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.Conversa", b =>
-                {
-                    b.Navigation("Mensagens");
                 });
 
             modelBuilder.Entity("CaddieResearch.Api.Models.Usuario", b =>

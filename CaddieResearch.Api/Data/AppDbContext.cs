@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Ativo> Ativos { get; set; }
     public DbSet<Assinatura> Assinaturas { get; set; }
     public DbSet<Favorito> Favoritos { get; set; }
+    public DbSet<Relatorio> Relatorios { get; set; }
     public DbSet<Conversa> Conversas { get; set; }
     public DbSet<Mensagem> Mensagens { get; set; }
 
@@ -22,7 +23,6 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Evita múltiplos caminhos de CASCADE DELETE no SQL Server
         modelBuilder.Entity<Mensagem>()
             .HasOne(m => m.Remetente)
             .WithMany()
