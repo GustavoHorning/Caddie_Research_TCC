@@ -17,6 +17,7 @@ public class Relatorio
     public string ConteudoTexto { get; set; } = string.Empty;
     
     public string? ArquivoPdfUrl { get; set; }
+    public string? ConteudoPdfTexto { get; set; }
     
     [Required]
     public int CarteiraId { get; set; } 
