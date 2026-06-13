@@ -9,6 +9,7 @@ namespace CaddieResearch.Api.Controllers;
 
 [ApiController]
 [Route("api/chat")]
+[Microsoft.AspNetCore.Authorization.Authorize]
 public class ChatController : ControllerBase
 {
     private readonly AppDbContext _context;
