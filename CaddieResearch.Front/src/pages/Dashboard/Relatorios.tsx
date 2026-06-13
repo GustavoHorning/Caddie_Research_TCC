@@ -3,7 +3,8 @@ import './Relatorios.css';
 import Sidebar from '../../components/Sidebar';
 import TopBar from '../../components/TopBar';
 import api from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import PdfViewerModal from '../../components/PdfViewerModal';
 
 interface Carteira {
     id: number;
@@ -31,7 +32,35 @@ export default function Relatorios() {
     const [modalUpgradeAberto, setModalUpgradeAberto] = useState(false);
     const [nomeCarteiraModal, setNomeCarteiraModal] = useState('');
 
+    const [viewerAberto, setViewerAberto] = useState(false);
+    const [viewerUrl, setViewerUrl] = useState('');
+    const [viewerTitulo, setViewerTitulo] = useState('');
+
     const navigate = useNavigate();
+
+    const location = useLocation();
+
+    useEffect(() => {
+        if (carregando || relatorios.length === 0) return;
+
+        const params = new URLSearchParams(location.search);
+        const highlightId = params.get('highlight');
+        
+        if (highlightId) {
+            setTimeout(() => {
+                const element = document.getElementById(`relatorio-${highlightId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('highlight-pulse');
+                    
+                    window.history.replaceState(null, '', '/relatorios');
+                    
+                    setTimeout(() => element.classList.remove('highlight-pulse'), 2000);
+                }
+            }, 300);
+        }
+    }, [location.search, relatorios, carregando]);
+    
     const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
 
     useEffect(() => {
@@ -70,7 +99,7 @@ export default function Relatorios() {
             }
         }
     };
-    
+
     const carregarRelatorios = async () => {
         try {
             const response = await api.get('/api/relatorios', configSeguranca);
@@ -87,7 +116,7 @@ export default function Relatorios() {
         setModalUpgradeAberto(true);
     };
 
-    const handleDownloadPdf = async (id: number, titulo: string, carteiraNome: string) => {
+    const handleAbrirPdf = async (id: number, titulo: string, carteiraNome: string) => {
         try {
             const response = await api.get(`/api/relatorios/${id}/download`, {
                 ...configSeguranca,
@@ -96,24 +125,29 @@ export default function Relatorios() {
 
             const blob = new Blob([response.data], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `${titulo}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode?.removeChild(link);
-            window.URL.revokeObjectURL(url);
+            
+            setViewerUrl(url);
+            setViewerTitulo(titulo);
+            setViewerAberto(true);
         } catch (error: any) {
-            console.error("Erro no download", error);
+            console.error("Erro ao abrir PDF", error);
             if (error.response?.status === 403 || error.response?.status === 401) {
                 abrirModalUpgrade(carteiraNome);
+            } else {
+                alert("Ocorreu um erro ao baixar o arquivo.");
             }
         }
     };
 
+    const handleFecharViewer = () => {
+        if (viewerUrl) window.URL.revokeObjectURL(viewerUrl);
+        setViewerAberto(false);
+        setViewerUrl('');
+    };
+
     return (
         <div className="dashboard-layout">
-            <Sidebar activePath="/dashboard/relatorios" isOpen={menuMobileAberto} onClose={() => setMenuMobileAberto(false)} />
+            <Sidebar activePath="/relatorios" isOpen={menuMobileAberto} onClose={() => setMenuMobileAberto(false)} />
             {menuMobileAberto && <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>}
 
             <TopBar userName="Assinante" onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} />
@@ -135,7 +169,7 @@ export default function Relatorios() {
                                 const nomeCarteira = rel.carteira?.nome || 'Geral';
 
                                 return (
-                                    <div key={rel.id} className={`relatorio-cliente-card ${!temAcesso ? 'locked' : ''}`}>
+                                    <div key={rel.id} id={`relatorio-${rel.id}`} className={`relatorio-cliente-card ${!temAcesso ? 'locked' : ''}`}>
                                         <span className="relatorio-tag-carteira">
                                             {nomeCarteira}
                                         </span>
@@ -162,7 +196,7 @@ export default function Relatorios() {
                                                 </button>
                                             ) : (
                                                 rel.arquivoPdfUrl ? (
-                                                    <button onClick={() => handleDownloadPdf(rel.id, rel.titulo, nomeCarteira)} className="btn-baixar-pdf">
+                                                    <button onClick={() => handleAbrirPdf(rel.id, rel.titulo, nomeCarteira)} className="btn-baixar-pdf">
                                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                                                         Ler Relatório PDF
                                                     </button>
@@ -191,7 +225,7 @@ export default function Relatorios() {
                         <h3>Conteúdo Exclusivo</h3>
                         <p>
                             Este relatório pertence à estratégia de <strong>{nomeCarteiraModal}</strong>. 
-                            Sua conta gratuita atual não possui acesso a esta análise. Deseja conhecer nossos planos para liberar o acesso?
+                            Sua conta atual não possui acesso a esta análise. Deseja conhecer nossos planos para liberar o acesso?
                         </p>
                         <div className="upgrade-modal-acoes">
                             <button className="btn-modal-upgrade-confirmar" onClick={() => navigate('/gerenciar-plano')}>
@@ -204,6 +238,13 @@ export default function Relatorios() {
                     </div>
                 </div>
             )}
+
+            <PdfViewerModal 
+                isOpen={viewerAberto} 
+                onClose={handleFecharViewer} 
+                pdfUrl={viewerUrl} 
+                titulo={viewerTitulo} 
+            />
         </div>
     );
 }

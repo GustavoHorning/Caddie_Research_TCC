@@ -3,6 +3,7 @@ import './Gestor/PainelGestor.css';
 import SidebarGestor from '../../components/SidebarGestor';
 import TopBar from '../../components/TopBar';
 import api from '../../services/api';
+import PdfViewerModal from '../../components/PdfViewerModal';
 
 interface Carteira {
     id: number;
@@ -43,6 +44,10 @@ export default function RelatoriosGestor() {
     const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
     const [loadingForm, setLoadingForm] = useState(false);
 
+    const [viewerAberto, setViewerAberto] = useState(false);
+    const [viewerUrl, setViewerUrl] = useState('');
+    const [viewerTitulo, setViewerTitulo] = useState('');
+
     const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
 
     useEffect(() => {
@@ -74,31 +79,32 @@ export default function RelatoriosGestor() {
         }
     };
 
-    const handleDownloadPdf = async (id: number, titulo: string) => {
-    try {
-        mostrarNotificacao("Preparando download...", "sucesso");
-        
-        const response = await api.get(`/api/relatorios/${id}/download`, {
-            ...configSeguranca,
-            responseType: 'blob' 
-        });
+    const handleAbrirPdf = async (id: number, titulo: string) => {
+        try {
+            mostrarNotificacao("Carregando visualizador...", "sucesso");
+            
+            const response = await api.get(`/api/relatorios/${id}/download`, {
+                ...configSeguranca,
+                responseType: 'blob' 
+            });
 
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `${titulo}.pdf`);
-        document.body.appendChild(link);
-        
-        link.click();
-        
-        link.parentNode?.removeChild(link);
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Erro ao baixar o PDF", error);
-        mostrarNotificacao("Erro ao baixar arquivo ou acesso negado.", "erro");
-    }
-};
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            
+            setViewerUrl(url);
+            setViewerTitulo(titulo);
+            setViewerAberto(true);
+        } catch (error) {
+            console.error("Erro ao abrir o PDF", error);
+            mostrarNotificacao("Erro ao carregar documento ou acesso negado.", "erro");
+        }
+    };
+
+    const handleFecharViewer = () => {
+        if (viewerUrl) window.URL.revokeObjectURL(viewerUrl);
+        setViewerAberto(false);
+        setViewerUrl('');
+    };
 
     const mostrarNotificacao = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
         setToastMsg(msg);
@@ -213,7 +219,6 @@ export default function RelatoriosGestor() {
                             </button>
                         </div>
 
-                        {/* Modal de Formulário (Mesmo padrão do PainelGestor) */}
                         {mostrarForm && (
                             <div className="modal-cadastro-overlay">
                                 <div className="modal-cadastro-content">
@@ -351,7 +356,7 @@ export default function RelatoriosGestor() {
                                                 <td className="td-center" data-label="Anexo">
                                                     {rel.arquivoPdfUrl ? (
                                                         <button 
-                                                            onClick={() => handleDownloadPdf(rel.id, rel.titulo)} 
+                                                            onClick={() => handleAbrirPdf(rel.id, rel.titulo)} 
                                                             style={{ background: 'none', border: 'none', color: '#00B4D8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '0.85rem', padding: 0 }}
                                                         >
                                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -397,7 +402,6 @@ export default function RelatoriosGestor() {
                 </div>
             </main>
 
-            {/* Modal de Confirmação de Remoção */}
             {relatorioParaRemover && (
                 <div className="gestor-modal-overlay">
                     <div className="gestor-modal-box">
@@ -418,7 +422,13 @@ export default function RelatoriosGestor() {
                 </div>
             )}
 
-            {/* Toasts (Notificações) */}
+            <PdfViewerModal 
+                isOpen={viewerAberto} 
+                onClose={handleFecharViewer} 
+                pdfUrl={viewerUrl} 
+                titulo={viewerTitulo} 
+            />
+
             {toastMsg && (
                 <div className={`gestor-toast toast-${toastTipo}`}>
                     {toastMsg}
