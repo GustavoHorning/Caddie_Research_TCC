@@ -153,7 +153,7 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                         </div>
                     </h3>
                     <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>
-                        {cotacao.shortName ? cotacao.shortName.substring(0, 25) : "Bolsa B3"}
+                        {nomeEmpresa ? nomeEmpresa : (cotacao.shortName ? cotacao.shortName.substring(0, 25) : "Bolsa B3")}
                     </span>
                 </div>
             </div>

@@ -26,4 +26,18 @@ public class AcoesController : ControllerBase
 
         return Ok(cotacao);
     }
+    
+    [HttpGet("disponiveis")]
+    public async Task<IActionResult> GetTickersDisponiveis()
+    {
+        var tickers = await _acoesService.ObterTickersDisponiveisAsync();
+        return Ok(tickers);
+    }
+    
+    [HttpGet("disponiveis/internacionais")]
+    public async Task<IActionResult> GetTickersInternacionais()
+    {
+        var tickers = await _acoesService.ObterTickersInternacionaisAsync();
+        return Ok(tickers);
+    }
 }

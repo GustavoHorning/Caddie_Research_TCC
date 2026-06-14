@@ -51,6 +51,17 @@ export default function PainelGestor() {
   const placeholderTicker = isInternacional ? "Ex: AAPL" : isFii ? "Ex: HGLG11" : "Ex: PETR4";
   const placeholderEmpresa = isInternacional ? "Ex: Apple Inc." : isFii ? "Ex: CSHG Logística" : "Ex: Petrobras S.A.";
   const placeholderPreco = isInternacional ? "Ex: 185.50" : "Ex: 42.50";
+  const [listaTickers, setListaTickers] = useState<string[]>([]);
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+  const [listaTickersInternacionais, setListaTickersInternacionais] = useState<string[]>([]);
+  const listaCorretaParaFiltro = isInternacional ? listaTickersInternacionais : listaTickers;
+  const sugestoesTickers = formTicker.length > 0
+      ? listaCorretaParaFiltro
+          .filter(t => t.toLowerCase().includes(formTicker.toLowerCase()))
+          .slice(0, 8)
+      : [];
+  
+
 
   useEffect(() => {
     if (!ativoEditandoId) {
@@ -85,6 +96,16 @@ export default function PainelGestor() {
         .catch(err => console.error("Erro ao carregar ativos:", err))
         .finally(() => setCarregandoAtivos(false))
   }, [carteiraAtivosId])
+
+  useEffect(() => {
+    api.get('/api/acoes/disponiveis', configSeguranca)
+        .then(res => setListaTickers(res.data))
+        .catch(err => console.error("Erro ao carregar tickers BR:", err));
+
+    api.get('/api/acoes/disponiveis/internacionais', configSeguranca)
+        .then(res => setListaTickersInternacionais(res.data))
+        .catch(err => console.error("Erro ao carregar tickers Internacionais:", err));
+  }, []);
 
   const ativosFiltrados = ativosTabela.filter(ativo =>
       ativo.ticker.toLowerCase().includes(termoBusca.toLowerCase()) ||
@@ -340,14 +361,60 @@ export default function PainelGestor() {
                           {isRendaVariavel && (
                               <>
                                 <div className="gestor-campo-row">
-                                  <div className="gestor-campo">
+                                  <div className="gestor-campo" style={{ position: 'relative' }}>
                                     <label>Ticker</label>
                                     <input
                                         type="text"
                                         placeholder={placeholderTicker}
                                         value={formTicker}
-                                        onChange={e => setFormTicker(e.target.value)}
+                                        onChange={e => {
+                                          setFormTicker(e.target.value.toUpperCase());
+                                          setMostrarSugestoes(true);
+                                        }}
+                                        onFocus={() => setMostrarSugestoes(true)}
+                                        onBlur={() => setTimeout(() => setMostrarSugestoes(false), 200)}
                                     />
+
+                                    {mostrarSugestoes && sugestoesTickers.length > 0 && (
+                                        <ul style={{
+                                          position: 'absolute',
+                                          top: '100%',
+                                          left: 0,
+                                          right: 0,
+                                          backgroundColor: '#111',
+                                          border: '1px solid rgba(0, 180, 216, 0.3)',
+                                          borderRadius: '8px',
+                                          marginTop: '4px',
+                                          padding: 0,
+                                          margin: '4px 0 0 0',
+                                          listStyle: 'none',
+                                          zIndex: 50,
+                                          maxHeight: '150px',
+                                          overflowY: 'auto',
+                                          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                                        }}>
+                                          {sugestoesTickers.map(t => (
+                                              <li
+                                                  key={t}
+                                                  onClick={() => {
+                                                    setFormTicker(t);
+                                                    setMostrarSugestoes(false);
+                                                  }}
+                                                  style={{
+                                                    padding: '10px 12px',
+                                                    cursor: 'pointer',
+                                                    color: '#fff',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                    transition: 'background 0.2s'
+                                                  }}
+                                                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 180, 216, 0.15)'}
+                                                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                              >
+                                                <strong style={{ color: '#00B4D8' }}>{t}</strong>
+                                              </li>
+                                          ))}
+                                        </ul>
+                                    )}
                                   </div>
                                   <div className="gestor-campo" style={{ flex: 2 }}>
                                     <label>Nome da Empresa / Fundo</label>
