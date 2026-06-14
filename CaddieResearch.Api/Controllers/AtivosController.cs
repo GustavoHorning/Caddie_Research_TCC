@@ -5,6 +5,7 @@ using CaddieResearch.Api.Data;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System;
+using CaddieResearch.Api.Services; 
 
 namespace CaddieResearch.Controllers
 {
@@ -13,10 +14,12 @@ namespace CaddieResearch.Controllers
     public class AtivosController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly AcoesService _acoesService;
 
-        public AtivosController(AppDbContext context)
+        public AtivosController(AppDbContext context, AcoesService acoesService)
         {
             _context = context;
+            _acoesService = acoesService;
         }
         
         
@@ -43,6 +46,19 @@ namespace CaddieResearch.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
+            if (string.IsNullOrWhiteSpace(novoAtivo.NomeEmpresa))
+            {
+                var dadosAtivo = await _acoesService.ObterCotacaoAsync(novoAtivo.Ticker);
+                
+                if (dadosAtivo != null && !string.IsNullOrWhiteSpace(dadosAtivo.Name))
+                {
+                    novoAtivo.NomeEmpresa = dadosAtivo.Name;
+                }
+                else
+                {
+                    novoAtivo.NomeEmpresa = novoAtivo.Ticker; 
+                }
+            }
             _context.Ativos.Add(novoAtivo);
             await _context.SaveChangesAsync();
 
@@ -61,6 +77,7 @@ namespace CaddieResearch.Controllers
             var ativoBanco = await _context.Ativos.FindAsync(id);
             if (ativoBanco == null) return NotFound();
 
+            ativoBanco.Ticker = ativoAtualizado.Ticker;
             ativoBanco.PrecoTeto = ativoAtualizado.PrecoTeto;
             ativoBanco.Vies = ativoAtualizado.Vies;
             ativoBanco.NomeEmpresa = ativoAtualizado.NomeEmpresa; 
