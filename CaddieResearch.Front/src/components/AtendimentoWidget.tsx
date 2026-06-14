@@ -14,6 +14,13 @@ interface MensagemItem {
   conteudo: string
   ehGestor: boolean
   dataEnvio: string
+  nomeRemetente?: string
+}
+
+// Extrai o primeiro nome de um nome completo
+const primeiroNome = (nome?: string) => {
+  if (!nome) return 'Caddie'
+  return nome.trim().split(' ')[0]
 }
 
 interface ConversaHistorico {
@@ -268,7 +275,7 @@ export default function AtendimentoWidget({ isOpen, onClose, userName }: Props) 
                     </div>
                   )}
                   <div className={msg.ehGestor ? 'chat-bubble-texto' : 'chat-bubble-texto-cliente'}>
-                    {msg.ehGestor && <span className="chat-bubble-remetente">Analista Caddie</span>}
+                    {msg.ehGestor && <span className="chat-bubble-remetente">Analista {primeiroNome(msg.nomeRemetente)}</span>}
                     {msg.conteudo}
                   </div>
                 </div>

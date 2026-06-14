@@ -28,6 +28,13 @@ public class ChatController : ControllerBase
         return int.TryParse(claim, out var id) ? id : 0;
     }
 
+    // Extrai o primeiro nome de um nome completo
+    private static string PrimeiroNome(string? nomeCompleto)
+    {
+        if (string.IsNullOrWhiteSpace(nomeCompleto)) return "Caddie";
+        return nomeCompleto.Trim().Split(' ')[0];
+    }
+
     // ── CLIENTE: Abre uma nova conversa ──────────────────────────────
     [HttpPost("abrir")]
     public async Task<IActionResult> AbrirConversa([FromBody] AbrirConversaDto dto)
@@ -127,7 +134,8 @@ public class ChatController : ControllerBase
                 m.Conteudo,
                 m.EhGestor,
                 m.Lida,
-                m.DataEnvio
+                m.DataEnvio,
+                NomeRemetente = m.Remetente!.Nome
             })
             .ToListAsync();
 
@@ -201,6 +209,7 @@ public class ChatController : ControllerBase
         var conversa = await _context.Conversas
             .Include(c => c.Usuario)
             .Include(c => c.Mensagens)
+                .ThenInclude(m => m.Remetente)
             .FirstOrDefaultAsync(c => c.Id == conversaId);
 
         if (conversa == null) return NotFound("Conversa não encontrada.");
@@ -214,7 +223,7 @@ public class ChatController : ControllerBase
             var historico = conversa.Mensagens
                 .OrderBy(m => m.DataEnvio)
                 .Select(m => (
-                    Remetente: m.EhGestor ? "Analista Caddie" : conversa.Usuario!.Nome,
+                    Remetente: m.EhGestor ? $"Analista {PrimeiroNome(m.Remetente!.Nome)}" : conversa.Usuario!.Nome,
                     EhGestor: m.EhGestor,
                     Conteudo: m.Conteudo,
                     DataEnvio: m.DataEnvio

@@ -84,7 +84,7 @@ public class EmailService
         var linhasMensagens = string.Join("", mensagens.Select(m =>
         {
             var cor       = m.EhGestor ? "#1a2f45" : "#003d5c";
-            var remetente = m.EhGestor ? "Analista Caddie" : nomeDestino;
+            var remetente = m.Remetente; // Já vem formatado ("Analista Gustavo" ou nome do cliente)
             var justify   = m.EhGestor ? "flex-start" : "flex-end";
             return $@"
                 <div style='display:flex; justify-content:{justify}; margin-bottom:12px;'>
