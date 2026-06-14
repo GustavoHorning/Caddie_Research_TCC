@@ -18,3 +18,5 @@ appsettings.Development.json
 .idea/
 .vscode/
 *.sln.DotSettings.user
+
+appsettings.Development.json
