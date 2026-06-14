@@ -355,3 +355,62 @@
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Botão voltar — escondido no desktop, aparece só no mobile */
+.caixa-btn-voltar {
+  display: none;
+  background: none;
+  border: none;
+  color: #7a90a8;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 4px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.caixa-btn-voltar:hover { color: #fff; }
+
+/* ══════════ RESPONSIVIDADE — CELULAR (≤768px) ══════════ */
+@media (max-width: 768px) {
+  /* Lista ocupa a tela inteira */
+  .caixa-lista {
+    width: 100%;
+    min-width: 100%;
+    border-right: none;
+  }
+
+  /* Chat fica escondido até selecionar uma conversa */
+  .caixa-chat {
+    display: none;
+  }
+
+  /* Quando uma conversa está aberta: esconde a lista, mostra o chat */
+  .caixa-container.mostrando-chat .caixa-lista {
+    display: none;
+  }
+  .caixa-container.mostrando-chat .caixa-chat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Botão voltar visível no mobile */
+  .caixa-btn-voltar {
+    display: flex;
+  }
+
+  /* Mensagens ocupam mais largura no celular */
+  .caixa-msg-texto-cliente,
+  .caixa-msg-texto-gestor {
+    max-width: 78%;
+  }
+
+  /* Header e input com menos padding lateral */
+  .caixa-chat-header { padding: 14px 16px; gap: 10px; }
+  .caixa-chat-mensagens { padding: 16px; }
+  .caixa-chat-input { padding: 12px 16px; }
+
+  /* Email do cliente esconde no header (economiza espaço) */
+  .caixa-chat-email { display: none; }
+}

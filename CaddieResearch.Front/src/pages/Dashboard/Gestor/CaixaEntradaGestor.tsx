@@ -122,7 +122,7 @@ export default function CaixaEntradaGestor() {
       <TopBar userName="Gestor" onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} />
 
       <main className="dashboard-main">
-        <div className="caixa-container">
+        <div className={`caixa-container ${conversaSelecionada ? 'mostrando-chat' : ''}`}>
 
           {/* ── LISTA DE CONVERSAS ── */}
           <div className="caixa-lista">
@@ -182,6 +182,11 @@ export default function CaixaEntradaGestor() {
             ) : (
               <>
                 <div className="caixa-chat-header">
+                  <button className="caixa-btn-voltar" onClick={() => setConversaSelecionada(null)} title="Voltar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
                   <div className="caixa-chat-avatar">
                     {conversaSelecionada.nomeCliente.charAt(0).toUpperCase()}
                   </div>

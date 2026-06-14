@@ -467,3 +467,23 @@
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ══════════ RESPONSIVIDADE — CELULAR (≤480px) ══════════ */
+@media (max-width: 480px) {
+  /* Painel ocupa a tela inteira no celular */
+  .atendimento-panel {
+    width: 100%;
+    top: 60px;            /* topbar é mais baixa no mobile */
+    border-left: none;
+  }
+
+  /* Bolhas de mensagem usam mais largura disponível */
+  .chat-bubble-texto,
+  .chat-bubble-texto-cliente {
+    max-width: 75%;
+  }
+
+  /* Opções e histórico com toque mais confortável */
+  .atendimento-opcao { padding: 14px 16px; }
+  .atendimento-historico-item { padding: 12px 14px; }
+}
