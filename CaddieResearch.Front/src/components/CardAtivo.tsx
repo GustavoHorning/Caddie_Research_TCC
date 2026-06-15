@@ -46,13 +46,10 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
     async function verificarFavorito() {
         try {
             const token = localStorage.getItem('caddie_token');
-            const response = await fetch('http://localhost:5194/api/favoritos', {
+            const response = await api.get('/api/favoritos', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (response.ok) {
-                const data = await response.json();
-                setFavoritado(data.some((f: any) => f.ticker === ticker));
-            }
+            setFavoritado(response.data.some((f: any) => f.ticker === ticker));
         } catch (e) {
             console.error('Erro ao verificar favorito', e);
         }
@@ -63,24 +60,18 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
         try {
             const token = localStorage.getItem('caddie_token');
             if (favoritado) {
-                await fetch(`http://localhost:5194/api/favoritos/${ticker}`, {
-                    method: 'DELETE',
+                await api.delete(`/api/favoritos/${ticker}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setFavoritado(false);
             } else {
-                await fetch('http://localhost:5194/api/favoritos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        ticker,
-                        nomeEmpresa: nomeEmpresa || cotacao?.shortName || '',
-                        categoria: categoria || '',
-                        nomeCarteira: nomeCarteira || ''
-                    })
+                await api.post('/api/favoritos', {
+                    ticker,
+                    nomeEmpresa: nomeEmpresa || cotacao?.shortName || '',
+                    categoria: categoria || '',
+                    nomeCarteira: nomeCarteira || ''
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
                 });
                 setFavoritado(true);
             }
