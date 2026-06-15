@@ -180,11 +180,10 @@ export default function PainelGestor() {
       }
     }
 
-    if (!ativoEditandoId) {
-      const ativoJaExiste = ativosTabela.some(a => a.ticker.toUpperCase() === tickerLimpo);
-      if (ativoJaExiste) {
-        return mostrarNotificacao(`O ativo ${tickerLimpo} já existe nesta carteira!`, "erro");
-      }
+    const ativoJaExiste = ativosTabela.some(a => a.ticker.toUpperCase() === tickerLimpo && a.id !== ativoEditandoId);
+
+    if (ativoJaExiste) {
+      return mostrarNotificacao(`O ativo ${tickerLimpo} já está recomendado nesta carteira!`, "erro");
     }
 
     const payload = {

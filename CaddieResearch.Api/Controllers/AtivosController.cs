@@ -45,6 +45,12 @@ namespace CaddieResearch.Controllers
         public async Task<IActionResult> CriarAtivo([FromBody] Ativo novoAtivo)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+            
+            var jaExiste = _context.Ativos.Any(a => a.Ticker == novoAtivo.Ticker && a.CarteiraId == novoAtivo.CarteiraId);
+            if (jaExiste)
+            {
+                return BadRequest(new { mensagem = $"O ativo {novoAtivo.Ticker} já existe nesta carteira." });
+            }
 
             if (string.IsNullOrWhiteSpace(novoAtivo.NomeEmpresa))
             {
@@ -73,6 +79,12 @@ namespace CaddieResearch.Controllers
                        ?? User.FindFirst("Role")?.Value;
                
             if (role != "Gestor") return Forbid(); 
+            
+            var conflito = _context.Ativos.Any(a => a.Ticker == ativoAtualizado.Ticker && a.CarteiraId == ativoAtualizado.CarteiraId && a.Id != id);
+            if (conflito)
+            {
+                return BadRequest(new { mensagem = "Já existe outro ativo com este ticker nesta carteira." });
+            }
 
             var ativoBanco = await _context.Ativos.FindAsync(id);
             if (ativoBanco == null) return NotFound();
