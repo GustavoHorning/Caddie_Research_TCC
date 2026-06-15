@@ -1,14 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import './GlobalSearch.css';
-import PdfViewerModal from './PdfViewerModal';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-
-const mockOutros = [
-    { id: 'm2', tipo: 'Tese', titulo: 'Por que comprar Petrobras agora?', tags: ['PETR4', 'DIVIDENDOS'], data: '15 Mai 2026', url: '/teses/2' },
-    { id: 'm3', tipo: 'Carteira', titulo: 'Carteira Top 10 Dividendos', tags: ['VALE3', 'PETR4', 'BBAS3'], data: '01 Mai 2026', url: '/carteiras/1' },
-    { id: 'm5', tipo: 'Tese', titulo: 'A Queda da Selic e o Impacto nos FIIs', tags: ['FIIs', 'MACRO', 'SELIC'], data: '20 Abr 2026', url: '/teses/5' },
-];
 
 export default function GlobalSearch({ onClose }: { onClose: () => void }) {
     const [termoBusca, setTermoBusca] = useState('');
@@ -17,19 +10,44 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
     const [isSearching, setIsSearching] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [resultadosApi, setResultadosApi] = useState<any[]>([]);
+    const [nivelAcessoUsuario, setNivelAcessoUsuario] = useState<number>(0);
     
     const inputRef = useRef<HTMLInputElement>(null);
-    const [documentoAtivo, setDocumentoAtivo] = useState<{url: string, titulo: string} | null>(null);
     const navigate = useNavigate();
 
     const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
+
+    useEffect(() => {
+        const token = localStorage.getItem('caddie_token');
+        if (token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                const decoded = JSON.parse(jsonPayload);
+                
+                const role = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded['Role'] || decoded['role'];
+                const plano = (decoded['Plano'] || decoded['plano'] || '').toLowerCase();
+
+                if (role === 'Gestor') {
+                    setNivelAcessoUsuario(999);
+                } else {
+                    if (plano.includes('black')) setNivelAcessoUsuario(3);
+                    else if (plano.includes('premium')) setNivelAcessoUsuario(2);
+                    else if (plano.includes('basic')) setNivelAcessoUsuario(1);
+                    else setNivelAcessoUsuario(0);
+                }
+            } catch (e) {
+                setNivelAcessoUsuario(0);
+            }
+        }
+    }, []);
 
     useEffect(() => {
         setIsSearching(true);
         const timer = setTimeout(() => {
             setTermoDebounced(termoBusca);
         }, 400);
-
         return () => clearTimeout(timer);
     }, [termoBusca]);
 
@@ -42,20 +60,8 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
             }
 
             try {
-                const res = await api.get(`/api/relatorios/busca?termo=${encodeURIComponent(termoDebounced)}`, configSeguranca);
-                
-                const mapeados = res.data.map((r: any) => ({
-                    id: `api_${r.id}`,
-                    realId: r.id,     
-                    tipo: 'Relatório',
-                    titulo: r.titulo,
-                    tags: [r.carteira?.nome || 'Geral', r.assunto],
-                    data: new Date(r.dataPublicacao).toLocaleDateString('pt-BR'),
-                    arquivoPdfUrl: r.arquivoPdfUrl,
-                    url: '/relatorios'
-                }));
-                
-                setResultadosApi(mapeados);
+                const res = await api.get(`/api/buscas/global?termo=${encodeURIComponent(termoDebounced)}`, configSeguranca);
+                setResultadosApi(res.data);
             } catch (error) {
                 console.error("Erro na busca da API:", error);
             } finally {
@@ -67,20 +73,13 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
         buscarNaApi();
     }, [termoDebounced]);
 
-    const mockFiltrado = mockOutros.filter(item => 
-        item.titulo.toLowerCase().includes(termoDebounced.toLowerCase()) ||
-        item.tags.some(tag => tag.toLowerCase().includes(termoDebounced.toLowerCase()))
-    );
-
-    const resultadosFiltrados = [...resultadosApi, ...mockFiltrado].filter(item =>
-        filtroAtivo === 'Todos' || item.tipo === filtroAtivo
+    const resultadosFiltrados = resultadosApi.filter(item =>
+        filtroAtivo === 'Todos' || item.tipo === filtroAtivo || (filtroAtivo === 'Carteira' && item.tipo !== 'Relatório')
     );
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                onClose();
-            }
+            if (e.key === 'Escape') onClose();
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setSelectedIndex(prev => (prev < resultadosFiltrados.length - 1 ? prev + 1 : prev));
@@ -104,37 +103,29 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
     }, []);
 
     const handleOpenResult = (item: any) => {
+        const temAcesso = nivelAcessoUsuario >= item.nivelExigido;
+
         if (item.tipo === 'Relatório') {
             navigate(`/relatorios?highlight=${item.realId}`);
-            onClose();
-        } else if (item.tipo === 'Tese') {
-            setDocumentoAtivo({
-                url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-                titulo: item.titulo
-            });
         } else {
-            navigate(item.url || '/dashboard');
-            onClose();
+            if (temAcesso) {
+                navigate(`/carteiras/${item.carteiraId}?highlight=${item.realId}`);
+            } else {
+                navigate(`/carteiras?highlight=carteira_${item.carteiraId}`);
+            }
         }
-    };
-
-    const handleCloseViewer = () => {
-        if (documentoAtivo?.url && documentoAtivo.url.startsWith('blob:')) {
-            window.URL.revokeObjectURL(documentoAtivo.url); 
-        }
-        setDocumentoAtivo(null);
+        onClose();
     };
 
     return (
         <div className="search-overlay" onClick={onClose}>
             <div className="search-modal" onClick={e => e.stopPropagation()}>
-
                 <div className="search-header">
                     <span className="search-icon">{isSearching ? '⏳' : '🔍'}</span>
                     <input
                         ref={inputRef}
                         type="text"
-                        placeholder="Pesquisar relatórios, teses ou ativos (ex: PETR4)..."
+                        placeholder="Pesquisar relatórios, fundos, ativos (ex: PETR4)..."
                         value={termoBusca}
                         onChange={(e) => setTermoBusca(e.target.value)}
                     />
@@ -142,7 +133,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="search-filters">
-                    {['Todos', 'Relatório', 'Tese', 'Carteira'].map(filtro => (
+                    {['Todos', 'Relatório', 'Ação', 'FII', 'Renda Fixa'].map(filtro => (
                         <button
                             key={filtro}
                             className={`filter-chip ${filtroAtivo === filtro ? 'active' : ''}`}
@@ -160,7 +151,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                 <div className="search-results">
                     {termoDebounced.length === 0 ? (
                         <div className="search-empty-state">
-                            <span>Digite o nome de um ativo (ex: VALE3) ou assunto para começar a buscar.</span>
+                            <span>Digite o nome de um ativo, empresa ou assunto para começar a buscar.</span>
                         </div>
                     ) : isSearching ? (
                         <div className="search-empty-state">
@@ -185,7 +176,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                                         ))}
                                     </div>
                                 </div>
-                                <span className="result-date">{item.data}</span>
+                                <span className="result-date">{new Date(item.dataPublicacao).toLocaleDateString('pt-BR')}</span>
                                 {index === selectedIndex && (
                                     <span style={{marginLeft: '12px', color: '#00B4D8', fontSize: '1.2rem'}}>↵</span>
                                 )}
@@ -194,7 +185,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                     ) : (
                         <div className="search-empty-state">
                             <span>Nenhum resultado encontrado para "{termoDebounced}".</span>
-                            <p style={{fontSize: '0.8rem', marginTop: '8px', opacity: 0.5}}>Tente termos internos de PDFs ou nomes de empresas.</p>
+                            <p style={{fontSize: '0.8rem', marginTop: '8px', opacity: 0.5}}>A busca inteligente pesquisa em relatórios, PDFs e todos os ativos cadastrados.</p>
                         </div>
                     )}
                 </div>
@@ -203,14 +194,6 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                     <span>Use as setas <strong>↑ ↓</strong> para navegar e <strong>Enter ↵</strong> para abrir.</span>
                 </div>
             </div>
-            
-            <PdfViewerModal
-                isOpen={documentoAtivo !== null}
-                onClose={handleCloseViewer}
-                pdfUrl={documentoAtivo?.url || ''}
-                titulo={documentoAtivo?.titulo || ''}
-            />
-            
         </div>
     );
 }
