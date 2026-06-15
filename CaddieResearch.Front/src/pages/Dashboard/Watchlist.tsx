@@ -79,45 +79,42 @@ export default function Watchlist() {
     }
   }
 
-  function filtroRendaFixa(f: Favorito): boolean {
-    const cat = f.categoria?.toLowerCase() || ''
-    return (
-      cat.includes('renda fixa') ||
-      cat.includes('cri') ||
-      cat.includes('cra') ||
-      cat.includes('debenture') ||
-      cat.includes('debênture') ||
-      cat.includes('tesouro') ||
-      cat.includes('lci') ||
-      cat.includes('lca') ||
-      cat.includes('cdb') ||
-      cat.includes('atrelado') ||
-      cat.includes('inflação') ||
-      cat.includes('inflacao') ||
-      cat.includes('prefixado') ||
-      cat.includes('selic')
-    )
+  // Junta categoria, carteira e rentabilidade para classificar pelo texto disponível
+  function textoClassificacao(f: Favorito): string {
+    return `${f.categoria || ''} ${f.nomeCarteira || ''} ${f.rentabilidade || ''}`.toLowerCase()
   }
 
-  function filtroAcoes(f: Favorito): boolean {
-    const cat = f.categoria?.toLowerCase() || ''
-    return (
-      cat.includes('ação') ||
-      cat.includes('acao') ||
-      cat.includes('ações') ||
-      cat.includes('acoes') ||
-      cat.includes('b3')
-    )
+  // Ticker padrão B3: 4 letras + 1 ou 2 dígitos (WEGE3, EGIE3, BBDC4, BPAC11)
+  function ehAcaoB3(ticker: string): boolean {
+    return /^[A-Za-z]{4}\d{1,2}$/.test(ticker || '')
   }
 
   function filtroInternacional(f: Favorito): boolean {
-    const cat = f.categoria?.toLowerCase() || ''
-    return (
-      cat.includes('internacional') ||
-      cat.includes('etf') ||
-      cat.includes('usd') ||
-      f.ticker?.includes('.')
-    )
+    const txt = textoClassificacao(f)
+    if (txt.includes('internacional') || txt.includes('etf') || txt.includes('usd')) return true
+    if (f.ticker?.includes('.')) return true
+    return false
+  }
+
+  function filtroRendaFixa(f: Favorito): boolean {
+    const txt = textoClassificacao(f)
+    if (
+      txt.includes('renda fixa') || txt.includes('cri') || txt.includes('cra') ||
+      txt.includes('debenture') || txt.includes('debênture') || txt.includes('tesouro') ||
+      txt.includes('lci') || txt.includes('lca') || txt.includes('cdb') ||
+      txt.includes('atrelado') || txt.includes('inflação') || txt.includes('inflacao') ||
+      txt.includes('prefixado') || txt.includes('selic') || txt.includes('fundo')
+    ) return true
+    // Tem rentabilidade alvo mas não é ação com ticker padrão da B3
+    if (f.rentabilidade && !ehAcaoB3(f.ticker)) return true
+    return false
+  }
+
+  function filtroAcoes(f: Favorito): boolean {
+    // Se já é renda fixa ou internacional, não é ação
+    if (filtroRendaFixa(f) || filtroInternacional(f)) return false
+    // Ticker no formato da B3 = ação
+    return ehAcaoB3(f.ticker)
   }
 
   function getFavoritosFiltrados(): Favorito[] {
