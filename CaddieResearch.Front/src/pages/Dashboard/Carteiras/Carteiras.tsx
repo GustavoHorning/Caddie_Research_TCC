@@ -3,23 +3,25 @@ import './Carteiras.css'
 import Sidebar from '../../../components/Sidebar'
 import TopBar from '../../../components/TopBar'
 import api from '../../../services/api';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
+// IDs mapeados exatamente como estão no seu Banco de Dados para garantir o "Piscar" no Upsell
 const carteirasVitrine = [
-    { nome: 'Dividendos', iconeCor: '#4caf50', icone: '💸', teaser: 'Gere renda passiva recorrente com as melhores pagadoras.', planoMinimo: 'Basic' },
-    { nome: 'FIIs', iconeCor: '#ff9800', icone: '🏢', teaser: 'Receba aluguéis mensais isentos de imposto de renda.', planoMinimo: 'Premium' },
-    { nome: 'Internacional', iconeCor: '#2196f3', icone: '🌎', teaser: 'Proteja seu patrimônio em dólar com gigantes globais.', planoMinimo: 'Black' },
-    { nome: 'Small Caps', iconeCor: '#9c27b0', icone: '🚀', teaser: 'Descubra empresas com altíssimo potencial de multiplicação.', planoMinimo: 'Black' },
-    { nome: 'Valor', iconeCor: '#f44336', icone: '📈', teaser: 'Ações descontadas com forte potencial de valorização.', planoMinimo: 'Black' },
-    { nome: 'Fundos', iconeCor: '#00bcd4', icone: '💼', teaser: 'Acesso aos melhores gestores do mercado.', planoMinimo: 'Black' },
-    { nome: 'Renda Fixa', iconeCor: '#607d8b', icone: '🛡️', teaser: 'Segurança e previsibilidade para seu patrimônio.', planoMinimo: 'Black' },
-    { nome: 'Reserva de Emergencia', iconeCor: '#e91e63', icone: '🐷', teaser: 'Liquidez diária para imprevistos do dia a dia.', planoMinimo: 'Black' }
+    { id: 1, nome: 'Dividendos', iconeCor: '#4caf50', icone: '💸', teaser: 'Gere renda passiva recorrente com as melhores pagadoras.', planoMinimo: 'Basic' },
+    { id: 2, nome: 'Valor', iconeCor: '#f44336', icone: '📈', teaser: 'Ações descontadas com forte potencial de valorização.', planoMinimo: 'Black' },
+    { id: 3, nome: 'Internacional', iconeCor: '#2196f3', icone: '🌎', teaser: 'Proteja seu patrimônio em dólar com gigantes globais.', planoMinimo: 'Black' },
+    { id: 4, nome: 'Small Caps', iconeCor: '#9c27b0', icone: '🚀', teaser: 'Descubra empresas com altíssimo potencial de multiplicação.', planoMinimo: 'Black' },
+    { id: 5, nome: 'FIIs', iconeCor: '#ff9800', icone: '🏢', teaser: 'Receba aluguéis mensais isentos de imposto de renda.', planoMinimo: 'Premium' },
+    { id: 6, nome: 'Fundos', iconeCor: '#00bcd4', icone: '💼', teaser: 'Acesso aos melhores gestores do mercado.', planoMinimo: 'Black' },
+    { id: 7, nome: 'Renda Fixa', iconeCor: '#607d8b', icone: '🛡️', teaser: 'Segurança e previsibilidade para seu patrimônio.', planoMinimo: 'Black' },
+    { id: 8, nome: 'Reserva de Emergencia', iconeCor: '#e91e63', icone: '🐷', teaser: 'Liquidez diária para imprevistos do dia a dia.', planoMinimo: 'Black' }
 ];
 
 export default function Carteiras() {
     const [menuMobileAberto, setMenuMobileAberto] = useState(false)
     const [carteirasAutorizadas, setCarteirasAutorizadas] = useState<any[]>([]);
     const [carregando, setCarregando] = useState(true);
+    const location = useLocation();
 
     useEffect(() => {
         const token = localStorage.getItem('caddie_token');
@@ -35,6 +37,27 @@ export default function Carteiras() {
                 setCarregando(false);
             });
     }, []);
+
+    useEffect(() => {
+        if (carregando) return;
+
+        const params = new URLSearchParams(location.search);
+        const highlightId = params.get('highlight'); // Ex: carteira_5
+        
+        if (highlightId) {
+            setTimeout(() => {
+                const element = document.getElementById(highlightId);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('highlight-pulse');
+                    
+                    window.history.replaceState(null, '', location.pathname);
+                    
+                    setTimeout(() => element.classList.remove('highlight-pulse'), 2000);
+                }
+            }, 300);
+        }
+    }, [location.search, carregando]);
 
     return (
         <div className="dashboard-layout">
@@ -106,6 +129,7 @@ export default function Carteiras() {
                                 return (
                                     <Link
                                         key={i}
+                                        id={`carteira_${vitrine.id}`}
                                         className={`carteira-card ${bloqueada ? 'carteira-bloqueada' : ''}`}
                                         to={bloqueada ? '/gerenciar-plano' : `/carteiras/${carteiraAPI?.id}`}
                                     >

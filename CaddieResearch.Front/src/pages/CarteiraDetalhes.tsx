@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
@@ -11,6 +11,7 @@ import CardRendaFixa from '../components/CardRendaFixa';
 export default function CarteiraDetalhes() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [carteira, setCarteira] = useState<any>(null);
     const [carregando, setCarregando] = useState(true);
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
@@ -42,6 +43,27 @@ export default function CarteiraDetalhes() {
                 .catch(err => console.error("Erro ao buscar indicadores macro", err));
         }
     }, [id, navigate]);
+
+    useEffect(() => {
+        if (carregando || !carteira || !carteira.ativos) return;
+
+        const params = new URLSearchParams(location.search);
+        const highlightId = params.get('highlight');
+        
+        if (highlightId) {
+            setTimeout(() => {
+                const element = document.getElementById(`ativo-${highlightId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.classList.add('highlight-pulse');
+                    
+                    window.history.replaceState(null, '', location.pathname);
+                    
+                    setTimeout(() => element.classList.remove('highlight-pulse'), 2000);
+                }
+            }, 300);
+        }
+    }, [location.search, carregando, carteira]);
 
     const ativos = carteira?.ativos || [];
     const totalAtivos = ativos.length;
@@ -195,47 +217,50 @@ export default function CarteiraDetalhes() {
                                         if (carteira?.id === 8) tipoCard = 'reserva';
 
                                         return (
-                                            <CardRendaFixa
-                                                key={index}
-                                                tipo={tipoCard}
-                                                nome={ativo.ticker}
-                                                rentabilidade={ativo.rentabilidade || "--"}
-                                                vencimento={ativo.vencimento}
-                                                liquidez={ativo.liquidez}
-                                                cnpj={ativo.nomeEmpresa}
-                                                vies={ativo.vies}
-                                                dataEntrada={ativo.dataEntrada}
-                                                categoria={ativo.categoria}
-                                                nomeCarteira={carteira?.nome}
-                                            />
+                                            <div key={index} id={`ativo-${ativo.id}`}>
+                                                <CardRendaFixa
+                                                    tipo={tipoCard}
+                                                    nome={ativo.ticker}
+                                                    rentabilidade={ativo.rentabilidade || "--"}
+                                                    vencimento={ativo.vencimento}
+                                                    liquidez={ativo.liquidez}
+                                                    cnpj={ativo.nomeEmpresa}
+                                                    vies={ativo.vies}
+                                                    dataEntrada={ativo.dataEntrada}
+                                                    categoria={ativo.categoria}
+                                                    nomeCarteira={carteira?.nome}
+                                                />
+                                            </div>
                                         );
                                     }
 
                                     if (isInternacional) {
                                         return (
-                                            <CardInternacional
-                                                key={index}
+                                            <div key={index} id={`ativo-${ativo.id}`}>
+                                                <CardInternacional
+                                                    ticker={ativo.ticker}
+                                                    vies={ativo.vies}
+                                                    precoTeto={ativo.precoTeto}
+                                                    dataEntrada={ativo.dataEntrada}
+                                                    categoria={ativo.categoria}
+                                                    nomeCarteira={carteira?.nome}
+                                                />
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div key={index} id={`ativo-${ativo.id}`}>
+                                            <CardAtivo
                                                 ticker={ativo.ticker}
                                                 vies={ativo.vies}
                                                 precoTeto={ativo.precoTeto}
                                                 dataEntrada={ativo.dataEntrada}
                                                 categoria={ativo.categoria}
+                                                nomeEmpresa={ativo.nomeEmpresa}
                                                 nomeCarteira={carteira?.nome}
                                             />
-                                        );
-                                    }
-
-                                    return (
-                                        <CardAtivo
-                                            key={index}
-                                            ticker={ativo.ticker}
-                                            vies={ativo.vies}
-                                            precoTeto={ativo.precoTeto}
-                                            dataEntrada={ativo.dataEntrada}
-                                            categoria={ativo.categoria}
-                                            nomeEmpresa={ativo.nomeEmpresa}
-                                            nomeCarteira={carteira?.nome}
-                                        />
+                                        </div>
                                     );
                                 })}
                             </div>
