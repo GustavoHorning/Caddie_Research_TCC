@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import './CardAtivo.css';
+import api from '../services/api';
 
 interface CardRendaFixaProps {
     tipo: 'renda-fixa' | 'fundo' | 'reserva';
@@ -52,13 +53,10 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
     async function verificarFavorito() {
         try {
             const token = localStorage.getItem('caddie_token');
-            const response = await fetch('http://localhost:5194/api/favoritos', {
+            const response = await api.get('/api/favoritos', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (response.ok) {
-                const data = await response.json();
-                setFavoritado(data.some((f: any) => f.ticker === nome));
-            }
+            setFavoritado(response.data.some((f: any) => f.ticker === nome));
         } catch (e) {
             console.error('Erro ao verificar favorito', e);
         }
@@ -69,25 +67,19 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
         try {
             const token = localStorage.getItem('caddie_token');
             if (favoritado) {
-                await fetch(`http://localhost:5194/api/favoritos/${nome}`, {
-                    method: 'DELETE',
+                await api.delete(`/api/favoritos/${nome}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setFavoritado(false);
             } else {
-                await fetch('http://localhost:5194/api/favoritos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        ticker: nome,
-                        nomeEmpresa: cnpj || '',
-                        categoria: categoria || tipo,
-                        rentabilidade: rentabilidade || '',
-                        nomeCarteira: nomeCarteira || ''
-                    })
+                await api.post('/api/favoritos', {
+                    ticker: nome,
+                    nomeEmpresa: cnpj || '',
+                    categoria: categoria || tipo,
+                    rentabilidade: rentabilidade || '',
+                    nomeCarteira: nomeCarteira || ''
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
                 });
                 setFavoritado(true);
             }

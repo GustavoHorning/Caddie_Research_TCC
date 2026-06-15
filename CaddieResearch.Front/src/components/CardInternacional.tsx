@@ -47,11 +47,11 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
     async function verificarFavorito() {
         try {
             const token = localStorage.getItem('caddie_token');
-            const response = await fetch('http://localhost:5194/api/favoritos', {
+            const response = await api.get('/api/favoritos', {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (response.ok) {
-                const data = await response.json();
+            {
+                const data = response.data;
                 setFavoritado(data.some((f: any) => f.ticker === ticker));
             }
         } catch (e) {
@@ -64,24 +64,18 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
         try {
             const token = localStorage.getItem('caddie_token');
             if (favoritado) {
-                await fetch(`http://localhost:5194/api/favoritos/${ticker}`, {
-                    method: 'DELETE',
+                await api.delete(`/api/favoritos/${ticker}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setFavoritado(false);
             } else {
-                await fetch('http://localhost:5194/api/favoritos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        ticker,
-                        nomeEmpresa: cotacao?.shortName || '',
-                        categoria: categoria || 'Internacional',
-                        nomeCarteira: nomeCarteira || ''
-                    })
+                await api.post('/api/favoritos', {
+                    ticker,
+                    nomeEmpresa: cotacao?.shortName || '',
+                    categoria: categoria || 'Internacional',
+                    nomeCarteira: nomeCarteira || ''
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
                 });
                 setFavoritado(true);
             }

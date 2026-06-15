@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import api from '../../services/api'
 import './Watchlist.css'
 
 interface Favorito {
@@ -31,14 +32,11 @@ export default function Watchlist() {
   async function carregarFavoritos() {
     try {
       const token = localStorage.getItem('caddie_token')
-      const response = await fetch('http://localhost:5194/api/favoritos', {
+      const response = await api.get('/api/favoritos', {
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (response.ok) {
-        const data = await response.json()
-        setFavoritos(data)
-        carregarCotacoes(data)
-      }
+      setFavoritos(response.data)
+      carregarCotacoes(response.data)
     } catch (e) {
       console.error('Erro ao carregar favoritos', e)
     } finally {
@@ -52,13 +50,10 @@ export default function Watchlist() {
       favs.map(async (f) => {
         try {
           const token = localStorage.getItem('caddie_token')
-          const res = await fetch(`http://localhost:5194/api/acoes/cotacao/${f.ticker}`, {
+          const res = await api.get(`/api/acoes/cotacao/${f.ticker}`, {
             headers: { Authorization: `Bearer ${token}` }
           })
-          if (res.ok) {
-            const data = await res.json()
-            novasCotacoes[f.ticker] = data
-          }
+          novasCotacoes[f.ticker] = res.data
         } catch (e) {
           console.error(`Erro ao buscar cotação de ${f.ticker}`, e)
         }
@@ -70,8 +65,7 @@ export default function Watchlist() {
   async function removerFavorito(ticker: string) {
     try {
       const token = localStorage.getItem('caddie_token')
-      await fetch(`http://localhost:5194/api/favoritos/${ticker}`, {
-        method: 'DELETE',
+      await api.delete(`/api/favoritos/${ticker}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setFavoritos(prev => prev.filter(f => f.ticker !== ticker))
