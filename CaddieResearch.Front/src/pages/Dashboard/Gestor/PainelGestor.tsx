@@ -32,6 +32,13 @@ export default function PainelGestor() {
 
   const [toastMsg, setToastMsg] = useState('');
   const [toastTipo, setToastTipo] = useState<'sucesso' | 'erro'>('sucesso');
+
+  // Recomendações para clientes
+  const [clientes, setClientes] = useState<{id: number; nome: string; email: string}[]>([])
+  const [modalRec, setModalRec] = useState(false)
+  const [recForm, setRecForm] = useState({ clienteId: '', ticker: '', nomeAtivo: '', classeAtivo: 'Renda Variável', quantidade: '', precoSugerido: '', descricao: '' })
+  const [enviandoRec, setEnviandoRec] = useState(false)
+  const [recsEnviadas, setRecsEnviadas] = useState<any[]>([])
   const [ativoParaRemover, setAtivoParaRemover] = useState<{id: number, ticker: string} | null>(null);
 
   const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
@@ -257,11 +264,42 @@ export default function PainelGestor() {
     }
   }
 
+  useEffect(() => {
+    api.get('/api/recomendacoes/clientes', configSeguranca).then(r => setClientes(r.data)).catch(() => {})
+    api.get('/api/recomendacoes/enviadas', configSeguranca).then(r => setRecsEnviadas(r.data)).catch(() => {})
+  }, [])
+
+  async function enviarRecomendacao() {
+    if (!recForm.clienteId || !recForm.ticker || !recForm.quantidade || !recForm.precoSugerido) return
+    setEnviandoRec(true)
+    try {
+      await api.post('/api/recomendacoes', {
+        clienteId: parseInt(recForm.clienteId),
+        ticker: recForm.ticker,
+        nomeAtivo: recForm.nomeAtivo,
+        classeAtivo: recForm.classeAtivo,
+        quantidade: parseFloat(recForm.quantidade),
+        precoSugerido: parseFloat(recForm.precoSugerido),
+        descricao: recForm.descricao,
+        origem: 'Painel'
+      }, configSeguranca)
+      setModalRec(false)
+      setRecForm({ clienteId: '', ticker: '', nomeAtivo: '', classeAtivo: 'Renda Variável', quantidade: '', precoSugerido: '', descricao: '' })
+      const r = await api.get('/api/recomendacoes/enviadas', configSeguranca)
+      setRecsEnviadas(r.data)
+      mostrarNotificacao('Recomendação enviada!', 'sucesso')
+    } catch { mostrarNotificacao('Erro ao enviar recomendação.', 'erro') }
+    finally { setEnviandoRec(false) }
+  }
+
   const mostrarNotificacao = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
     setToastMsg(msg);
     setToastTipo(tipo);
     setTimeout(() => setToastMsg(''), 3000);
   };
+
+  const inpStyle: React.CSSProperties = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 12px', color: '#e6edf3', fontSize: '0.9rem', outline: 'none' }
+  const selStyle: React.CSSProperties = { ...inpStyle, cursor: 'pointer' }
 
   return (
       <div className="dashboard-layout">
@@ -732,7 +770,73 @@ export default function PainelGestor() {
               </div>
             </div>
 
+            {/* SEÇÃO: Recomendações para Clientes */}
+            <div className="gestor-card" style={{ marginTop: 24 }}>
+              <div className="gestor-ativos-header" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 16 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', color: '#e6edf3' }}>👍 Recomendações para Clientes</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#8b949e' }}>Envie recomendações de ativos diretamente para portfólios dos clientes.</p>
+                </div>
+                <button className="gestor-btn-novo-ativo" onClick={() => setModalRec(true)}>+ Nova Recomendação</button>
+              </div>
+              {recsEnviadas.length === 0 ? (
+                <p style={{ textAlign: 'center', padding: '28px', color: '#8b949e', fontSize: '0.87rem' }}>Nenhuma recomendação enviada ainda.</p>
+              ) : (
+                <div className="gestor-table-wrap">
+                  <table className="gestor-table">
+                    <thead><tr><th>Cliente</th><th>Ativo</th><th>Qtd</th><th>Preço Sug.</th><th>Status</th><th>Data</th></tr></thead>
+                    <tbody>
+                      {recsEnviadas.map((r: any) => (
+                        <tr key={r.id}>
+                          <td>{r.nomeCliente}</td>
+                          <td><strong>{r.ticker}</strong> — {r.nomeAtivo}</td>
+                          <td>{r.quantidade}</td>
+                          <td>R$ {Number(r.precoSugerido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td><span style={{ fontSize: '0.78rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, border: '1px solid', color: r.status === 'Aceita' ? '#22c55e' : r.status === 'Recusada' ? '#ef4444' : '#F59E0B', borderColor: r.status === 'Aceita' ? '#22c55e' : r.status === 'Recusada' ? '#ef4444' : '#F59E0B' }}>{r.status}</span></td>
+                          <td>{new Date(r.dataCriacao).toLocaleDateString('pt-BR')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
           </div>
+
+          {/* Modal Nova Recomendação */}
+          {modalRec && (
+            <div className="gestor-modal-overlay" onClick={() => setModalRec(false)}>
+              <div className="gestor-modal-box" style={{ width: 500, maxWidth: '95vw', background: '#161b22', borderRadius: 16, padding: 28, display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
+                <h3 style={{ margin: 0, color: '#e6edf3', fontSize: '1.05rem' }}>👍 Nova Recomendação para Cliente</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  {[
+                    { label: 'Cliente', col: '1/-1', el: <select style={selStyle} value={recForm.clienteId} onChange={e => setRecForm(p => ({ ...p, clienteId: e.target.value }))}>
+                        <option value="">Selecione o cliente...</option>
+                        {clientes.map(c => <option key={c.id} value={c.id}>{c.nome} ({c.email})</option>)}
+                      </select> },
+                    { label: 'Ticker', el: <input style={inpStyle} type="text" placeholder="Ex: PETR4" value={recForm.ticker} onChange={e => setRecForm(p => ({ ...p, ticker: e.target.value.toUpperCase() }))} /> },
+                    { label: 'Nome do Ativo', el: <input style={inpStyle} type="text" placeholder="Ex: Petrobras S.A." value={recForm.nomeAtivo} onChange={e => setRecForm(p => ({ ...p, nomeAtivo: e.target.value }))} /> },
+                    { label: 'Classe', el: <select style={selStyle} value={recForm.classeAtivo} onChange={e => setRecForm(p => ({ ...p, classeAtivo: e.target.value }))}>
+                        <option>Renda Variável</option><option>Renda Fixa</option><option>Internacional</option><option>Outros</option>
+                      </select> },
+                    { label: 'Quantidade', el: <input style={inpStyle} type="number" placeholder="Ex: 100" value={recForm.quantidade} onChange={e => setRecForm(p => ({ ...p, quantidade: e.target.value }))} /> },
+                    { label: 'Preço Sugerido (R$)', el: <input style={inpStyle} type="number" placeholder="Ex: 38.50" value={recForm.precoSugerido} onChange={e => setRecForm(p => ({ ...p, precoSugerido: e.target.value }))} /> },
+                    { label: 'Tese / Descrição (opcional)', col: '1/-1', el: <input style={inpStyle} type="text" placeholder="Ex: Empresa sólida com dividendos consistentes" value={recForm.descricao} onChange={e => setRecForm(p => ({ ...p, descricao: e.target.value }))} /> },
+                  ].map(({ label, col, el }) => (
+                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: col }}>
+                      <label style={{ fontSize: '0.8rem', color: '#8b949e' }}>{label}</label>
+                      {el}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                  <button className="gestor-btn-novo-ativo" onClick={enviarRecomendacao} disabled={enviandoRec}>{enviandoRec ? 'Enviando...' : 'Enviar Recomendação'}</button>
+                  <button className="gestor-btn-cancelar" onClick={() => setModalRec(false)}>Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {ativoParaRemover && (
               <div className="gestor-modal-overlay">

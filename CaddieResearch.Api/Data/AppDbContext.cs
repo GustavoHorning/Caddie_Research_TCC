@@ -21,6 +21,8 @@ public class AppDbContext : DbContext
     public DbSet<RelatorioRevisado> RelatoriosRevisados { get; set; }
     public DbSet<Portfolio> Portfolios { get; set; }
     public DbSet<Posicao> Posicoes { get; set; }
+    public DbSet<Aporte> Aportes { get; set; }
+    public DbSet<Recomendacao> Recomendacoes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +32,18 @@ public class AppDbContext : DbContext
             .HasOne(m => m.Remetente)
             .WithMany()
             .HasForeignKey(m => m.RemetenteId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Recomendacao>()
+            .HasOne(r => r.Gestor)
+            .WithMany()
+            .HasForeignKey(r => r.GestorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Recomendacao>()
+            .HasOne(r => r.Cliente)
+            .WithMany()
+            .HasForeignKey(r => r.ClienteId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
