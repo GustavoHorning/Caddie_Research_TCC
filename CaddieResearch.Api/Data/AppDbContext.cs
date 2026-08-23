@@ -18,6 +18,9 @@ public class AppDbContext : DbContext
     public DbSet<Relatorio> Relatorios { get; set; }
     public DbSet<Conversa> Conversas { get; set; }
     public DbSet<Mensagem> Mensagens { get; set; }
+    public DbSet<RelatorioRevisado> RelatoriosRevisados { get; set; }
+    public DbSet<Portfolio> Portfolios { get; set; }
+    public DbSet<Posicao> Posicoes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

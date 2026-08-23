@@ -29,4 +29,7 @@ public class Favorito
     public string? NomeCarteira { get; set; }
 
     public DateTime DataAdicionado { get; set; } = DateTime.UtcNow;
+
+    [MaxLength(500)]
+    public string? Anotacao { get; set; }
 }

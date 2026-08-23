@@ -181,6 +181,61 @@ public class RelatoriosController : ControllerBase
         }
     }
 
+    [HttpPost("{id}/revisado")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> MarcarRevisado(int id)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out int usuarioId)) return Unauthorized();
+
+        var jaRevisado = await _context.RelatoriosRevisados
+            .AnyAsync(r => r.UsuarioId == usuarioId && r.RelatorioId == id);
+
+        if (jaRevisado) return Ok(new { revisado = true });
+
+        _context.RelatoriosRevisados.Add(new RelatorioRevisado
+        {
+            UsuarioId = usuarioId,
+            RelatorioId = id,
+            DataRevisado = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync();
+        return Ok(new { revisado = true });
+    }
+
+    [HttpDelete("{id}/revisado")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> DesmarcarRevisado(int id)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out int usuarioId)) return Unauthorized();
+
+        var revisado = await _context.RelatoriosRevisados
+            .FirstOrDefaultAsync(r => r.UsuarioId == usuarioId && r.RelatorioId == id);
+
+        if (revisado != null)
+        {
+            _context.RelatoriosRevisados.Remove(revisado);
+            await _context.SaveChangesAsync();
+        }
+        return Ok(new { revisado = false });
+    }
+
+    [HttpGet("revisados")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> GetRevisados()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out int usuarioId)) return Unauthorized();
+
+        var ids = await _context.RelatoriosRevisados
+            .Where(r => r.UsuarioId == usuarioId)
+            .Select(r => r.RelatorioId)
+            .ToListAsync();
+
+        return Ok(ids);
+    }
+
     private string? ExtrairTextoDoPdf(IFormFile arquivoPdf)
     {
         try

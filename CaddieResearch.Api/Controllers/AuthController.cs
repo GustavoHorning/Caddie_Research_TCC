@@ -45,7 +45,15 @@ public class AuthController : ControllerBase
 
         _context.Usuarios.Add(novoUsuario);
         await _context.SaveChangesAsync();
-        
+
+        _context.Portfolios.Add(new Portfolio
+        {
+            UsuarioId = novoUsuario.Id,
+            Nome = "Portfólio Inicial",
+            DataInicio = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync();
+
         var emailCodificado = Uri.EscapeDataString(novoUsuario.Email);
         var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
         var linkDeConfirmacao = $"{frontendUrl}/confirmar-email?email={emailCodificado}&token={tokenGerado}";        

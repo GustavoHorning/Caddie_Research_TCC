@@ -62,6 +62,25 @@ public class FavoritosController : ControllerBase
         return Ok(new { mensagem = "Adicionado à watchlist!" });
     }
 
+    [HttpPatch("{ticker}/anotacao")]
+    public async Task<IActionResult> AtualizarAnotacao(string ticker, [FromBody] AnotacaoDto dto)
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdClaim, out int usuarioId))
+            return Unauthorized();
+
+        var favorito = await _context.Favoritos
+            .FirstOrDefaultAsync(f => f.UsuarioId == usuarioId && f.Ticker == ticker);
+
+        if (favorito == null)
+            return NotFound();
+
+        favorito.Anotacao = dto.Anotacao;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { mensagem = "Anotação salva!" });
+    }
+
     [HttpDelete("{ticker}")]
     public async Task<IActionResult> RemoveFavorito(string ticker)
     {
@@ -89,4 +108,9 @@ public class FavoritoDto
     public string? Categoria { get; set; }
     public string? Rentabilidade { get; set; }
     public string? NomeCarteira { get; set; }
+}
+
+public class AnotacaoDto
+{
+    public string? Anotacao { get; set; }
 }
