@@ -26,8 +26,10 @@ export default function Relatorios() {
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
     const [relatorios, setRelatorios] = useState<Relatorio[]>([]);
     const [carregando, setCarregando] = useState(true);
-    
-    const [nivelAcessoUsuario, setNivelAcessoUsuario] = useState<number>(0); 
+    const [abaAtiva, setAbaAtiva] = useState<'todos' | 'revisados'>('todos');
+    const [idsRevisados, setIdsRevisados] = useState<number[]>([]);
+
+    const [nivelAcessoUsuario, setNivelAcessoUsuario] = useState<number>(0);
 
     const [modalUpgradeAberto, setModalUpgradeAberto] = useState(false);
     const [nomeCarteiraModal, setNomeCarteiraModal] = useState('');
@@ -66,6 +68,7 @@ export default function Relatorios() {
     useEffect(() => {
         descobrirNivelUsuario();
         carregarRelatorios();
+        carregarRevisados();
     }, []);
 
     const descobrirNivelUsuario = () => {
@@ -97,6 +100,30 @@ export default function Relatorios() {
                 console.error("Erro ao ler token", e);
                 setNivelAcessoUsuario(0);
             }
+        }
+    };
+
+    const carregarRevisados = async () => {
+        try {
+            const response = await api.get('/api/relatorios/revisados', configSeguranca);
+            setIdsRevisados(response.data);
+        } catch (error) {
+            console.error("Erro ao carregar revisados", error);
+        }
+    };
+
+    const toggleRevisado = async (id: number) => {
+        const jaRevisado = idsRevisados.includes(id);
+        try {
+            if (jaRevisado) {
+                await api.delete(`/api/relatorios/${id}/revisado`, configSeguranca);
+                setIdsRevisados(prev => prev.filter(r => r !== id));
+            } else {
+                await api.post(`/api/relatorios/${id}/revisado`, {}, configSeguranca);
+                setIdsRevisados(prev => [...prev, id]);
+            }
+        } catch (error) {
+            console.error("Erro ao marcar revisado", error);
         }
     };
 
@@ -159,11 +186,34 @@ export default function Relatorios() {
                         <p>Acompanhe as análises exclusivas, resultados e recomendações dos nossos especialistas.</p>
                     </div>
 
+                    <div style={{ display: 'flex', gap: '12px', margin: '24px 0 8px' }}>
+                        <button
+                            onClick={() => setAbaAtiva('todos')}
+                            style={{
+                                padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+                                background: abaAtiva === 'todos' ? '#00B4D8' : 'rgba(255,255,255,0.07)',
+                                color: abaAtiva === 'todos' ? '#fff' : '#8b949e'
+                            }}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            onClick={() => setAbaAtiva('revisados')}
+                            style={{
+                                padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+                                background: abaAtiva === 'revisados' ? '#00B4D8' : 'rgba(255,255,255,0.07)',
+                                color: abaAtiva === 'revisados' ? '#fff' : '#8b949e'
+                            }}
+                        >
+                            ✓ Revisados ({idsRevisados.length})
+                        </button>
+                    </div>
+
                     {carregando ? (
                         <p style={{ color: '#8b949e', marginTop: '24px' }}>Carregando biblioteca...</p>
                     ) : (
                         <div className="relatorios-cliente-grid">
-                            {relatorios.map(rel => {
+                            {relatorios.filter(rel => abaAtiva === 'todos' || idsRevisados.includes(rel.id)).map(rel => {
                                 const nivelExigido = rel.carteira?.nivelAcesso || 1;
                                 const temAcesso = nivelAcessoUsuario >= nivelExigido;
                                 const nomeCarteira = rel.carteira?.nome || 'Geral';
@@ -186,6 +236,21 @@ export default function Relatorios() {
                                                     : (rel.conteudoTexto || "Confira a análise completa e os fundamentos da nossa recomendação no anexo PDF deste relatório.")
                                                 }
                                             </p>
+                                        </div>
+
+                                        <div style={{ marginTop: '12px' }}>
+                                            <button
+                                                onClick={() => toggleRevisado(rel.id)}
+                                                style={{
+                                                    background: idsRevisados.includes(rel.id) ? 'rgba(0, 180, 216, 0.15)' : 'rgba(255,255,255,0.05)',
+                                                    border: `1px solid ${idsRevisados.includes(rel.id) ? '#00B4D8' : 'rgba(255,255,255,0.1)'}`,
+                                                    color: idsRevisados.includes(rel.id) ? '#00B4D8' : '#8b949e',
+                                                    borderRadius: '8px', padding: '6px 14px', cursor: 'pointer',
+                                                    fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px'
+                                                }}
+                                            >
+                                                {idsRevisados.includes(rel.id) ? '✓ Revisado' : '○ Marcar como Revisado'}
+                                            </button>
                                         </div>
 
                                         <div className="relatorio-footer">

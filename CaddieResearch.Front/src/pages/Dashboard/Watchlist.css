@@ -334,3 +334,28 @@
     font-size: 0.82rem;
   }
 }
+
+
+.wl-card-anotacao {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ccc;
+  font-size: 0.8rem;
+  padding: 8px 10px;
+  resize: none;
+  margin-top: 10px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.wl-card-anotacao::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.wl-card-anotacao:focus {
+  outline: none;
+  border-color: rgba(99, 179, 237, 0.5);
+}

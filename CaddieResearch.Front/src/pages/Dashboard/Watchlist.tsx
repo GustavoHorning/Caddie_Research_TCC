@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import api from '../../services/api'
 import './Watchlist.css'
 
 interface Favorito {
@@ -9,6 +8,7 @@ interface Favorito {
   categoria?: string
   rentabilidade?: string
   nomeCarteira?: string
+  anotacao?: string
 }
 
 interface Cotacao {
@@ -32,11 +32,14 @@ export default function Watchlist() {
   async function carregarFavoritos() {
     try {
       const token = localStorage.getItem('caddie_token')
-      const response = await api.get('/api/favoritos', {
+      const response = await fetch('http://localhost:5194/api/favoritos', {
         headers: { Authorization: `Bearer ${token}` }
       })
-      setFavoritos(response.data)
-      carregarCotacoes(response.data)
+      if (response.ok) {
+        const data = await response.json()
+        setFavoritos(data)
+        carregarCotacoes(data)
+      }
     } catch (e) {
       console.error('Erro ao carregar favoritos', e)
     } finally {
@@ -50,10 +53,13 @@ export default function Watchlist() {
       favs.map(async (f) => {
         try {
           const token = localStorage.getItem('caddie_token')
-          const res = await api.get(`/api/acoes/cotacao/${f.ticker}`, {
+          const res = await fetch(`http://localhost:5194/api/acoes/cotacao/${f.ticker}`, {
             headers: { Authorization: `Bearer ${token}` }
           })
-          novasCotacoes[f.ticker] = res.data
+          if (res.ok) {
+            const data = await res.json()
+            novasCotacoes[f.ticker] = data
+          }
         } catch (e) {
           console.error(`Erro ao buscar cotação de ${f.ticker}`, e)
         }
@@ -62,10 +68,28 @@ export default function Watchlist() {
     setCotacoes(novasCotacoes)
   }
 
+  async function salvarAnotacao(ticker: string, anotacao: string) {
+    try {
+      const token = localStorage.getItem('caddie_token')
+      await fetch(`http://localhost:5194/api/favoritos/${ticker}/anotacao`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ anotacao })
+      })
+      setFavoritos(prev => prev.map(f => f.ticker === ticker ? { ...f, anotacao } : f))
+    } catch (e) {
+      console.error('Erro ao salvar anotação', e)
+    }
+  }
+
   async function removerFavorito(ticker: string) {
     try {
       const token = localStorage.getItem('caddie_token')
-      await api.delete(`/api/favoritos/${ticker}`, {
+      await fetch(`http://localhost:5194/api/favoritos/${ticker}`, {
+        method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })
       setFavoritos(prev => prev.filter(f => f.ticker !== ticker))
@@ -79,42 +103,45 @@ export default function Watchlist() {
     }
   }
 
-  // Junta categoria, carteira e rentabilidade para classificar pelo texto disponível
-  function textoClassificacao(f: Favorito): string {
-    return `${f.categoria || ''} ${f.nomeCarteira || ''} ${f.rentabilidade || ''}`.toLowerCase()
-  }
-
-  // Ticker padrão B3: 4 letras + 1 ou 2 dígitos (WEGE3, EGIE3, BBDC4, BPAC11)
-  function ehAcaoB3(ticker: string): boolean {
-    return /^[A-Za-z]{4}\d{1,2}$/.test(ticker || '')
-  }
-
-  function filtroInternacional(f: Favorito): boolean {
-    const txt = textoClassificacao(f)
-    if (txt.includes('internacional') || txt.includes('etf') || txt.includes('usd')) return true
-    if (f.ticker?.includes('.')) return true
-    return false
-  }
-
   function filtroRendaFixa(f: Favorito): boolean {
-    const txt = textoClassificacao(f)
-    if (
-      txt.includes('renda fixa') || txt.includes('cri') || txt.includes('cra') ||
-      txt.includes('debenture') || txt.includes('debênture') || txt.includes('tesouro') ||
-      txt.includes('lci') || txt.includes('lca') || txt.includes('cdb') ||
-      txt.includes('atrelado') || txt.includes('inflação') || txt.includes('inflacao') ||
-      txt.includes('prefixado') || txt.includes('selic') || txt.includes('fundo')
-    ) return true
-    // Tem rentabilidade alvo mas não é ação com ticker padrão da B3
-    if (f.rentabilidade && !ehAcaoB3(f.ticker)) return true
-    return false
+    const cat = f.categoria?.toLowerCase() || ''
+    return (
+      cat.includes('renda fixa') ||
+      cat.includes('cri') ||
+      cat.includes('cra') ||
+      cat.includes('debenture') ||
+      cat.includes('debênture') ||
+      cat.includes('tesouro') ||
+      cat.includes('lci') ||
+      cat.includes('lca') ||
+      cat.includes('cdb') ||
+      cat.includes('atrelado') ||
+      cat.includes('inflação') ||
+      cat.includes('inflacao') ||
+      cat.includes('prefixado') ||
+      cat.includes('selic')
+    )
   }
 
   function filtroAcoes(f: Favorito): boolean {
-    // Se já é renda fixa ou internacional, não é ação
-    if (filtroRendaFixa(f) || filtroInternacional(f)) return false
-    // Ticker no formato da B3 = ação
-    return ehAcaoB3(f.ticker)
+    const cat = f.categoria?.toLowerCase() || ''
+    return (
+      cat.includes('ação') ||
+      cat.includes('acao') ||
+      cat.includes('ações') ||
+      cat.includes('acoes') ||
+      cat.includes('b3')
+    )
+  }
+
+  function filtroInternacional(f: Favorito): boolean {
+    const cat = f.categoria?.toLowerCase() || ''
+    return (
+      cat.includes('internacional') ||
+      cat.includes('etf') ||
+      cat.includes('usd') ||
+      f.ticker?.includes('.')
+    )
   }
 
   function getFavoritosFiltrados(): Favorito[] {
@@ -218,6 +245,14 @@ export default function Watchlist() {
                     <span className="wl-tag wl-tag-carteira">{f.nomeCarteira}</span>
                   )}
                 </div>
+
+                <textarea
+                  className="wl-card-anotacao"
+                  placeholder="Adicione uma anotação..."
+                  defaultValue={f.anotacao || ''}
+                  onBlur={e => salvarAnotacao(f.ticker, e.target.value)}
+                  rows={2}
+                />
 
                 <div className="wl-card-bottom">
                   {cotacao ? (

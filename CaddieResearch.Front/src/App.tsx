@@ -18,6 +18,8 @@ import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor';
 import CaixaEntradaGestor from './pages/Dashboard/Gestor/CaixaEntradaGestor';
 import GerenciarPlano from './pages/Dashboard/GerenciarPlano';
 import Perfil from "./pages/Dashboard/Perfil";
+import Portfolio from './pages/Dashboard/Portfolio';
+import PortfolioDetalhe from './pages/Dashboard/PortfolioDetalhe';
 import Watchlist from './pages/Dashboard/Watchlist';
 
 import DashboardLayout from './components/DashboardLayout';
@@ -43,6 +45,8 @@ function App() {
                 <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
                 <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
                 <Route path="/watchlist" element={<ProtectedRoute clientOnly><DashboardLayout><Watchlist /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/portfolio" element={<ProtectedRoute clientOnly><DashboardLayout><Portfolio /></DashboardLayout></ProtectedRoute>} />
+                <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/relatorios" element={<Relatorios />} />
 
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
