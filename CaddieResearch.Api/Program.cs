@@ -22,6 +22,10 @@ builder.Services.AddHttpClient<AbacatePayService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<AcoesService>();
 builder.Services.AddHttpClient<TaxasMacroeconomicasService>();
+builder.Services.AddHttpClient("yahoo", c =>
+{
+    c.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+});
 
 
 builder.Services.AddScoped<AcoesService>();
