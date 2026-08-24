@@ -36,16 +36,31 @@ public class PortfolioController : ControllerBase
             .Include(p => p.Posicoes)
             .ToListAsync();
 
+        var portfolioIds = portfolios.Select(p => p.Id).ToList();
+        var aportesPorPortfolio = await _context.Aportes
+            .Where(a => portfolioIds.Contains(a.PortfolioId))
+            .GroupBy(a => a.PortfolioId)
+            .Select(g => new { PortfolioId = g.Key, Total = g.Sum(a => a.Valor) })
+            .ToDictionaryAsync(x => x.PortfolioId, x => x.Total);
+
         var resultado = portfolios.Select(p =>
         {
-            var patrimonio = p.Posicoes?.Sum(pos => pos.Quantidade * pos.PrecoMedio) ?? 0;
+            var valorPosicoes = p.Posicoes?.Sum(pos => pos.Quantidade * pos.PrecoMedio) ?? 0;
+            var totalAportes = aportesPorPortfolio.GetValueOrDefault(p.Id, 0);
+            var temPosicoes = (p.Posicoes?.Count ?? 0) > 0;
+
+            // Sem posições: patrimônio = aportes (Conta Corrente). Com posições: valor de mercado.
+            var patrimonio = temPosicoes ? valorPosicoes : totalAportes;
+
             return new
             {
                 p.Id,
                 p.Nome,
                 p.DataInicio,
                 Patrimonio = patrimonio,
-                TotalPosicoes = p.Posicoes?.Count ?? 0
+                TotalPosicoes = p.Posicoes?.Count ?? 0,
+                TemContaCorrente = !temPosicoes && totalAportes > 0,
+                TotalAportes = totalAportes
             };
         });
 
@@ -109,7 +124,7 @@ public class PortfolioController : ControllerBase
 
         _context.Posicoes.Add(posicao);
         await _context.SaveChangesAsync();
-        return Ok(posicao);
+        return Ok(new { posicao.Id, posicao.Ticker, posicao.NomeAtivo, posicao.ClasseAtivo, posicao.Quantidade, posicao.PrecoMedio, posicao.DataEntrada });
     }
 
     [HttpDelete("{portfolioId}/posicoes/{posicaoId}")]
