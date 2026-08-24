@@ -23,6 +23,15 @@ interface PortfolioData {
   id: number; nome: string; dataInicio: string; nomeCliente: string; posicoes: Posicao[]
 }
 
+const CATEGORIAS_ATIVO = [
+  'Ações / Units', 'Ativos Personalizados', 'BDR', 'Caixa', 'CDB', 'CDCA', 'COE',
+  'Commodities', 'CRI / CRA', 'Criptomoedas', 'Debêntures', 'Direitos de Subscrição',
+  'DPGE', 'ETFs', 'FIIs', 'Fundos', 'Futuros', 'LC', 'LCA / LCI / LCD',
+  'LF / LFS / LFSN', 'LIG', 'Moedas', 'Offshore - Ações / ETFs / REITs',
+  'Offshore - Bonds', 'Opções de Ações', 'Operação Compromissada', 'Poupança',
+  'RDB / RDC', 'Recibos de Subscrição', 'Termo de Ações', 'Tesouro Direto',
+]
+
 const CORES_CLASSE: Record<string, string> = {
   'Renda Variável': '#00B4D8', 'Renda Fixa': '#7B61FF',
   'Internacional': '#F59E0B', 'Outros': '#6b7280',
@@ -36,17 +45,7 @@ const MENU_ITEMS = [
   { key: 'recomendacoes', label: 'Recomendações', icon: '👍' },
 ]
 
-// Dados mock do gráfico de rentabilidade (será substituído por dados reais quando houver posições)
-const dadosRentabilidade = [
-  { mes: 'Jan', portfolio: 0, ibovespa: 0 },
-  { mes: 'Fev', portfolio: 0.8, ibovespa: 1.2 },
-  { mes: 'Mar', portfolio: 1.5, ibovespa: 2.1 },
-  { mes: 'Abr', portfolio: 1.2, ibovespa: 3.0 },
-  { mes: 'Mai', portfolio: 2.4, ibovespa: 2.5 },
-  { mes: 'Jun', portfolio: 3.1, ibovespa: 1.8 },
-  { mes: 'Jul', portfolio: 4.0, ibovespa: 2.2 },
-  { mes: 'Ago', portfolio: 0, ibovespa: 0 },
-]
+const BRAPI_TOKEN = import.meta.env.VITE_BRAPI_TOKEN
 
 export default function PortfolioDetalhe() {
   const { id } = useParams()
@@ -60,6 +59,26 @@ export default function PortfolioDetalhe() {
   const [salvando, setSalvando] = useState(false)
   const [recomendacoes, setRecomendacoes] = useState<Recomendacao[]>([])
   const [respondendo, setRespondendo] = useState<number | null>(null)
+  const [modalTransacao, setModalTransacao] = useState(false)
+  const [passoTransacao, setPassoTransacao] = useState<1 | 2>(1)
+  const [txTicker, setTxTicker] = useState('')
+  const [txData, setTxData] = useState('')
+  const [txTipo, setTxTipo] = useState('Compra')
+  const [txAtivo, setTxAtivo] = useState<{ nome: string; classe: string; preco: number } | null>(null)
+  const [txClasse, setTxClasse] = useState('Renda Variável')
+  const [txBuscando, setTxBuscando] = useState(false)
+  const [txQuantidade, setTxQuantidade] = useState('')
+  const [txPreco, setTxPreco] = useState('')
+  const [salvandoTransacao, setSalvandoTransacao] = useState(false)
+  const [menuAberto, setMenuAberto] = useState<number | null>(null)
+  const [dadosRentabilidade, setDadosRentabilidade] = useState<{ mes: string; portfolio: number; ibovespa: number }[]>([])
+  const [carregandoGrafico, setCarregandoGrafico] = useState(false)
+  const [toast, setToast] = useState('')
+
+  function mostrarToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
 
   const token = localStorage.getItem('caddie_token')
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -73,7 +92,11 @@ export default function PortfolioDetalhe() {
   async function carregarPortfolio() {
     try {
       const res = await fetch(`http://localhost:5194/api/portfolio/${id}`, { headers })
-      if (res.ok) setPortfolio(await res.json())
+      if (res.ok) {
+        const data = await res.json()
+        setPortfolio(data)
+        if (data.posicoes?.length > 0) carregarGrafico(data.posicoes)
+      }
     } catch (e) { console.error(e) }
     finally { setCarregando(false) }
   }
@@ -103,6 +126,71 @@ export default function PortfolioDetalhe() {
     finally { setSalvando(false) }
   }
 
+  async function carregarGrafico(posicoes: Posicao[]) {
+    if (!posicoes || posicoes.length === 0) return
+    setCarregandoGrafico(true)
+    try {
+      const ticker = posicoes[0].ticker
+      const tickerYahoo = `${ticker}.SA`
+      const base = 'http://localhost:5194/api/mercado/historico'
+
+      const [resAtivo, resIbov] = await Promise.all([
+        fetch(`${base}?ticker=${tickerYahoo}&range=1y&interval=1d`, { headers }),
+        fetch(`${base}?ticker=%5EBVSP&range=1y&interval=1d`, { headers })
+      ])
+
+      const [jsonAtivo, jsonIbov] = await Promise.all([resAtivo.json(), resIbov.json()])
+
+      const resultAtivo = jsonAtivo?.chart?.result?.[0]
+      const resultIbov = jsonIbov?.chart?.result?.[0]
+
+      if (!resultAtivo || !resultIbov) {
+        console.warn('Histórico vazio - Yahoo Finance não retornou dados')
+        return
+      }
+
+      const timestamps: number[] = resultAtivo.timestamp || []
+      const fechamentosAtivo: number[] = resultAtivo.indicators?.quote?.[0]?.close || []
+      const fechamentosIbov: number[] = resultIbov.indicators?.quote?.[0]?.close || []
+
+      if (timestamps.length === 0 || fechamentosAtivo.length === 0) return
+
+      // Filtra apenas pontos com valores válidos
+      const pontos = timestamps
+        .map((ts, i) => ({
+          ts,
+          closeAtivo: fechamentosAtivo[i],
+          closeIbov: fechamentosIbov[i]
+        }))
+        .filter(p => p.closeAtivo != null && p.closeIbov != null)
+
+      if (pontos.length === 0) return
+
+      const baseAtivo = pontos[0].closeAtivo
+      const baseIbov = pontos[0].closeIbov
+      const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+      // Agrupa por mês — pega último fechamento de cada mês
+      const porMes: Record<string, { portfolio: number; ibovespa: number }> = {}
+      for (const p of pontos) {
+        const data = new Date(p.ts * 1000)
+        const chave = `${data.getFullYear()}-${data.getMonth()}`
+        porMes[chave] = {
+          portfolio: parseFloat((((p.closeAtivo - baseAtivo) / baseAtivo) * 100).toFixed(2)),
+          ibovespa: parseFloat((((p.closeIbov - baseIbov) / baseIbov) * 100).toFixed(2))
+        }
+      }
+
+      const dados = Object.entries(porMes).map(([chave, vals]) => {
+        const [ano, mes] = chave.split('-').map(Number)
+        return { mes: `${meses[mes]}/${String(ano).slice(2)}`, ...vals }
+      })
+
+      setDadosRentabilidade(dados)
+    } catch (e) { console.error('Erro ao carregar gráfico:', e) }
+    finally { setCarregandoGrafico(false) }
+  }
+
   async function carregarRecomendacoes() {
     try {
       const res = await fetch('http://localhost:5194/api/recomendacoes/minhas', { headers })
@@ -126,6 +214,43 @@ export default function PortfolioDetalhe() {
       if (res.ok) carregarRecomendacoes()
     } catch (e) { console.error(e) }
     finally { setRespondendo(null) }
+  }
+
+  function abrirModalTransacao() {
+    setPassoTransacao(1)
+    setTxTicker(''); setTxData(''); setTxTipo('Compra'); setTxClasse('Renda Variável')
+    setTxAtivo(null); setTxQuantidade(''); setTxPreco('')
+    setModalTransacao(true)
+  }
+
+  async function buscarAtivo(_ticker: string) {
+    // Integração com Brapi pendente — preenchimento manual por enquanto
+  }
+
+  async function salvarTransacao() {
+    if (!txTicker || !txQuantidade || !txPreco) return
+    setSalvandoTransacao(true)
+    try {
+      const res = await fetch(`http://localhost:5194/api/portfolio/${id}/posicoes`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          ticker: txTicker.toUpperCase(),
+          nomeAtivo: txAtivo?.nome || txTicker,
+          classeAtivo: txAtivo?.classe || txClasse,
+          quantidade: parseFloat(txQuantidade),
+          precoMedio: parseFloat(txPreco),
+          dataEntrada: txData || null
+        })
+      })
+      if (res.ok) {
+        setModalTransacao(false)
+        carregarPortfolio()
+        mostrarToast('✅ Transação cadastrada com sucesso!')
+      } else {
+        mostrarToast('❌ Erro ao cadastrar transação.')
+      }
+    } catch (e) { console.error(e); mostrarToast('❌ Erro ao cadastrar transação.') }
+    finally { setSalvandoTransacao(false) }
   }
 
   async function removerAporte(aporteId: number) {
@@ -213,6 +338,9 @@ export default function PortfolioDetalhe() {
             <button className="pd-nav-item pd-nav-acao" onClick={() => setModalAporte(true)}>
               <span>➕</span><span>Cadastrar aporte</span>
             </button>
+            <button className="pd-nav-item pd-nav-acao" onClick={abrirModalTransacao}>
+              <span>↕️</span><span>Cadastrar transação</span>
+            </button>
             <button className="pd-nav-item pd-nav-acao">
               <span>📄</span><span>Gerar relatório</span>
             </button>
@@ -227,7 +355,8 @@ export default function PortfolioDetalhe() {
             <div className="pd-dashboard-grid">
               {/* Gráfico rentabilidade */}
               <div className="pd-card pd-card-chart">
-                <h3>Rentabilidade</h3>
+                <h3>Rentabilidade vs IBOVESPA</h3>
+                {carregandoGrafico && <p style={{ color: '#8b949e', fontSize: '0.82rem' }}>Carregando dados de mercado...</p>}
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={dadosRentabilidade} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -243,7 +372,9 @@ export default function PortfolioDetalhe() {
                     <Line type="monotone" dataKey="ibovespa" name="IBOVESPA" stroke="#7B61FF" strokeWidth={2} dot={false} strokeDasharray="5 3" />
                   </LineChart>
                 </ResponsiveContainer>
-                <p className="pd-chart-aviso">* Gráfico será atualizado com dados reais após registro de posições.</p>
+                {dadosRentabilidade.length === 0 && !carregandoGrafico && (
+                  <p className="pd-chart-aviso">* Cadastre posições para visualizar a rentabilidade real.</p>
+                )}
               </div>
 
               {/* Alocação patrimonial */}
@@ -357,20 +488,49 @@ export default function PortfolioDetalhe() {
 
           {/* TRANSAÇÕES */}
           {abaAtiva === 'transacoes' && (
-            <div className="pd-card full">
+            <div className="pd-card full" onClick={() => setMenuAberto(null)}>
               <h3>Transações</h3>
-              {aportes.length === 0 ? (
-                <div className="pd-vazio"><span>↕️</span><p>Nenhuma transação registrada.</p></div>
+              {!portfolio.posicoes || portfolio.posicoes.length === 0 ? (
+                <div className="pd-vazio"><span>↕️</span><p>Nenhuma transação registrada.</p><span className="pd-vazio-sub">Clique em "Cadastrar transação" para adicionar.</span></div>
               ) : (
                 <table className="pd-table">
-                  <thead><tr><th>Data</th><th>Tipo</th><th>Valor</th><th>Descrição</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>Ativo</th>
+                      <th>Tipo</th>
+                      <th>Data da transação</th>
+                      <th>Quantidade</th>
+                      <th>Preço</th>
+                      <th>Custos</th>
+                      <th>Valor total</th>
+                      <th>Origem</th>
+                      <th></th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {aportes.map(a => (
-                      <tr key={a.id}>
-                        <td>{new Date(a.dataAporte).toLocaleDateString('pt-BR')}</td>
-                        <td><span className="pd-classe-tag" style={{ borderColor: '#00B4D8', color: '#00B4D8' }}>Aporte</span></td>
-                        <td className="pd-valor-total">{formatBRL(a.valor)}</td>
-                        <td>{a.descricao || '—'}</td>
+                    {portfolio.posicoes.map(p => (
+                      <tr key={p.id}>
+                        <td><span className="pd-ticker">{p.ticker}</span><span className="pd-ativo-nome">{p.nomeAtivo}</span></td>
+                        <td><span className="pd-classe-tag" style={{ borderColor: '#22c55e', color: '#22c55e' }}>Compra</span></td>
+                        <td>{new Date(p.dataEntrada).toLocaleDateString('pt-BR')}</td>
+                        <td>{p.quantidade}</td>
+                        <td>{formatBRL(p.precoMedio)}</td>
+                        <td style={{ color: '#8b949e' }}>—</td>
+                        <td className="pd-valor-total">{formatBRL(p.valorTotal)}</td>
+                        <td style={{ color: '#8b949e', fontSize: '0.82rem' }}>Manual</td>
+                        <td style={{ position: 'relative' }}>
+                          <button className="pd-btn-3pontos" onClick={e => { e.stopPropagation(); setMenuAberto(menuAberto === p.id ? null : p.id) }}>⋮</button>
+                          {menuAberto === p.id && (
+                            <div className="pd-dropdown-menu" onClick={e => e.stopPropagation()}>
+                              <button className="pd-dropdown-item">✏️ Editar</button>
+                              <button className="pd-dropdown-item pd-dropdown-excluir" onClick={async () => {
+                                await fetch(`http://localhost:5194/api/portfolio/${id}/posicoes/${p.id}`, { method: 'DELETE', headers })
+                                setMenuAberto(null)
+                                carregarPortfolio()
+                              }}>🗑️ Excluir</button>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -451,6 +611,129 @@ export default function PortfolioDetalhe() {
               </button>
               <button className="pd-btn-cancelar" onClick={() => setModalAporte(false)}>Cancelar</button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Toast */}
+      {toast && <div className="pd-toast">{toast}</div>}
+
+      {/* Modal Transação */}
+      {modalTransacao && (
+        <div className="pd-modal-overlay" onClick={() => setModalTransacao(false)}>
+          <div className="pd-modal-transacao" onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="pd-modal-tx-header">
+              <h3>Cadastrar transação</h3>
+              <div className="pd-modal-tx-passo">
+                <span>Passo {passoTransacao} de 2</span>
+                <div className="pd-passo-bar">
+                  <div className="pd-passo-fill" style={{ width: passoTransacao === 1 ? '50%' : '100%' }} />
+                </div>
+                <button className="pd-modal-tx-fechar" onClick={() => setModalTransacao(false)}>✕</button>
+              </div>
+            </div>
+
+            {/* PASSO 1 */}
+            {passoTransacao === 1 && (
+              <div className="pd-modal-tx-body">
+                <label className="pd-tx-label">Ativo</label>
+                <div className="pd-tx-busca">
+                  <span className="pd-tx-busca-icon">🔍</span>
+                  <input autoFocus type="text" placeholder="Busque por nome, ticker, empresa ou tipo"
+                    value={txTicker}
+                    onChange={e => { setTxTicker(e.target.value.toUpperCase()); setTxAtivo(null) }}
+                    onBlur={() => buscarAtivo(txTicker)}
+                    onKeyDown={e => e.key === 'Enter' && buscarAtivo(txTicker)}
+                  />
+                  {txBuscando && <span style={{ color: '#8b949e', fontSize: '0.8rem' }}>buscando...</span>}
+                  {txAtivo && <span style={{ color: '#22c55e', fontSize: '0.8rem' }}>✓ {txAtivo.nome}</span>}
+                  {txTicker && <button style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer' }} onClick={() => { setTxTicker(''); setTxAtivo(null) }}>✕</button>}
+                </div>
+
+                <div className="pd-tx-form-grid" style={{ marginTop: 8 }}>
+                  <div className="pd-form-group">
+                    <label>Data da transação</label>
+                    <input type="date" value={txData} onChange={e => setTxData(e.target.value)} />
+                  </div>
+                  <div className="pd-form-group">
+                    <label>Tipo</label>
+                    <select style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 12px', color: '#e6edf3', fontSize: '0.9rem', outline: 'none' }}
+                      value={txTipo} onChange={e => setTxTipo(e.target.value)}>
+                      <option>Compra</option>
+                      <option>Venda</option>
+                    </select>
+                  </div>
+                  <div className="pd-form-group" style={{ gridColumn: '1/-1' }}>
+                    <label>Classe do ativo</label>
+                    <select style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 12px', color: '#e6edf3', fontSize: '0.9rem', outline: 'none' }}
+                      value={txClasse} onChange={e => setTxClasse(e.target.value)}>
+                      <option>Renda Variável</option>
+                      <option>Renda Fixa</option>
+                      <option>Internacional</option>
+                      <option>Outros</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pd-modal-acoes" style={{ marginTop: 8 }}>
+                  <button className="pd-btn-primary"
+                    disabled={!txTicker}
+                    onClick={() => setPassoTransacao(2)}>
+                    Próximo
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 2 */}
+            {passoTransacao === 2 && (
+              <div className="pd-modal-tx-p2">
+                {/* Painel esquerdo — resumo */}
+                <div className="pd-tx-resumo-card">
+                  <div className="pd-tx-resumo-item"><span>Ativo</span><strong>{txTicker}</strong></div>
+                  <div className="pd-tx-resumo-item"><span>Classe</span><strong>{txAtivo?.classe || 'Renda Variável'}</strong></div>
+                  <div className="pd-tx-resumo-item"><span>Tipo</span><strong>{txTipo}</strong></div>
+                  {txData && <div className="pd-tx-resumo-item"><span>Data</span><strong>{new Date(txData + 'T12:00:00').toLocaleDateString('pt-BR')}</strong></div>}
+                </div>
+
+                {/* Painel direito — quantidade e preço */}
+                <div className="pd-tx-detalhes">
+                  <div className="pd-form-group">
+                    <label>Quantidade</label>
+                    <input type="number" placeholder="Ex.: 100" value={txQuantidade}
+                      onChange={e => setTxQuantidade(e.target.value)} />
+                  </div>
+                  <div className="pd-form-group">
+                    <label>Preço</label>
+                    <input type="number" value={txPreco}
+                      onChange={e => setTxPreco(e.target.value)} />
+                    {txAtivo?.preco > 0 && (
+                      <span style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: 4 }}>
+                        Preço de ref. R$ {txAtivo.preco.toFixed(2)} em {new Date().toLocaleDateString('pt-BR')}.
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pd-tx-total">
+                    <span>Total</span>
+                    <strong>
+                      {txQuantidade && txPreco
+                        ? formatBRL(parseFloat(txQuantidade) * parseFloat(txPreco))
+                        : 'R$ 0,00'}
+                    </strong>
+                  </div>
+
+                  <div className="pd-modal-acoes">
+                    <button className="pd-btn-primary" onClick={salvarTransacao} disabled={salvandoTransacao}>
+                      {salvandoTransacao ? 'Salvando...' : 'Cadastrar'}
+                    </button>
+                    <button className="pd-btn-cancelar" onClick={() => setPassoTransacao(1)}>Voltar</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       )}
