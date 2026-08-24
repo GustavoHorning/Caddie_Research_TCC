@@ -8,6 +8,8 @@ interface PortfolioItem {
   dataInicio: string
   patrimonio: number
   totalPosicoes: number
+  temContaCorrente: boolean
+  totalAportes: number
 }
 
 export default function Portfolio() {
@@ -64,8 +66,20 @@ export default function Portfolio() {
                 portfolios.map(p => (
                   <tr key={p.id} className="pf-row" onClick={() => navigate(`/portfolio/${p.id}`)}>
                     <td className="pf-nome">{p.nome}</td>
-                    <td className="pf-valor">{formatBRL(p.patrimonio)}</td>
-                    <td>{p.totalPosicoes} ativo{p.totalPosicoes !== 1 ? 's' : ''}</td>
+                    <td className="pf-valor">
+                      {formatBRL(p.patrimonio)}
+                      {p.temContaCorrente && (
+                        <span style={{ marginLeft: 8, fontSize: '0.72rem', color: '#8b949e', fontWeight: 400 }}>
+                          (Conta Corrente)
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {p.totalPosicoes === 0
+                        ? <span style={{ color: '#8b949e', fontSize: '0.82rem' }}>— aguardando posições</span>
+                        : `${p.totalPosicoes} ativo${p.totalPosicoes !== 1 ? 's' : ''}`
+                      }
+                    </td>
                     <td>{new Date(p.dataInicio).toLocaleDateString('pt-BR')}</td>
                   </tr>
                 ))

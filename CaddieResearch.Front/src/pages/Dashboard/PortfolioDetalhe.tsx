@@ -34,7 +34,7 @@ const CATEGORIAS_ATIVO = [
 
 const CORES_CLASSE: Record<string, string> = {
   'Renda Variável': '#00B4D8', 'Renda Fixa': '#7B61FF',
-  'Internacional': '#F59E0B', 'Outros': '#6b7280',
+  'Internacional': '#F59E0B', 'Commodities': '#F97316', 'Outros': '#6b7280',
 }
 
 const MENU_ITEMS = [
@@ -70,10 +70,22 @@ export default function PortfolioDetalhe() {
   const [txQuantidade, setTxQuantidade] = useState('')
   const [txPreco, setTxPreco] = useState('')
   const [salvandoTransacao, setSalvandoTransacao] = useState(false)
+  const [rfModalidade, setRfModalidade] = useState<'Pós-fixado' | 'Prefixado'>('Pós-fixado')
+  const [rfIndexador, setRfIndexador] = useState('% do CDI')
+  const [rfTaxa, setRfTaxa] = useState('100,00')
+  const [rfValor, setRfValor] = useState('')
+  const [rfVencimento, setRfVencimento] = useState('')
+  const [rfBanco, setRfBanco] = useState('')
+  const [rfPeriodicidade, setRfPeriodicidade] = useState('No vencimento')
   const [menuAberto, setMenuAberto] = useState<number | null>(null)
   const [dadosRentabilidade, setDadosRentabilidade] = useState<{ mes: string; portfolio: number; ibovespa: number }[]>([])
   const [carregandoGrafico, setCarregandoGrafico] = useState(false)
   const [toast, setToast] = useState('')
+  const anoAtual = new Date().getFullYear()
+  const [periodoInicio, setPeriodoInicio] = useState(`${anoAtual}-01-01`)
+  const [periodoFim, setPeriodoFim] = useState(new Date().toISOString().slice(0, 10))
+  const [mostrarSeletorData, setMostrarSeletorData] = useState(false)
+  const [precosAtuais, setPrecosAtuais] = useState<Record<string, number>>({})
 
   function mostrarToast(msg: string) {
     setToast(msg)
@@ -88,14 +100,42 @@ export default function PortfolioDetalhe() {
     if (abaAtiva === 'aportes' || abaAtiva === 'transacoes') carregarAportes()
     if (abaAtiva === 'recomendacoes') carregarRecomendacoes()
   }, [abaAtiva])
+  useEffect(() => {
+    if (portfolio?.posicoes?.length) carregarGrafico(portfolio.posicoes, periodoInicio, periodoFim, totalAportes)
+  }, [periodoInicio, periodoFim])
+
+  async function carregarPrecosAtuais(posicoes: Posicao[]) {
+    const tickers = [...new Set(posicoes.map(p => p.ticker))]
+    const precos: Record<string, number> = {}
+    await Promise.all(tickers.map(async ticker => {
+      try {
+        const res = await fetch(`http://localhost:5194/api/mercado/historico?ticker=${ticker}.SA&range=5d&interval=1d`, { headers })
+        if (!res.ok) return
+        const json = await res.json()
+        const fechamentos: (number | null)[] = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []
+        const ultimo = [...fechamentos].reverse().find(v => v != null)
+        if (ultimo != null) precos[ticker] = ultimo
+      } catch { /* ignora erro individual */ }
+    }))
+    setPrecosAtuais(precos)
+  }
 
   async function carregarPortfolio() {
     try {
-      const res = await fetch(`http://localhost:5194/api/portfolio/${id}`, { headers })
-      if (res.ok) {
-        const data = await res.json()
+      const [resPortfolio, resAportes] = await Promise.all([
+        fetch(`http://localhost:5194/api/portfolio/${id}`, { headers }),
+        fetch(`http://localhost:5194/api/portfolio/${id}/aportes`, { headers })
+      ])
+      const data = resPortfolio.ok ? await resPortfolio.json() : null
+      const aps = resAportes.ok ? await resAportes.json() : []
+      if (data) {
         setPortfolio(data)
-        if (data.posicoes?.length > 0) carregarGrafico(data.posicoes)
+        setAportes(aps)
+        const totalAps = aps.reduce((a: number, ap: { valor: number }) => a + ap.valor, 0)
+        if (data.posicoes?.length > 0) {
+          carregarGrafico(data.posicoes, periodoInicio, periodoFim, totalAps)
+          carregarPrecosAtuais(data.posicoes)
+        }
       }
     } catch (e) { console.error(e) }
     finally { setCarregando(false) }
@@ -126,62 +166,99 @@ export default function PortfolioDetalhe() {
     finally { setSalvando(false) }
   }
 
-  async function carregarGrafico(posicoes: Posicao[]) {
+  function periodoParaRange(inicio: string, fim: string): string {
+    const dias = Math.ceil((new Date(fim).getTime() - new Date(inicio).getTime()) / 86400000)
+    if (dias <= 5) return '5d'
+    if (dias <= 30) return '1mo'
+    if (dias <= 90) return '3mo'
+    if (dias <= 180) return '6mo'
+    if (dias <= 365) return '1y'
+    if (dias <= 730) return '2y'
+    return '5y'
+  }
+
+  async function carregarGrafico(posicoes: Posicao[], inicio = periodoInicio, fim = periodoFim, aporteTotal = totalAportes) {
     if (!posicoes || posicoes.length === 0) return
     setCarregandoGrafico(true)
     try {
-      const ticker = posicoes[0].ticker
-      const tickerYahoo = `${ticker}.SA`
       const base = 'http://localhost:5194/api/mercado/historico'
+      const range = periodoParaRange(inicio, fim)
 
-      const [resAtivo, resIbov] = await Promise.all([
-        fetch(`${base}?ticker=${tickerYahoo}&range=1y&interval=1d`, { headers }),
-        fetch(`${base}?ticker=%5EBVSP&range=1y&interval=1d`, { headers })
+      // Busca histórico de todas as posições + IBOVESPA em paralelo
+      const [respostas, resIbov] = await Promise.all([
+        Promise.all(posicoes.map(p =>
+          fetch(`${base}?ticker=${p.ticker}.SA&range=${range}&interval=1d`, { headers }).then(r => r.json())
+        )),
+        fetch(`${base}?ticker=%5EBVSP&range=${range}&interval=1d`, { headers }).then(r => r.json())
       ])
 
-      const [jsonAtivo, jsonIbov] = await Promise.all([resAtivo.json(), resIbov.json()])
+      const resultIbov = resIbov?.chart?.result?.[0]
+      if (!resultIbov) return
 
-      const resultAtivo = jsonAtivo?.chart?.result?.[0]
-      const resultIbov = jsonIbov?.chart?.result?.[0]
-
-      if (!resultAtivo || !resultIbov) {
-        console.warn('Histórico vazio - Yahoo Finance não retornou dados')
-        return
-      }
-
-      const timestamps: number[] = resultAtivo.timestamp || []
-      const fechamentosAtivo: number[] = resultAtivo.indicators?.quote?.[0]?.close || []
-      const fechamentosIbov: number[] = resultIbov.indicators?.quote?.[0]?.close || []
-
-      if (timestamps.length === 0 || fechamentosAtivo.length === 0) return
-
-      // Filtra apenas pontos com valores válidos
-      const pontos = timestamps
-        .map((ts, i) => ({
-          ts,
-          closeAtivo: fechamentosAtivo[i],
-          closeIbov: fechamentosIbov[i]
-        }))
-        .filter(p => p.closeAtivo != null && p.closeIbov != null)
-
-      if (pontos.length === 0) return
-
-      const baseAtivo = pontos[0].closeAtivo
-      const baseIbov = pontos[0].closeIbov
+      const tsInicio = new Date(inicio).getTime() / 1000
+      const tsFim = new Date(fim).getTime() / 1000 + 86400
       const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
-      // Agrupa por mês — pega último fechamento de cada mês
-      const porMes: Record<string, { portfolio: number; ibovespa: number }> = {}
-      for (const p of pontos) {
-        const data = new Date(p.ts * 1000)
-        const chave = `${data.getFullYear()}-${data.getMonth()}`
-        porMes[chave] = {
-          portfolio: parseFloat((((p.closeAtivo - baseAtivo) / baseAtivo) * 100).toFixed(2)),
-          ibovespa: parseFloat((((p.closeIbov - baseIbov) / baseIbov) * 100).toFixed(2))
+      // Monta lista ordenada de { data, preco } para cada posição
+      const historicosPosicoes = posicoes.map((pos, idx) => {
+        const result = respostas[idx]?.chart?.result?.[0]
+        const ts: number[] = result?.timestamp || []
+        const closes: (number | null)[] = result?.indicators?.quote?.[0]?.close || []
+        const serie: { data: string; preco: number }[] = []
+        ts.forEach((t, i) => {
+          if (closes[i] != null) {
+            serie.push({ data: new Date(t * 1000).toISOString().slice(0, 10), preco: closes[i]! })
+          }
+        })
+        serie.sort((a, b) => a.data.localeCompare(b.data))
+
+        // Retorna o último preço disponível até uma data alvo
+        function precoAte(dataAlvo: string): number {
+          let ultimo = pos.precoMedio
+          for (const p of serie) {
+            if (p.data <= dataAlvo) ultimo = p.preco
+            else break
+          }
+          return ultimo
         }
+        return { pos, precoAte }
+      })
+
+      // Custo fixo total de todas as posições
+      const custoTotal = posicoes.reduce((a, p) => a + p.precoMedio * p.quantidade, 0)
+      const aporteBase = aporteTotal > 0 ? aporteTotal : custoTotal
+
+      // Timestamps do IBOV como eixo de referência
+      const tsIbov: number[] = resultIbov.timestamp || []
+      const closesIbov: (number | null)[] = resultIbov.indicators?.quote?.[0]?.close || []
+
+      const pontosFiltrados = tsIbov
+        .map((ts, i) => ({ ts, closeIbov: closesIbov[i] }))
+        .filter(p => p.closeIbov != null && p.ts >= tsInicio && p.ts <= tsFim)
+
+      if (pontosFiltrados.length === 0) return
+
+      const baseIbov = pontosFiltrados[0].closeIbov!
+
+      // Agrupa por mês — último ponto de cada mês
+      const porMes: Record<string, { portfolio: number; ibovespa: number }> = {}
+      for (const { ts, closeIbov } of pontosFiltrados) {
+        // Valor de mercado de todas as posições neste dia
+        const diaStr = new Date(ts * 1000).toISOString().slice(0, 10)
+        let valorMercado = 0
+        for (const { pos, precoAte } of historicosPosicoes) {
+          valorMercado += precoAte(diaStr) * pos.quantidade
+        }
+        const lucro = valorMercado - custoTotal
+        const pctPortfolio = parseFloat(((lucro / aporteBase) * 100).toFixed(2))
+        const pctIbov = parseFloat((((closeIbov! - baseIbov) / baseIbov) * 100).toFixed(2))
+
+        const data = new Date(ts * 1000)
+        const chave = `${data.getFullYear()}-${String(data.getMonth()).padStart(2,'0')}`
+        porMes[chave] = { portfolio: pctPortfolio, ibovespa: pctIbov }
       }
 
-      const dados = Object.entries(porMes).map(([chave, vals]) => {
+      const dados = Object.entries(porMes).sort(([a], [b]) => a.localeCompare(b)).map(([chave, vals]) => {
         const [ano, mes] = chave.split('-').map(Number)
         return { mes: `${meses[mes]}/${String(ano).slice(2)}`, ...vals }
       })
@@ -228,19 +305,34 @@ export default function PortfolioDetalhe() {
   }
 
   async function salvarTransacao() {
-    if (!txTicker || !txQuantidade || !txPreco) return
+    const isRendaFixa = txClasse === 'Renda Fixa'
+    if (isRendaFixa) {
+      if (!txTicker || !rfValor) return
+    } else {
+      if (!txTicker || !txQuantidade || !txPreco) return
+    }
     setSalvandoTransacao(true)
     try {
+      const body = isRendaFixa
+        ? {
+            ticker: txTicker.toUpperCase(),
+            nomeAtivo: txAtivo?.nome || txTicker,
+            classeAtivo: 'Renda Fixa',
+            quantidade: 1,
+            precoMedio: parseFloat(rfValor),
+            dataEntrada: txData || null
+          }
+        : {
+            ticker: txTicker.toUpperCase(),
+            nomeAtivo: txAtivo?.nome || txTicker,
+            classeAtivo: txAtivo?.classe || txClasse,
+            quantidade: parseFloat(txQuantidade),
+            precoMedio: parseFloat(txPreco),
+            dataEntrada: txData || null
+          }
       const res = await fetch(`http://localhost:5194/api/portfolio/${id}/posicoes`, {
         method: 'POST', headers,
-        body: JSON.stringify({
-          ticker: txTicker.toUpperCase(),
-          nomeAtivo: txAtivo?.nome || txTicker,
-          classeAtivo: txAtivo?.classe || txClasse,
-          quantidade: parseFloat(txQuantidade),
-          precoMedio: parseFloat(txPreco),
-          dataEntrada: txData || null
-        })
+        body: JSON.stringify(body)
       })
       if (res.ok) {
         setModalTransacao(false)
@@ -261,8 +353,32 @@ export default function PortfolioDetalhe() {
   const formatBRL = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
-  const patrimonio = portfolio?.posicoes?.reduce((a, p) => a + p.valorTotal, 0) ?? 0
   const totalAportes = aportes.reduce((a, ap) => a + ap.valor, 0)
+
+  const custoTotalPosicoes = (portfolio?.posicoes ?? []).reduce((a, p) => a + p.precoMedio * p.quantidade, 0)
+  const valorMercadoPosicoes = (portfolio?.posicoes ?? []).reduce((a, p) => {
+    const precoAtual = precosAtuais[p.ticker] ?? p.precoMedio
+    return a + precoAtual * p.quantidade
+  }, 0)
+  const caixaNaoInvestido = Math.max(0, totalAportes - custoTotalPosicoes)
+  const patrimonio = valorMercadoPosicoes + caixaNaoInvestido
+
+  const posicoesFiltradas = (portfolio?.posicoes ?? []).filter(p => {
+    const d = p.dataEntrada.slice(0, 10)
+    return d >= periodoInicio && d <= periodoFim
+  })
+
+  const { resultado, pctResultado } = (() => {
+    let custoTotal = 0, valorAtualTotal = 0
+    for (const p of posicoesFiltradas) {
+      const precoAtual = precosAtuais[p.ticker] ?? p.precoMedio
+      custoTotal += p.precoMedio * p.quantidade
+      valorAtualTotal += precoAtual * p.quantidade
+    }
+    const resultado = valorAtualTotal - custoTotal
+    const pct = totalAportes > 0 ? (resultado / totalAportes) * 100 : 0
+    return { resultado, pctResultado: pct }
+  })()
 
   const alocacaoPorClasse = portfolio?.posicoes?.reduce((acc, p) => {
     acc[p.classeAtivo] = (acc[p.classeAtivo] || 0) + p.valorTotal
@@ -297,19 +413,44 @@ export default function PortfolioDetalhe() {
       <div className="pd-header">
         <button className="pd-voltar" onClick={() => navigate('/portfolio')}>← Portfólios</button>
         <div className="pd-header-info">
-          <div className="pd-header-cliente">
-            <h2 className="pd-nome-cliente">{portfolio.nomeCliente}</h2>
-            <span className="pd-data-inicio">📅 Início do portfólio: {new Date(portfolio.dataInicio).toLocaleDateString('pt-BR')}</span>
+          {/* Linha superior: nome + seletor de data */}
+          <div className="pd-header-top">
+            <div className="pd-header-cliente">
+              <h2 className="pd-nome-cliente">{portfolio.nomeCliente}</h2>
+              <span className="pd-data-inicio">📅 Início do portfólio: {
+                aportes.length > 0
+                  ? new Date(aportes.reduce((min, a) => a.dataAporte < min ? a.dataAporte : min, aportes[0].dataAporte)).toLocaleDateString('pt-BR')
+                  : new Date(portfolio.dataInicio).toLocaleDateString('pt-BR')
+              }</span>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <button className="pd-periodo-btn" onClick={() => setMostrarSeletorData(v => !v)}>
+                📅 Ano atual | {periodoInicio.split('-').reverse().join('/')} – {periodoFim.split('-').reverse().join('/')} ▾
+              </button>
+              {mostrarSeletorData && (
+                <div className="pd-seletor-data">
+                  <label>De<input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} /></label>
+                  <label>Até<input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} /></label>
+                  <button onClick={() => setMostrarSeletorData(false)} className="pd-seletor-ok">OK</button>
+                </div>
+              )}
+            </div>
           </div>
+          {/* Linha inferior: stats */}
           <div className="pd-header-stats">
             <div className="pd-stat">
               <span className="pd-stat-label">Patrimônio em {new Date().toLocaleDateString('pt-BR')}</span>
-              <span className="pd-stat-val">{formatBRL(totalAportes)}</span>
+              <span className="pd-stat-val">{formatBRL(patrimonio)}</span>
             </div>
             <div className="pd-stat">
               <span className="pd-stat-label">Resultado (Ano atual)</span>
-              {patrimonio > 0
-                ? <span className="pd-stat-resultado">{formatBRL(patrimonio)} <span className="pd-badge-positivo">+0,00% ↑</span></span>
+              {posicoesFiltradas.length > 0
+                ? <span className="pd-stat-resultado">
+                    {formatBRL(resultado)}{' '}
+                    <span className={resultado >= 0 ? 'pd-badge-positivo' : 'pd-badge-negativo'}>
+                      {resultado >= 0 ? '+' : ''}{pctResultado.toFixed(2)}% {resultado >= 0 ? '↑' : '↓'}
+                    </span>
+                  </span>
                 : <span className="pd-badge-neutro">— aguardando posições</span>
               }
             </div>
@@ -671,6 +812,7 @@ export default function PortfolioDetalhe() {
                       <option>Renda Variável</option>
                       <option>Renda Fixa</option>
                       <option>Internacional</option>
+                      <option>Commodities</option>
                       <option>Outros</option>
                     </select>
                   </div>
@@ -697,32 +839,101 @@ export default function PortfolioDetalhe() {
                   {txData && <div className="pd-tx-resumo-item"><span>Data</span><strong>{new Date(txData + 'T12:00:00').toLocaleDateString('pt-BR')}</strong></div>}
                 </div>
 
-                {/* Painel direito — quantidade e preço */}
+                {/* Painel direito */}
                 <div className="pd-tx-detalhes">
-                  <div className="pd-form-group">
-                    <label>Quantidade</label>
-                    <input type="number" placeholder="Ex.: 100" value={txQuantidade}
-                      onChange={e => setTxQuantidade(e.target.value)} />
-                  </div>
-                  <div className="pd-form-group">
-                    <label>Preço</label>
-                    <input type="number" value={txPreco}
-                      onChange={e => setTxPreco(e.target.value)} />
-                    {txAtivo?.preco > 0 && (
-                      <span style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: 4 }}>
-                        Preço de ref. R$ {txAtivo.preco.toFixed(2)} em {new Date().toLocaleDateString('pt-BR')}.
-                      </span>
-                    )}
-                  </div>
+                  {txClasse === 'Renda Fixa' ? (
+                    <>
+                      {/* Modalidade */}
+                      <div className="pd-form-group">
+                        <label>Modalidade</label>
+                        <div style={{ display: 'flex', gap: 16 }}>
+                          {(['Pós-fixado', 'Prefixado'] as const).map(m => (
+                            <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.88rem' }}>
+                              <input type="radio" name="rfModalidade" checked={rfModalidade === m} onChange={() => setRfModalidade(m)} />
+                              {m}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
 
-                  <div className="pd-tx-total">
-                    <span>Total</span>
-                    <strong>
-                      {txQuantidade && txPreco
-                        ? formatBRL(parseFloat(txQuantidade) * parseFloat(txPreco))
-                        : 'R$ 0,00'}
-                    </strong>
-                  </div>
+                      {/* Indexador + Taxa */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="pd-form-group">
+                          <label>Indexador</label>
+                          <select value={rfIndexador} onChange={e => setRfIndexador(e.target.value)}>
+                            <option>% do CDI</option>
+                            <option>CDI +</option>
+                            <option>IPCA +</option>
+                            <option>SELIC</option>
+                            <option>Prefixado</option>
+                          </select>
+                        </div>
+                        <div className="pd-form-group">
+                          <label>{rfIndexador === 'Prefixado' ? 'Taxa a.a.' : rfIndexador}</label>
+                          <input type="text" value={rfTaxa} onChange={e => setRfTaxa(e.target.value)} placeholder="100,00%" />
+                        </div>
+                      </div>
+
+                      {/* Valor + Vencimento */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="pd-form-group">
+                          <label>Valor investido (R$)</label>
+                          <input type="number" placeholder="Ex.: 1000,00" value={rfValor} onChange={e => setRfValor(e.target.value)} />
+                        </div>
+                        <div className="pd-form-group">
+                          <label>Data de vencimento</label>
+                          <input type="date" value={rfVencimento} onChange={e => setRfVencimento(e.target.value)} />
+                        </div>
+                      </div>
+
+                      {/* Banco + Periodicidade */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="pd-form-group">
+                          <label>Banco emissor</label>
+                          <input type="text" placeholder="Ex.: Banco Inter" value={rfBanco} onChange={e => setRfBanco(e.target.value)} />
+                        </div>
+                        <div className="pd-form-group">
+                          <label>Periodicidade de pagamento</label>
+                          <select value={rfPeriodicidade} onChange={e => setRfPeriodicidade(e.target.value)}>
+                            <option>No vencimento</option>
+                            <option>Mensal</option>
+                            <option>Semestral</option>
+                            <option>Anual</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="pd-tx-total">
+                        <span>Total</span>
+                        <strong>{rfValor ? formatBRL(parseFloat(rfValor)) : 'R$ 0,00'}</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="pd-form-group">
+                        <label>Quantidade</label>
+                        <input type="number" placeholder="Ex.: 100" value={txQuantidade}
+                          onChange={e => setTxQuantidade(e.target.value)} />
+                      </div>
+                      <div className="pd-form-group">
+                        <label>Preço</label>
+                        <input type="number" value={txPreco} onChange={e => setTxPreco(e.target.value)} />
+                        {txAtivo?.preco > 0 && (
+                          <span style={{ fontSize: '0.76rem', color: '#8b949e', marginTop: 4 }}>
+                            Preço de ref. R$ {txAtivo.preco.toFixed(2)} em {new Date().toLocaleDateString('pt-BR')}.
+                          </span>
+                        )}
+                      </div>
+                      <div className="pd-tx-total">
+                        <span>Total</span>
+                        <strong>
+                          {txQuantidade && txPreco
+                            ? formatBRL(parseFloat(txQuantidade) * parseFloat(txPreco))
+                            : 'R$ 0,00'}
+                        </strong>
+                      </div>
+                    </>
+                  )}
 
                   <div className="pd-modal-acoes">
                     <button className="pd-btn-primary" onClick={salvarTransacao} disabled={salvandoTransacao}>
