@@ -37,4 +37,32 @@ public class MercadoController : ControllerBase
             return StatusCode(500, ex.Message);
         }
     }
+
+    [HttpGet("futuro")]
+    public async Task<IActionResult> GetCotacaoFuturo([FromQuery] string ticker)
+    {
+        if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
+
+        var url = $"https://cotacao.b3.com.br/mds/api/v1/InstrumentQuotation/{ticker.ToUpper()}";
+
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Add("Accept", "application/json");
+            req.Headers.Add("Origin", "https://www.b3.com.br");
+            req.Headers.Add("Referer", "https://www.b3.com.br/");
+
+            var res = await _http.SendAsync(req);
+            var body = await res.Content.ReadAsStringAsync();
+
+            if (!res.IsSuccessStatusCode)
+                return StatusCode((int)res.StatusCode, body);
+
+            return Content(body, "application/json");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
+    }
 }
