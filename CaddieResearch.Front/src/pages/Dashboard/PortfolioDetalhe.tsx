@@ -34,7 +34,7 @@ const CATEGORIAS_ATIVO = [
 
 const CORES_CLASSE: Record<string, string> = {
   'Renda Variável': '#00B4D8', 'Renda Fixa': '#7B61FF',
-  'Internacional': '#F59E0B', 'Commodities': '#F97316', 'Outros': '#6b7280',
+  'Internacional': '#F59E0B', 'Commodities': '#F97316', 'Futuros': '#EC4899', 'Caixa Livre': '#22c55e', 'Outros': '#6b7280',
 }
 
 const MENU_ITEMS = [
@@ -70,6 +70,7 @@ export default function PortfolioDetalhe() {
   const [txQuantidade, setTxQuantidade] = useState('')
   const [txPreco, setTxPreco] = useState('')
   const [salvandoTransacao, setSalvandoTransacao] = useState(false)
+  const [ftTipoOp, setFtTipoOp] = useState<'Intraday' | 'Swing'>('Swing')
   const [rfModalidade, setRfModalidade] = useState<'Pós-fixado' | 'Prefixado'>('Pós-fixado')
   const [rfIndexador, setRfIndexador] = useState('% do CDI')
   const [rfTaxa, setRfTaxa] = useState('100,00')
@@ -78,6 +79,8 @@ export default function PortfolioDetalhe() {
   const [rfBanco, setRfBanco] = useState('')
   const [rfPeriodicidade, setRfPeriodicidade] = useState('No vencimento')
   const [menuAberto, setMenuAberto] = useState<number | null>(null)
+  const [modalPrecoManual, setModalPrecoManual] = useState<{ posicaoId: number; ticker: string } | null>(null)
+  const [precoManualInput, setPrecoManualInput] = useState('')
   const [dadosRentabilidade, setDadosRentabilidade] = useState<{ mes: string; portfolio: number; ibovespa: number }[]>([])
   const [carregandoGrafico, setCarregandoGrafico] = useState(false)
   const [toast, setToast] = useState('')
@@ -104,18 +107,73 @@ export default function PortfolioDetalhe() {
     if (portfolio?.posicoes?.length) carregarGrafico(portfolio.posicoes, periodoInicio, periodoFim, totalAportes)
   }, [periodoInicio, periodoFim])
 
+  // Meses de vencimento futuros B3: F=Jan G=Feb H=Mar J=Apr K=Mai M=Jun N=Jul Q=Ago U=Set V=Out X=Nov Z=Dez
+  const MESES_FUTURO: Record<string, number> = { F:0,G:1,H:2,J:3,K:4,M:5,N:6,Q:7,U:8,V:9,X:10,Z:11 }
+  const PREFIXO_CONTINUO: Record<string, string> = { WIN:'WIN=F', WDO:'WDO=F', IND:'IND=F', DOL:'DOL=F' }
+
+  function tickerContinuo(ticker: string): string {
+    const prefixo = ticker.slice(0, 3).toUpperCase()
+    return PREFIXO_CONTINUO[prefixo] || ticker
+  }
+
+  function vencimentoFuturo(ticker: string): Date | null {
+    const mes = MESES_FUTURO[ticker.slice(-3, -2).toUpperCase()]
+    const ano = parseInt('20' + ticker.slice(-2))
+    if (isNaN(mes) || isNaN(ano)) return null
+    // WIN vence na 3ª quarta-feira do mês de vencimento
+    const d = new Date(ano, mes, 1)
+    let quartas = 0
+    while (quartas < 3) { if (d.getDay() === 3) quartas++; if (quartas < 3) d.setDate(d.getDate() + 1) }
+    return d
+  }
+
   async function carregarPrecosAtuais(posicoes: Posicao[]) {
-    const tickers = [...new Set(posicoes.map(p => p.ticker))]
     const precos: Record<string, number> = {}
-    await Promise.all(tickers.map(async ticker => {
-      try {
-        const res = await fetch(`http://localhost:5194/api/mercado/historico?ticker=${ticker}.SA&range=5d&interval=1d`, { headers })
-        if (!res.ok) return
-        const json = await res.json()
-        const fechamentos: (number | null)[] = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []
-        const ultimo = [...fechamentos].reverse().find(v => v != null)
-        if (ultimo != null) precos[ticker] = ultimo
-      } catch { /* ignora erro individual */ }
+    await Promise.all(posicoes.map(async p => {
+      const isFuturo = p.classeAtivo === 'Futuros'
+      if (isFuturo) {
+        const venc = vencimentoFuturo(p.ticker)
+        const hoje = new Date()
+        const vencido = venc && venc < hoje
+
+        if (!vencido) {
+          // Contrato ativo → B3 API (cotação em tempo real)
+          try {
+            const res = await fetch(`http://localhost:5194/api/mercado/futuro?ticker=${p.ticker}`, { headers })
+            if (res.ok) {
+              const json = await res.json()
+              const preco = json?.Trad?.[0]?.scty?.SctyQtn?.curPrc
+              if (preco != null) precos[p.ticker] = parseFloat(preco)
+            }
+          } catch { /* ignora */ }
+        } else {
+          // Contrato vencido → Yahoo Finance histórico até o vencimento
+          const diasPassados = Math.ceil((hoje.getTime() - venc!.getTime()) / 86400000)
+          const range = diasPassados <= 30 ? '1mo' : diasPassados <= 90 ? '3mo' : diasPassados <= 180 ? '6mo' : '1y'
+          try {
+            const res = await fetch(`http://localhost:5194/api/mercado/historico?ticker=${encodeURIComponent(tickerContinuo(p.ticker))}&range=${range}&interval=1d`, { headers })
+            if (res.ok) {
+              const json = await res.json()
+              const timestamps: number[] = json?.chart?.result?.[0]?.timestamp || []
+              const fechamentos: (number | null)[] = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []
+              const tsLimite = venc!.getTime() / 1000
+              for (let i = timestamps.length - 1; i >= 0; i--) {
+                if (timestamps[i] <= tsLimite && fechamentos[i] != null) { precos[p.ticker] = fechamentos[i]!; break }
+              }
+            }
+          } catch { /* ignora */ }
+        }
+      } else {
+        const tickerYahoo = `${p.ticker}.SA`
+        try {
+          const res = await fetch(`http://localhost:5194/api/mercado/historico?ticker=${encodeURIComponent(tickerYahoo)}&range=5d&interval=1d`, { headers })
+          if (!res.ok) return
+          const json = await res.json()
+          const fechamentos: (number | null)[] = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []
+          const ultimo = [...fechamentos].reverse().find(v => v != null)
+          if (ultimo != null) precos[p.ticker] = ultimo
+        } catch { /* ignora */ }
+      }
     }))
     setPrecosAtuais(precos)
   }
@@ -186,9 +244,10 @@ export default function PortfolioDetalhe() {
 
       // Busca histórico de todas as posições + IBOVESPA em paralelo
       const [respostas, resIbov] = await Promise.all([
-        Promise.all(posicoes.map(p =>
-          fetch(`${base}?ticker=${p.ticker}.SA&range=${range}&interval=1d`, { headers }).then(r => r.json())
-        )),
+        Promise.all(posicoes.map(p => {
+          const tickerYahoo = p.classeAtivo === 'Futuros' ? p.ticker : `${p.ticker}.SA`
+          return fetch(`${base}?ticker=${tickerYahoo}&range=${range}&interval=1d`, { headers }).then(r => r.json())
+        })),
         fetch(`${base}?ticker=%5EBVSP&range=${range}&interval=1d`, { headers }).then(r => r.json())
       ])
 
@@ -306,6 +365,7 @@ export default function PortfolioDetalhe() {
 
   async function salvarTransacao() {
     const isRendaFixa = txClasse === 'Renda Fixa'
+    const isFuturo = txClasse === 'Futuros'
     if (isRendaFixa) {
       if (!txTicker || !rfValor) return
     } else {
@@ -313,6 +373,7 @@ export default function PortfolioDetalhe() {
     }
     setSalvandoTransacao(true)
     try {
+      const margemUnit = ftTipoOp === 'Intraday' ? 150 : 5000
       const body = isRendaFixa
         ? {
             ticker: txTicker.toUpperCase(),
@@ -320,6 +381,15 @@ export default function PortfolioDetalhe() {
             classeAtivo: 'Renda Fixa',
             quantidade: 1,
             precoMedio: parseFloat(rfValor),
+            dataEntrada: txData || null
+          }
+        : isFuturo
+        ? {
+            ticker: txTicker.toUpperCase(),
+            nomeAtivo: `${txTicker.toUpperCase()} (${ftTipoOp}|margem:${margemUnit})`,
+            classeAtivo: 'Futuros',
+            quantidade: parseFloat(txQuantidade),
+            precoMedio: parseFloat(txPreco), // preço de entrada do contrato (pontos)
             dataEntrada: txData || null
           }
         : {
@@ -384,6 +454,7 @@ export default function PortfolioDetalhe() {
     acc[p.classeAtivo] = (acc[p.classeAtivo] || 0) + p.valorTotal
     return acc
   }, {} as Record<string, number>) ?? {}
+  if (caixaNaoInvestido > 0) alocacaoPorClasse['Caixa Livre'] = caixaNaoInvestido
   const totalAlocacao = Object.values(alocacaoPorClasse).reduce((a, b) => a + b, 0)
 
   const donutSegments = () => {
@@ -561,6 +632,17 @@ export default function PortfolioDetalhe() {
                     <span className="pd-resumo-label">Patrimônio alocado</span>
                     <span className="pd-resumo-valor">{formatBRL(patrimonio)}</span>
                   </div>
+                  <div className="pd-resumo-stat" style={{ borderTop: '1px solid #30363d', paddingTop: 10, marginTop: 4 }}>
+                    <span className="pd-resumo-label">💰 Caixa Livre</span>
+                    <span className="pd-resumo-valor" style={{ color: caixaNaoInvestido > 0 ? '#22c55e' : '#8b949e' }}>
+                      {formatBRL(caixaNaoInvestido)}
+                    </span>
+                    {totalAportes > 0 && (
+                      <span style={{ fontSize: '0.72rem', color: '#8b949e' }}>
+                        {((caixaNaoInvestido / totalAportes) * 100).toFixed(1)}% do capital total
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -575,23 +657,126 @@ export default function PortfolioDetalhe() {
                   <span>📊</span><p>Nenhuma posição registrada ainda.</p>
                   <span className="pd-vazio-sub">As posições serão adicionadas após o alinhamento com o gestor.</span>
                 </div>
-              ) : (
-                <table className="pd-table">
-                  <thead><tr><th>Ativo</th><th>Classe</th><th>Qtd</th><th>Preço Médio</th><th>Valor Total</th><th>Entrada</th></tr></thead>
-                  <tbody>
-                    {portfolio.posicoes.map(p => (
-                      <tr key={p.id}>
-                        <td><span className="pd-ticker">{p.ticker}</span><span className="pd-ativo-nome">{p.nomeAtivo}</span></td>
-                        <td><span className="pd-classe-tag" style={{ borderColor: CORES_CLASSE[p.classeAtivo] || '#6b7280', color: CORES_CLASSE[p.classeAtivo] || '#6b7280' }}>{p.classeAtivo}</span></td>
-                        <td>{p.quantidade}</td>
-                        <td>{formatBRL(p.precoMedio)}</td>
-                        <td className="pd-valor-total">{formatBRL(p.valorTotal)}</td>
-                        <td>{new Date(p.dataEntrada).toLocaleDateString('pt-BR')}</td>
+              ) : (() => {
+                const totalPort = portfolio.posicoes!.reduce((a, p) => {
+                  const pa = precosAtuais[p.ticker] ?? p.precoMedio
+                  return a + pa * p.quantidade
+                }, 0)
+                const grupos = portfolio.posicoes!.reduce((acc, p) => {
+                  const cl = p.classeAtivo || 'Outros'
+                  if (!acc[cl]) acc[cl] = []
+                  acc[cl].push(p)
+                  return acc
+                }, {} as Record<string, Posicao[]>)
+
+                return (
+                  <table className="pd-table pd-table-posicoes">
+                    <thead>
+                      <tr>
+                        <th>Classe / Ativo</th>
+                        <th style={{textAlign:'right'}}>Valor atualizado</th>
+                        <th style={{textAlign:'right'}}>Valor investido</th>
+                        <th style={{textAlign:'right'}}>P&L</th>
+                        <th style={{textAlign:'right'}}>Rent. TWR</th>
+                        <th style={{textAlign:'right'}}>Quantidade</th>
+                        <th style={{textAlign:'right'}}>% portfólio</th>
+                        <th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody>
+                      {Object.entries(grupos).map(([classe, posicoes]) => {
+                        const cor = CORES_CLASSE[classe] || '#6b7280'
+                        const totalInvCl = posicoes.reduce((a, p) => {
+                          const m = p.nomeAtivo.match(/margem:(\d+)/)
+                          return a + (p.classeAtivo === 'Futuros' && m ? parseInt(m[1]) * p.quantidade : p.precoMedio * p.quantidade)
+                        }, 0)
+                        const totalAtCl = posicoes.reduce((a, p) => {
+                          const pa = precosAtuais[p.ticker] ?? p.precoMedio
+                          const m = p.nomeAtivo.match(/margem:(\d+)/)
+                          const isFut = p.classeAtivo === 'Futuros' && m
+                          const inv = isFut ? parseInt(m![1]) * p.quantidade : p.precoMedio * p.quantidade
+                          const pl = isFut ? (pa - p.precoMedio) * p.quantidade * 0.20 : pa * p.quantidade - inv
+                          return a + (isFut ? inv + pl : pa * p.quantidade)
+                        }, 0)
+                        const plCl = totalAtCl - totalInvCl
+                        const pctCl = totalInvCl > 0 ? (plCl / totalInvCl) * 100 : 0
+                        const pctPortCl = totalPort > 0 ? (totalAtCl / totalPort) * 100 : 0
+                        return [
+                          // Linha de classe
+                          <tr key={`cl-${classe}`} className="pd-row-classe">
+                            <td>
+                              <span style={{ display:'inline-block', width:10, height:10, borderRadius:2, background:cor, marginRight:8 }}/>
+                              <strong>{classe}</strong>
+                            </td>
+                            <td style={{textAlign:'right'}}><strong>{formatBRL(totalAtCl)}</strong></td>
+                            <td style={{textAlign:'right'}}><strong>{formatBRL(totalInvCl)}</strong></td>
+                            <td style={{textAlign:'right'}}>
+                              <strong style={{color: plCl >= 0 ? '#22c55e' : '#ef4444'}}>
+                                {plCl >= 0 ? '+' : ''}{formatBRL(plCl)}
+                              </strong>
+                            </td>
+                            <td style={{textAlign:'right'}}>
+                              <span style={{color: pctCl >= 0 ? '#22c55e' : '#ef4444', fontWeight:600}}>
+                                {pctCl >= 0 ? '+' : ''}{pctCl.toFixed(2)}% {pctCl >= 0 ? '↑' : '↓'}
+                              </span>
+                            </td>
+                            <td style={{textAlign:'right'}}>—</td>
+                            <td style={{textAlign:'right'}}><strong>{pctPortCl.toFixed(2)}%</strong></td>
+                            <td/>
+                          </tr>,
+                          // Linhas de ativos
+                          ...posicoes.map(p => {
+                            const margemMatch = p.nomeAtivo.match(/margem:(\d+)/)
+                            const isFut = p.classeAtivo === 'Futuros' && margemMatch
+                            const venc = isFut ? vencimentoFuturo(p.ticker) : null
+                            const vencido = venc ? venc < new Date() : false
+                            const pa = precosAtuais[p.ticker] ?? (vencido ? p.precoMedio : p.precoMedio)
+                            const inv = isFut
+                              ? parseInt(margemMatch![1]) * p.quantidade
+                              : p.precoMedio * p.quantidade
+                            const pl = isFut
+                              ? (pa - p.precoMedio) * p.quantidade * 0.20
+                              : pa * p.quantidade - inv
+                            const atual = isFut ? inv + pl : pa * p.quantidade
+                            const twr = inv > 0 ? (pl / inv) * 100 : 0
+                            const pctPort = totalPort > 0 ? (atual / totalPort) * 100 : 0
+                            return (
+                              <tr key={p.id} className="pd-row-ativo">
+                                <td style={{paddingLeft:28}}>
+                                  <span className="pd-ticker">{p.ticker}</span>
+                                  <span className="pd-ativo-nome">{p.nomeAtivo}</span>
+                                </td>
+                                <td style={{textAlign:'right'}}>{formatBRL(atual)}</td>
+                                <td style={{textAlign:'right'}}>{formatBRL(inv)}</td>
+                                <td style={{textAlign:'right', color: pl >= 0 ? '#22c55e' : '#ef4444'}}>
+                                  {pl >= 0 ? '+' : ''}{formatBRL(pl)}
+                                  {vencido && <span style={{display:'block', fontSize:'0.7rem', color:'#8b949e'}}>Fechado</span>}
+                                </td>
+                                <td style={{textAlign:'right', color: twr >= 0 ? '#22c55e' : '#ef4444'}}>
+                                  {twr >= 0 ? '+' : ''}{twr.toFixed(2)}% {twr >= 0 ? '↑' : '↓'}
+                                </td>
+                                <td style={{textAlign:'right'}}>{p.quantidade}</td>
+                                <td style={{textAlign:'right'}}>{pctPort.toFixed(2)}%</td>
+                                <td>
+                                  <div style={{position:'relative'}}>
+                                    <button className="pd-btn-3pontos" onClick={() => setMenuAberto(menuAberto === p.id ? null : p.id)}>⋮</button>
+                                    {menuAberto === p.id && (
+                                      <div className="pd-dropdown-menu">
+                                        <button className="pd-dropdown-item" onClick={() => { setModalPrecoManual({ posicaoId: p.id, ticker: p.ticker }); setPrecoManualInput(''); setMenuAberto(null) }}>✏️ Atualizar preço</button>
+                                        <button className="pd-dropdown-excluir" onClick={() => { removerPosicao(p.id); setMenuAberto(null) }}>Excluir</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })
+                        ]
+                      })}
+                    </tbody>
+                  </table>
+                )
+              })()}
             </div>
           )}
 
@@ -758,6 +943,37 @@ export default function PortfolioDetalhe() {
       {/* Toast */}
       {toast && <div className="pd-toast">{toast}</div>}
 
+      {/* Modal preço manual */}
+      {modalPrecoManual && (
+        <div className="pd-modal-overlay" onClick={() => setModalPrecoManual(null)}>
+          <div className="pd-modal" onClick={e => e.stopPropagation()} style={{maxWidth: 360}}>
+            <div className="pd-modal-header">
+              <h3>Atualizar preço — {modalPrecoManual.ticker}</h3>
+              <button className="pd-modal-tx-fechar" onClick={() => setModalPrecoManual(null)}>✕</button>
+            </div>
+            <div style={{padding: '20px 24px', display:'flex', flexDirection:'column', gap:16}}>
+              <div className="pd-form-group">
+                <label>Preço atual (pontos/R$)</label>
+                <input type="number" placeholder="Ex.: 135250" value={precoManualInput}
+                  onChange={e => setPrecoManualInput(e.target.value)}
+                  autoFocus />
+              </div>
+              <div className="pd-modal-acoes">
+                <button className="pd-btn-primary" onClick={() => {
+                  const v = parseFloat(precoManualInput)
+                  if (!isNaN(v) && modalPrecoManual) {
+                    setPrecosAtuais(prev => ({ ...prev, [modalPrecoManual.ticker]: v }))
+                    setModalPrecoManual(null)
+                    mostrarToast('✅ Preço atualizado!')
+                  }
+                }}>Confirmar</button>
+                <button className="pd-btn-cancelar" onClick={() => setModalPrecoManual(null)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Transação */}
       {modalTransacao && (
         <div className="pd-modal-overlay" onClick={() => setModalTransacao(false)}>
@@ -813,6 +1029,7 @@ export default function PortfolioDetalhe() {
                       <option>Renda Fixa</option>
                       <option>Internacional</option>
                       <option>Commodities</option>
+                      <option>Futuros</option>
                       <option>Outros</option>
                     </select>
                   </div>
@@ -841,7 +1058,54 @@ export default function PortfolioDetalhe() {
 
                 {/* Painel direito */}
                 <div className="pd-tx-detalhes">
-                  {txClasse === 'Renda Fixa' ? (
+                  {txClasse === 'Futuros' ? (() => {
+                    const margemUnit = ftTipoOp === 'Intraday' ? 150 : 5000
+                    const qtd = parseFloat(txQuantidade) || 0
+                    const precoNocional = parseFloat(txPreco) || 0
+                    const margemTotal = qtd * margemUnit
+                    const exposicao = qtd * precoNocional
+                    return (
+                      <>
+                        <div className="pd-form-group">
+                          <label>Tipo de operação</label>
+                          <div style={{ display: 'flex', gap: 16 }}>
+                            {(['Intraday', 'Swing'] as const).map(t => (
+                              <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.88rem' }}>
+                                <input type="radio" name="ftTipo" checked={ftTipoOp === t} onChange={() => setFtTipoOp(t)} />
+                                {t} {t === 'Intraday' ? '(R$ 150/contrato)' : '(R$ 5.000/contrato)'}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div className="pd-form-group">
+                            <label>Quantidade (contratos)</label>
+                            <input type="number" placeholder="Ex.: 5" value={txQuantidade} onChange={e => setTxQuantidade(e.target.value)} />
+                          </div>
+                          <div className="pd-form-group">
+                            <label>Preço do contrato (pts)</label>
+                            <input type="number" placeholder="Ex.: 172025" value={txPreco} onChange={e => setTxPreco(e.target.value)} />
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#8b949e' }}>
+                            <span>Margem por contrato</span>
+                            <span>{formatBRL(margemUnit)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#8b949e' }}>
+                            <span>Exposição total (nocional)</span>
+                            <span>{exposicao > 0 ? formatBRL(exposicao) : '—'}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, borderTop: '1px solid #30363d', paddingTop: 8 }}>
+                            <span>Capital alocado (margem)</span>
+                            <span style={{ color: '#00B4D8' }}>{margemTotal > 0 ? formatBRL(margemTotal) : 'R$ 0,00'}</span>
+                          </div>
+                        </div>
+                      </>
+                    )
+                  })() : txClasse === 'Renda Fixa' ? (
                     <>
                       {/* Modalidade */}
                       <div className="pd-form-group">

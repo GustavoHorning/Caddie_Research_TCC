@@ -121,6 +121,11 @@
 
 .pd-ticker { display: block; font-weight: 700; color: #e6edf3; }
 .pd-ativo-nome { display: block; font-size: 0.75rem; color: #8b949e; }
+
+.pd-row-classe { background: rgba(255,255,255,0.03); }
+.pd-row-classe td { padding: 10px 12px; font-size: 0.82rem; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.pd-row-ativo td { padding: 9px 12px; font-size: 0.84rem; }
+.pd-row-ativo:hover { background: rgba(255,255,255,0.025); }
 .pd-classe-tag { font-size: 0.73rem; font-weight: 600; border: 1px solid; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
 .pd-valor-total { font-weight: 600; color: #e6edf3 !important; }
 
