@@ -494,3 +494,45 @@
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.3);
 }
+/* ===== Card Morning Call na home ===== */
+.dash-mc-resumo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.dash-mc-titulo {
+  color: #e6edf3;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dash-mc-destaque {
+  color: #c9d1d9;
+  font-size: 0.85rem;
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border-left: 2px solid #f5a623;
+}
+
+.dash-mc-mais {
+  color: #8b949e;
+  font-size: 0.78rem;
+}
+
+.dash-mc-btn {
+  display: inline-block;
+  margin-top: 4px;
+  color: #58a6ff;
+  font-size: 0.82rem;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dash-mc-btn:hover {
+  text-decoration: underline;
+}
