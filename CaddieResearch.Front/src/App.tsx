@@ -25,6 +25,7 @@ import Watchlist from './pages/Dashboard/Watchlist';
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ConfirmarEmail from "./pages/ConfirmarEmail.tsx";
+import Calendario from './pages/Dashboard/Calendario'; 
 
 function App() {
     return (
@@ -52,6 +53,7 @@ function App() {
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
                 <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
                 <Route path="/gestor/relatorios" element={<RelatoriosGestor />} />
+                <Route path="/calendario" element={<ProtectedRoute clientOnly><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
 
 
             </Routes>

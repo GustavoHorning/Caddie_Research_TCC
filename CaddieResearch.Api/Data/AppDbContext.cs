@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<Posicao> Posicoes { get; set; }
     public DbSet<Aporte> Aportes { get; set; }
     public DbSet<Recomendacao> Recomendacoes { get; set; }
+    public DbSet<Evento> Eventos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
