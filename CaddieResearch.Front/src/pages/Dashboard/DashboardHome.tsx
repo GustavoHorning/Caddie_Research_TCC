@@ -9,6 +9,15 @@ const ultimasAtualizacoes = [
   { icon: 'CC', titulo: 'Caddie Call #2026', subtitulo: 'A replicação e os investimentos.', tag: '', tempo: '' },
 ]
 
+const morningCallResumo = {
+  titulo: 'Resumo do mercado — 25 de agosto',
+  data: 'Hoje, 25/08/2026',
+  topicos: [
+    'Petrobras anuncia novo plano de dividendos',
+    'Copom mantém taxa Selic — reflexo na renda fixa',
+    'Ibovespa fecha em alta puxado por commodities',
+  ],
+}
 const proximosEventos = [
   {
     id: 1,
@@ -216,6 +225,21 @@ export default function DashboardHome() {
             <p className="dash-minuto-text">
               O foco da semana foi a inclusão de novos ativos na carteira de Dividendos, refletindo a estratégia de capturar valor no longo prazo.
             </p>
+          </div>
+        </div>
+
+        <div className="dash-card dash-card-morningcall">
+          <div className="dash-card-header">
+            <h3>☕ Morning Call</h3>
+            <span className="dash-card-sub-header">{morningCallResumo.data}</span>
+          </div>
+          <div className="dash-mc-resumo">
+            <p className="dash-mc-titulo">{morningCallResumo.titulo}</p>
+            <p className="dash-mc-destaque">📰 {morningCallResumo.topicos[0]}</p>
+            <span className="dash-mc-mais">
+              + {morningCallResumo.topicos.length - 1} notícias para ler
+            </span>
+            <a href="/morning-call" className="dash-mc-btn">Ler Morning Call →</a>
           </div>
         </div>
 

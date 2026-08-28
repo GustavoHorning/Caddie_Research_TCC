@@ -1,0 +1,282 @@
+/* ===== Morning Call — estilos compartilhados (gestor + cliente) ===== */
+.mc-page {
+    background: #0d1117;
+    padding: 32px 40px 48px;
+    min-height: calc(100vh - 64px);
+    margin-top: -64px;
+    padding-top: 96px;
+    font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+    box-sizing: border-box;
+}
+
+.mc-container {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+
+/* ---------- Cabeçalho (gestor) ---------- */
+.mc-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.mc-icon {
+    font-size: 26px;
+}
+
+.mc-title {
+    color: #e6edf3;
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.mc-subtitle {
+    color: #8b949e;
+    font-size: 13px;
+    margin: 4px 0 0;
+}
+
+/* ---------- Campos do formulário ---------- */
+.mc-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.mc-field {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.mc-field label {
+    color: #8b949e;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.mc-field input,
+.mc-field select,
+.mc-topico input,
+.mc-topico textarea {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #e6edf3;
+    font-size: 14px;
+    font-family: inherit;
+    width: 100%;
+}
+
+.mc-field input:focus,
+.mc-field select:focus,
+.mc-topico input:focus,
+.mc-topico textarea:focus {
+    outline: none;
+    border-color: #1f6feb;
+}
+
+/* ---------- Tópicos ---------- */
+.mc-divider {
+    border-top: 1px solid #21262d;
+    margin: 20px 0 16px;
+}
+
+.mc-section-label {
+    color: #58a6ff;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.mc-topico {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.mc-topico input,
+.mc-topico textarea {
+    background: #0d1117;
+    margin-bottom: 8px;
+    resize: vertical;
+}
+
+.mc-topico-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    color: #6e7681;
+    font-size: 12px;
+}
+
+.mc-remove {
+    background: transparent;
+    border: none;
+    color: #f85149;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.mc-add-topico {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed #30363d;
+    border-radius: 10px;
+    padding: 12px;
+    color: #58a6ff;
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.mc-add-topico:hover {
+    border-color: #58a6ff;
+}
+
+/* ---------- Ações ---------- */
+.mc-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.mc-btn-cancel,
+.mc-btn-publish {
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+}
+
+.mc-btn-cancel {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #8b949e;
+}
+
+.mc-btn-publish {
+    background: #1f6feb;
+    color: #fff;
+    font-weight: 500;
+}
+
+.mc-btn-publish:hover {
+    background: #388bfd;
+}
+
+/* ===== Tela do cliente (leitura) ===== */
+.mc-reader-header {
+    border-bottom: 1px solid #21262d;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+}
+
+.mc-reader-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f5a623;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.mc-icon-sm {
+    font-size: 18px;
+}
+
+.mc-reader-title {
+    color: #e6edf3;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+
+.mc-reader-meta {
+    display: flex;
+    gap: 16px;
+    color: #8b949e;
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+
+.mc-reader-topico {
+    border-top: 1px solid #21262d;
+    padding-top: 20px;
+    margin-bottom: 22px;
+}
+
+.mc-reader-topico:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.mc-reader-topico-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mc-reader-num {
+    color: #58a6ff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mc-reader-topico-title span:last-child {
+    color: #e6edf3;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.mc-reader-texto {
+    color: #c9d1d9;
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0 0 10px;
+}
+
+.mc-reader-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #58a6ff;
+    font-size: 13px;
+    text-decoration: none;
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 6px 12px;
+}
+
+.mc-reader-link:hover {
+    border-color: #58a6ff;
+}
+
+.mc-reader-footer {
+    border-top: 1px solid #21262d;
+    padding-top: 16px;
+    color: #6e7681;
+    font-size: 12px;
+    text-align: center;
+}
