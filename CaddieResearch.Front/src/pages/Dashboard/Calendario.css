@@ -1,0 +1,345 @@
+﻿.cal-page {
+    padding: 32px;
+    max-width: 1000px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+.cal-header {
+    margin-bottom: 24px;
+}
+
+.cal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #e6edf3;
+    margin: 0 0 6px 0;
+}
+
+.cal-subtitle {
+    font-size: 0.9rem;
+    color: #8b949e;
+    margin: 0;
+}
+
+.cal-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+}
+
+.cal-filtros {
+    display: flex;
+    gap: 12px;
+}
+
+.cal-btn-filtro {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #8b949e;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cal-btn-filtro:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #c9d1d9;
+}
+
+.cal-btn-filtro.ativo {
+    background: #00B4D8;
+    color: #fff;
+    border-color: #00B4D8;
+    outline: none;
+}
+
+.cal-btn-watchlist {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #F59E0B;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cal-btn-watchlist.ativo {
+    background: #F59E0B;
+    color: #fff;
+}
+
+.cal-dia-grupo {
+    margin-bottom: 40px;
+}
+
+.cal-dia-header {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #e6edf3;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cal-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cal-item {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 14px 20px;
+    transition: background 0.2s;
+}
+
+.cal-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.cal-hora {
+    width: 65px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #8b949e;
+    flex-shrink: 0;
+}
+
+.cal-impacto-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 14px;
+    width: 30px;
+    flex-shrink: 0;
+    margin-right: 16px;
+}
+
+.cal-barra {
+    width: 4px;
+    background: #30363d;
+    border-radius: 1px;
+}
+.cal-barra:nth-child(1) { height: 7px; }
+.cal-barra:nth-child(2) { height: 10px; }
+.cal-barra:nth-child(3) { height: 14px; }
+
+
+.cal-item[title="Impacto: 1"] .cal-barra.ativa { background: #00B4D8; } 
+.cal-item[title="Impacto: 2"] .cal-barra.ativa { background: #F59E0B; } 
+.cal-item[title="Impacto: 3"] .cal-barra.ativa { background: #ef4444; } 
+
+.cal-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cal-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.cal-tag.tipo-macro { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.cal-tag.tipo-balanço { background: rgba(245, 158, 11, 0.15); color: #F59E0B; }
+.cal-tag.tipo-caddie { background: rgba(0, 180, 216, 0.15); color: #00B4D8; }
+
+.cal-evento-titulo {
+    font-size: 0.95rem;
+    color: #e6edf3;
+}
+
+.cal-dados {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.cal-dado-badge {
+    font-size: 0.75rem;
+    color: #7a90a8;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+.cal-dado-badge.destaque {
+    color: #e6edf3;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cal-vazio {
+    text-align: center;
+    padding: 60px;
+    color: #8b949e;
+}
+
+.cal-item-wrapper {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    overflow: hidden; 
+}
+
+.cal-item-wrapper:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.cal-item-wrapper.expandido {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.cal-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+}
+
+.cal-seta-expansao {
+    font-size: 0.7rem;
+    color: #8b949e;
+    margin-left: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.cal-detalhes-expandido {
+    padding: 20px 24px; 
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 16px; 
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes cal-fade-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.cal-descricao {
+    margin: 0;
+    color: #a0aab5; 
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.cal-link-externo {
+    align-self: flex-start; 
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid #00d2ff; 
+    color: #00d2ff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.cal-link-externo:hover {
+    background: #00d2ff;
+    color: #0a0a0a;
+}
+
+.cal-bandeira-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: #c9d1d9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+
+@media (max-width: 768px) {
+    .cal-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .cal-toolbar > div:nth-child(2) {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .cal-toolbar input,
+    .cal-btn-watchlist {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .cal-filtros {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .cal-btn-filtro {
+        flex: 1 1 calc(50% - 8px); 
+        min-width: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .cal-page {
+        padding: 16px; 
+    }
+
+    .cal-header h1 {
+        font-size: 1.5rem; 
+    }
+
+    .cal-item {
+        flex-wrap: wrap; 
+        gap: 12px;
+        position: relative;
+    }
+
+    .cal-hora {
+        font-size: 0.9rem;
+    }
+
+    .cal-info {
+        width: 100%;
+        order: 3; 
+        margin-left: 0;
+    }
+
+    .cal-dados {
+        width: 100%;
+        order: 4;
+        justify-content: space-between;
+    }
+
+    .cal-seta-expansao {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+    }
+}

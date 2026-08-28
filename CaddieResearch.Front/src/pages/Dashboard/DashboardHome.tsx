@@ -18,6 +18,32 @@ const morningCallResumo = {
     'Ibovespa fecha em alta puxado por commodities',
   ],
 }
+const proximosEventos = [
+  {
+    id: 1,
+    data: 'Hoje, 09:30',
+    titulo: 'EUA: Relatório de Emprego (Payroll)',
+    tipo: 'Macro',
+    impacto: 3, // 3 = Alta volatilidade
+    projecao: '180k',
+    atual: '---'
+  },
+  {
+    id: 2,
+    data: 'Hoje, 18:00',
+    titulo: 'Balanço: WEGE3 (2T26)',
+    tipo: 'Balanço',
+    impacto: 2
+  },
+  {
+    id: 3,
+    data: 'Amanhã, 19:00',
+    titulo: 'Live: Rebalanceamento da Carteira',
+    tipo: 'Caddie',
+    impacto: 1,
+    link: true
+  }
+]
 
 interface Favorito {
   id: number
@@ -144,13 +170,42 @@ export default function DashboardHome() {
         <div className="dash-card dash-card-eventos">
           <div className="dash-card-header">
             <h3>Próximos Eventos</h3>
-            <span className="dash-card-icon">E</span>
+            <a href="/calendario" className="dash-card-link-header">Ver calendário ➔</a>
           </div>
-          <div className="dash-eventos-empty">
-            <span className="dash-eventos-check">ok</span>
-            <p>Sem eventos previstos</p>
-            <span className="dash-eventos-sub">Confira os eventos que já foram realizados</span>
-            <a href="#" className="dash-eventos-btn">EVENTOS PASSADOS</a>
+
+          <div className="dash-eventos-timeline">
+            {proximosEventos.map((evento) => (
+                <div key={evento.id} className="dash-evento-item">
+                  <div className="dash-evento-left">
+                    <span className={`dash-evento-dot tipo-${evento.tipo.toLowerCase()}`}></span>
+                    <div className="dash-evento-line"></div>
+                  </div>
+
+                  <div className="dash-evento-content">
+                    <span className="dash-evento-data">{evento.data}</span>
+
+                    <div className="dash-evento-titulo-row">
+                      <strong className="dash-evento-titulo">{evento.titulo}</strong>
+                    </div>
+
+                    <div className="dash-evento-detalhes">
+                      <div className="dash-evento-impacto-barras" title={`Impacto: ${evento.impacto}/3`}>
+                        <div className={`barra-impacto ${evento.impacto >= 1 ? 'ativa' : ''}`}></div>
+                        <div className={`barra-impacto ${evento.impacto >= 2 ? 'ativa' : ''}`}></div>
+                        <div className={`barra-impacto ${evento.impacto >= 3 ? 'ativa' : ''}`}></div>
+                      </div>
+
+                      {evento.projecao && (
+                          <span className="dash-evento-projecao">Proj: {evento.projecao}</span>
+                      )}
+
+                      {evento.link && (
+                          <button className="dash-evento-btn-add">+ Adicionar à Agenda</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+            ))}
           </div>
         </div>
 
