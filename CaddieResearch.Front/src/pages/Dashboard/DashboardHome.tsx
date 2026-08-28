@@ -24,7 +24,7 @@ const proximosEventos = [
     data: 'Hoje, 09:30',
     titulo: 'EUA: Relatório de Emprego (Payroll)',
     tipo: 'Macro',
-    impacto: 3, // 3 = Alta volatilidade
+    impacto: 3, 
     projecao: '180k',
     atual: '---'
   },
