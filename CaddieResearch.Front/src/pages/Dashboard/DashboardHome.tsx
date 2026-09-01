@@ -9,6 +9,7 @@ const ultimasAtualizacoes = [
   { icon: 'CC', titulo: 'Caddie Call #2026', subtitulo: 'A replicação e os investimentos.', tag: '', tempo: '' },
 ]
 
+
 const morningCallResumo = {
   titulo: 'Resumo do mercado — 25 de agosto',
   data: 'Hoje, 25/08/2026',
@@ -63,11 +64,44 @@ interface Cotacao {
 export default function DashboardHome() {
   const [favoritos, setFavoritos] = useState<Favorito[]>([])
   const [cotacoes, setCotacoes] = useState<Record<string, Cotacao>>({})
+  const [eventos, setEventos] = useState<any[]>([]) 
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
     carregarFavoritos()
+    carregarEventos()
   }, [])
+
+  async function carregarEventos() {
+    try {
+      const response = await fetch('http://localhost:5194/api/calendario');
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        const balancos = data.filter((e: any) => e.tipo?.toLowerCase() === 'balanço' || e.tipo?.toLowerCase() === 'balanco');
+        const outrosEventos = data.filter((e: any) => e.tipo?.toLowerCase() !== 'balanço' && e.tipo?.toLowerCase() !== 'balanco');
+
+        const vitrine = [];
+
+        if (balancos.length > 0) {
+          vitrine.push(balancos[0]);
+        }
+
+        const espacoRestante = 3 - vitrine.length;
+        vitrine.push(...outrosEventos.slice(0, espacoRestante));
+
+        vitrine.sort((a, b) => {
+          const timeA = a.dataStr + "T" + a.hora;
+          const timeB = b.dataStr + "T" + b.hora;
+          return timeA.localeCompare(timeB);
+        });
+
+        setEventos(vitrine);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar eventos do calendário:", error);
+    }
+  }
 
   async function carregarFavoritos() {
     try {
@@ -174,38 +208,44 @@ export default function DashboardHome() {
           </div>
 
           <div className="dash-eventos-timeline">
-            {proximosEventos.map((evento) => (
-                <div key={evento.id} className="dash-evento-item">
-                  <div className="dash-evento-left">
-                    <span className={`dash-evento-dot tipo-${evento.tipo.toLowerCase()}`}></span>
-                    <div className="dash-evento-line"></div>
-                  </div>
-
-                  <div className="dash-evento-content">
-                    <span className="dash-evento-data">{evento.data}</span>
-
-                    <div className="dash-evento-titulo-row">
-                      <strong className="dash-evento-titulo">{evento.titulo}</strong>
-                    </div>
-
-                    <div className="dash-evento-detalhes">
-                      <div className="dash-evento-impacto-barras" title={`Impacto: ${evento.impacto}/3`}>
-                        <div className={`barra-impacto ${evento.impacto >= 1 ? 'ativa' : ''}`}></div>
-                        <div className={`barra-impacto ${evento.impacto >= 2 ? 'ativa' : ''}`}></div>
-                        <div className={`barra-impacto ${evento.impacto >= 3 ? 'ativa' : ''}`}></div>
+            {eventos.length === 0 ? (
+                <p style={{ color: '#7a90a8', fontSize: '0.85rem' }}>Buscando eventos da agenda...</p>
+            ) : (
+                eventos.map((evento, index) => (
+                    <div key={evento.id || index} className="dash-evento-item">
+                      <div className="dash-evento-left">
+                        <span className={`dash-evento-dot tipo-${evento.tipo?.toLowerCase() || 'macro'}`}></span>
+                        <div className="dash-evento-line"></div>
                       </div>
 
-                      {evento.projecao && (
-                          <span className="dash-evento-projecao">Proj: {evento.projecao}</span>
-                      )}
+                      <div className="dash-evento-content">
+                        <span className="dash-evento-data">{evento.hora}</span>
 
-                      {evento.link && (
-                          <button className="dash-evento-btn-add">+ Adicionar à Agenda</button>
-                      )}
+                        <div className="dash-evento-titulo-row">
+                          <strong className="dash-evento-titulo">{evento.titulo}</strong>
+                        </div>
+
+                        <div className="dash-evento-detalhes">
+                          <div className="dash-evento-impacto-barras" title={`Impacto: ${evento.impacto}/3`}>
+                            <div className={`barra-impacto ${evento.impacto >= 1 ? 'ativa' : ''}`}></div>
+                            <div className={`barra-impacto ${evento.impacto >= 2 ? 'ativa' : ''}`}></div>
+                            <div className={`barra-impacto ${evento.impacto >= 3 ? 'ativa' : ''}`}></div>
+                          </div>
+
+                          {evento.projecao && evento.projecao !== "---" && (
+                              <span className="dash-evento-projecao">Proj: {evento.projecao}</span>
+                          )}
+
+                          {evento.link && (
+                              <a href={evento.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                <button className="dash-evento-btn-add">Ver Fonte ➔</button>
+                              </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-            ))}
+                ))
+            )}
           </div>
         </div>
 

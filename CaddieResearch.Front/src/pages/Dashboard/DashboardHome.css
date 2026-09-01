@@ -444,7 +444,6 @@
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.3);
 }
-/* ===== Card Morning Call na home ===== */
 .dash-mc-resumo {
   display: flex;
   flex-direction: column;
@@ -485,6 +484,7 @@
 
 .dash-mc-btn:hover {
   text-decoration: underline;
+}
 
 .dash-card-link-header {
   font-size: 0.75rem;
