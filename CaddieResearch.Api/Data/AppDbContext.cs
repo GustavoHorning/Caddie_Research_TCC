@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
     public DbSet<Aporte> Aportes { get; set; }
     public DbSet<Recomendacao> Recomendacoes { get; set; }
     public DbSet<Evento> Eventos { get; set; }
+    public DbSet<MorningCall> MorningCalls { get; set; }
+    public DbSet<MorningCallTopico> MorningCallTopicos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +47,12 @@ public class AppDbContext : DbContext
             .HasOne(r => r.Cliente)
             .WithMany()
             .HasForeignKey(r => r.ClienteId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MorningCall>()
+            .HasOne(m => m.Gestor)
+            .WithMany()
+            .HasForeignKey(m => m.GestorId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
