@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using CaddieResearch.Api.Workers;
 using SeuProjeto.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,7 +56,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddHostedService<CaddieResearch.Api.Workers.MacroCalendarioWorker>();
-builder.Services.AddHostedService<CaddieResearch.Api.Workers.BalancoCalendarioWorker>();
+builder.Services.AddHostedService<BalancoCalendarioWorker>();
 var app = builder.Build();
 
 app.UseHttpsRedirection();

@@ -17,7 +17,6 @@ export default function SidebarGestor({ activePath, isOpen = false, onClose }: S
                         <div>Caddie <span className="sidebar-logo-highlight">Research</span></div>
                         <div className="logo-badge-gestor" style={{ marginLeft: 0 }}>GESTOR</div>
                     </div>
-                    {/* Botão de Fechar no Celular */}
                     <button className="sidebar-close-btn" onClick={onClose}>✖</button>
                 </div>
 
@@ -52,6 +51,16 @@ export default function SidebarGestor({ activePath, isOpen = false, onClose }: S
                             >
                                 <span className="sidebar-link-icon">☕</span>
                                 <span className="sidebar-link-label">Morning Call</span>
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                to="/gestor/agenda"
+                                onClick={onClose}
+                                className={`sidebar-link ${activePath === '/gestor/agenda' ? 'active' : ''}`}
+                            >
+                                <span className="sidebar-link-icon">📅</span>
+                                <span className="sidebar-link-label">Agenda & Eventos</span>
                             </Link>
                         </li>
                         <li>

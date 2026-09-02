@@ -16,7 +16,7 @@ public class BalancoCalendarioWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Robô de Balanços (Modo Simulação) acordou: {time}", DateTimeOffset.Now);
+        _logger.LogInformation("Robô de Balanços (Modo Mock Dinâmico Realista) iniciado.");
 
         try
         {
@@ -33,54 +33,35 @@ public class BalancoCalendarioWorker : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var jaTemTeste = context.Eventos.Any(e => e.Tipo == "Balanço" && e.Titulo.Contains("WEGE3"));
-        if (jaTemTeste) 
+        var balancosAntigos = context.Eventos.Where(e => e.Tipo == "Balanço").ToList();
+        if (balancosAntigos.Any())
         {
-            _logger.LogInformation("Balanços de teste já estão no banco. Nenhuma ação necessária.");
-            return;
+            context.Eventos.RemoveRange(balancosAntigos);
+            await context.SaveChangesAsync();
         }
 
-        var hoje = DateTime.UtcNow;
+        var hoje = DateTime.UtcNow.Date;
 
         var balancosTeste = new List<Evento>
         {
-            new Evento 
-            {
-                Titulo = "Resultado Trimestral - WEG",
-                Descricao = "Divulgação dos resultados referentes ao último trimestre de WEGE3. Expectativa de alta na receita do exterior.",
-                DataHora = hoje.Date.AddHours(18),
-                Tipo = "Balanço",
-                Impacto = 3, 
-                Pais = "BR",
-                TickerRelacionado = "WEGE3",
-                LinkExterno = "https://ri.weg.net"
-            },
-            new Evento 
-            {
-                Titulo = "Resultado Trimestral - Petrobras",
-                Descricao = "Divulgação de resultados PETR4 com foco na política de dividendos extraordinários.",
-                DataHora = hoje.Date.AddDays(1).AddHours(9), 
-                Tipo = "Balanço",
-                Impacto = 3, 
-                Pais = "BR",
-                TickerRelacionado = "PETR4",
-                LinkExterno = "https://ri.petrobras.com.br"
-            },
-            new Evento 
-            {
-                Titulo = "Resultado Trimestral - Vale",
-                Descricao = "Resultados operacionais da Vale (VALE3). Foco na produção de minério de ferro.",
-                DataHora = hoje.Date.AddDays(1).AddHours(19), 
-                Tipo = "Balanço",
-                Impacto = 2, 
-                Pais = "BR",
-                TickerRelacionado = "VALE3"
-            }
+            new Evento { Titulo = "Balanço: WEGE3", Descricao = "Resultados do trimestre de WEG. Expectativa de margens resilientes no mercado externo.", DataHora = hoje.AddDays(1).AddHours(18), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "WEGE3" },
+            
+            new Evento { Titulo = "Balanço: PETR4", Descricao = "Resultados Petrobras. Foco na política de distribuição de dividendos extraordinários.", DataHora = hoje.AddDays(3).AddHours(18), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "PETR4" },
+            
+            new Evento { Titulo = "Balanço: VALE3", Descricao = "Resultados operacionais da Vale. Atenção ao custo C1 e variação do preço do minério de ferro.", DataHora = hoje.AddDays(5).AddHours(19), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "VALE3" },
+            
+            new Evento { Titulo = "Balanço: ITUB4", Descricao = "Itaú Unibanco. Foco na evolução da inadimplência e crescimento da carteira de crédito.", DataHora = hoje.AddDays(7).AddHours(18), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "ITUB4" },
+            
+            new Evento { Titulo = "Balanço: RENT3", Descricao = "Localiza. Destaque para o ritmo de renovação da frota e custos de depreciação.", DataHora = hoje.AddDays(9).AddHours(18), Tipo = "Balanço", Impacto = 2, Pais = "BR", TickerRelacionado = "RENT3" },
+            
+            new Evento { Titulo = "Balanço: BBAS3", Descricao = "Banco do Brasil. Expectativa sobre a carteira do agronegócio e Provisões (PDD).", DataHora = hoje.AddDays(11).AddHours(8), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "BBAS3" },
+            
+            new Evento { Titulo = "Balanço: SMTO3", Descricao = "São Martinho. Mercado acompanha volume de moagem e curva de preços do açúcar.", DataHora = hoje.AddDays(13).AddHours(18), Tipo = "Balanço", Impacto = 2, Pais = "BR", TickerRelacionado = "SMTO3" },
         };
 
         context.Eventos.AddRange(balancosTeste);
         await context.SaveChangesAsync();
 
-        _logger.LogInformation("Balanços fictícios (WEGE3, PETR4, VALE3) injetados com sucesso para testes da UI!");
+        _logger.LogInformation($"Mocks realistas inseridos com sucesso! {balancosTeste.Count} balanços espalhados para as próximas 2 semanas.");
     }
 }

@@ -33,7 +33,6 @@ export default function PainelGestor() {
   const [toastMsg, setToastMsg] = useState('');
   const [toastTipo, setToastTipo] = useState<'sucesso' | 'erro'>('sucesso');
 
-  // Recomendações para clientes
   const [clientes, setClientes] = useState<{id: number; nome: string; email: string}[]>([])
   const [modalRec, setModalRec] = useState(false)
   const [recForm, setRecForm] = useState({ clienteId: '', ticker: '', nomeAtivo: '', classeAtivo: 'Renda Variável', quantidade: '', precoSugerido: '', descricao: '' })

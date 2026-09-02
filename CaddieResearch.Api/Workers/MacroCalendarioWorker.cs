@@ -33,7 +33,7 @@ public class MacroCalendarioWorker : BackgroundService
                 _logger.LogError(ex, "Falha ao buscar dados da API pública.");
             }
 
-            await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
         }
     }
 
@@ -83,7 +83,6 @@ public class MacroCalendarioWorker : BackgroundService
                 _ => evt.Country.ToUpper()
             };
 
-            // 2. Inteligência de Descrição e Link
             string tituloLower = evt.Title?.ToLower() ?? "";
             string descricaoEnriquecida = "Indicador macroeconômico com potencial de gerar volatilidade nos mercados.";
             
