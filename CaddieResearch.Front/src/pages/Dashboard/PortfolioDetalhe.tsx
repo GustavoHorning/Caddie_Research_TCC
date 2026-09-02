@@ -89,6 +89,8 @@ export default function PortfolioDetalhe() {
   const [periodoFim, setPeriodoFim] = useState(new Date().toISOString().slice(0, 10))
   const [mostrarSeletorData, setMostrarSeletorData] = useState(false)
   const [precosAtuais, setPrecosAtuais] = useState<Record<string, number>>({})
+  const [posicaoDetalhe, setPosicaoDetalhe] = useState<Posicao | null>(null)
+  const [boletarAberto, setBoletarAberto] = useState(false)
 
   function mostrarToast(msg: string) {
     setToast(msg)
@@ -129,7 +131,64 @@ export default function PortfolioDetalhe() {
 
   async function carregarPrecosAtuais(posicoes: Posicao[]) {
     const precos: Record<string, number> = {}
+
     await Promise.all(posicoes.map(async p => {
+      if (p.classeAtivo === 'Renda Fixa') {
+        // Parsear nomeAtivo: "CDB (Pós-fixado|% do CDI|110%|2027-12-31|Banco)"
+        const match = p.nomeAtivo.match(/\(([^)]+)\)/)
+        if (match) {
+          const parts = match[1].split('|')
+          const modalidade = parts[0]  // 'Pós-fixado' ou 'Prefixado'
+          const indexador = parts[1]   // '% do CDI', 'CDI +', 'SELIC', 'Prefixado'
+          const taxaStr = (parts[2] || '100').replace('%', '').replace(',', '.')
+          const taxa = parseFloat(taxaStr) || 100
+
+          const dataEntrada = new Date(p.dataEntrada)
+          const hoje = new Date()
+
+          // Formatar datas para o padrão dd/MM/yyyy da API do BACEN
+          const fmt = (d: Date) =>
+            `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+
+          let vf = p.precoMedio
+
+          if (modalidade === 'Prefixado' || indexador === 'Prefixado') {
+            // Prefixado: juros compostos com a taxa anual informada
+            const diasCorridos = Math.max(0, Math.floor((hoje.getTime() - dataEntrada.getTime()) / 86400000))
+            const taxaAnual = taxa / 100
+            vf = p.precoMedio * Math.pow(1 + taxaAnual, diasCorridos / 252)
+          } else {
+            // Pós-fixado: buscar histórico real de CDI diário do BACEN para o período
+            try {
+              const res = await fetch(
+                `http://localhost:5194/api/mercado/cdi?dataInicial=${encodeURIComponent(fmt(dataEntrada))}&dataFinal=${encodeURIComponent(fmt(hoje))}`,
+                { headers }
+              )
+              if (res.ok) {
+                const dias: { data: string; valor: string }[] = await res.json()
+                // Compor fator acumulado multiplicando cada taxa diária do período
+                let fatorAcum = 1
+                for (const dia of dias) {
+                  const cdiDia = parseFloat(dia.valor) / 100 // e.g. "0.0527" → 0.000527
+                  if (indexador === '% do CDI' || indexador === 'SELIC') {
+                    fatorAcum *= 1 + cdiDia * (taxa / 100)
+                  } else if (indexador === 'CDI +') {
+                    // Spread anual convertido para diário
+                    const spreadDiario = Math.pow(1 + taxa / 100, 1 / 252) - 1
+                    fatorAcum *= 1 + cdiDia + spreadDiario
+                  } else {
+                    fatorAcum *= 1 + cdiDia * (taxa / 100)
+                  }
+                }
+                vf = p.precoMedio * fatorAcum
+              }
+            } catch { /* mantém precoMedio */ }
+          }
+          precos[p.ticker] = vf
+        }
+        return
+      }
+
       const isFuturo = p.classeAtivo === 'Futuros'
       if (isFuturo) {
         const venc = vencimentoFuturo(p.ticker)
@@ -241,87 +300,159 @@ export default function PortfolioDetalhe() {
     try {
       const base = 'http://localhost:5194/api/mercado/historico'
       const range = periodoParaRange(inicio, fim)
-
-      // Busca histórico de todas as posições + IBOVESPA em paralelo
-      const [respostas, resIbov] = await Promise.all([
-        Promise.all(posicoes.map(p => {
-          const tickerYahoo = p.classeAtivo === 'Futuros' ? p.ticker : `${p.ticker}.SA`
-          return fetch(`${base}?ticker=${tickerYahoo}&range=${range}&interval=1d`, { headers }).then(r => r.json())
-        })),
-        fetch(`${base}?ticker=%5EBVSP&range=${range}&interval=1d`, { headers }).then(r => r.json())
-      ])
-
-      const resultIbov = resIbov?.chart?.result?.[0]
-      if (!resultIbov) return
-
-      const tsInicio = new Date(inicio).getTime() / 1000
-      const tsFim = new Date(fim).getTime() / 1000 + 86400
       const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
-      // Monta lista ordenada de { data, preco } para cada posição
-      const historicosPosicoes = posicoes.map((pos, idx) => {
-        const result = respostas[idx]?.chart?.result?.[0]
-        const ts: number[] = result?.timestamp || []
-        const closes: (number | null)[] = result?.indicators?.quote?.[0]?.close || []
-        const serie: { data: string; preco: number }[] = []
-        ts.forEach((t, i) => {
-          if (closes[i] != null) {
-            serie.push({ data: new Date(t * 1000).toISOString().slice(0, 10), preco: closes[i]! })
-          }
-        })
-        serie.sort((a, b) => a.data.localeCompare(b.data))
+      const posRV   = posicoes.filter(p => p.classeAtivo !== 'Renda Fixa' && p.classeAtivo !== 'Futuros')
+      const posRF   = posicoes.filter(p => p.classeAtivo === 'Renda Fixa')
+      const posFut  = posicoes.filter(p => p.classeAtivo === 'Futuros')
 
-        // Retorna o último preço disponível até uma data alvo
-        function precoAte(dataAlvo: string): number {
-          let ultimo = pos.precoMedio
-          for (const p of serie) {
-            if (p.data <= dataAlvo) ultimo = p.preco
-            else break
+      // ── 1. Buscar Yahoo: RV + Futuros (ticker contínuo) + IBOVESPA ──
+      const tickersYahoo = [
+        ...posRV.map(p => `${p.ticker}.SA`),
+        ...posFut.map(p => tickerContinuo(p.ticker)),
+        '^BVSP'
+      ]
+      const respostasYahoo = await Promise.all(
+        tickersYahoo.map(t =>
+          fetch(`${base}?ticker=${encodeURIComponent(t)}&range=${range}&interval=1d`, { headers })
+            .then(r => r.ok ? r.json() : null).catch(() => null)
+        )
+      )
+
+      // ── 2. Buscar CDI histórico para RF ──
+      const fmtData = (s: string) => {
+        const d = new Date(s)
+        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+      }
+      // cdiAcum: date → fator acumulado desde o dia anterior ao período
+      const cdiAcum: Record<string, number> = {}
+      if (posRF.length > 0) {
+        try {
+          const res = await fetch(
+            `http://localhost:5194/api/mercado/cdi?dataInicial=${encodeURIComponent(fmtData(inicio))}&dataFinal=${encodeURIComponent(fmtData(new Date().toISOString()))}`,
+            { headers }
+          )
+          if (res.ok) {
+            const dias: { data: string; valor: string }[] = await res.json()
+            let fat = 1
+            for (const d of dias) {
+              fat *= 1 + parseFloat(d.valor) / 100
+              // Converter dd/MM/yyyy → yyyy-MM-dd
+              const [dd, mm, yyyy] = d.data.split('/')
+              cdiAcum[`${yyyy}-${mm}-${dd}`] = fat
+            }
           }
+        } catch { /* ignora */ }
+      }
+
+      // ── 3. Montar precoAte para RV e Futuros ──
+      function buildSerie(result: unknown) {
+        const r = (result as { chart?: { result?: { timestamp?: number[]; indicators?: { quote?: { close?: (number|null)[] }[] } }[] } })?.chart?.result?.[0]
+        const ts: number[] = r?.timestamp || []
+        const closes: (number | null)[] = r?.indicators?.quote?.[0]?.close || []
+        const serie: { data: string; preco: number }[] = []
+        ts.forEach((t, i) => { if (closes[i] != null) serie.push({ data: new Date(t * 1000).toISOString().slice(0, 10), preco: closes[i]! }) })
+        serie.sort((a, b) => a.data.localeCompare(b.data))
+        return serie
+      }
+      function precoAteFactory(serie: { data: string; preco: number }[], fallback: number) {
+        return (dataAlvo: string): number => {
+          let ultimo = fallback
+          for (const p of serie) { if (p.data <= dataAlvo) ultimo = p.preco; else break }
           return ultimo
         }
-        return { pos, precoAte }
-      })
+      }
 
-      // Custo fixo total de todas as posições
-      const custoTotal = posicoes.reduce((a, p) => a + p.precoMedio * p.quantidade, 0)
-      const aporteBase = aporteTotal > 0 ? aporteTotal : custoTotal
+      const rvSeries   = posRV.map((pos, i)  => ({ pos, precoAte: precoAteFactory(buildSerie(respostasYahoo[i]), pos.precoMedio) }))
+      const futSeries  = posFut.map((pos, i) => ({ pos, precoAte: precoAteFactory(buildSerie(respostasYahoo[posRV.length + i]), pos.precoMedio) }))
+      const resIbov    = respostasYahoo[posRV.length + posFut.length]
+      const resultIbov = (resIbov as { chart?: { result?: unknown[] } })?.chart?.result?.[0] as { timestamp?: number[]; indicators?: { quote?: { close?: (number|null)[] }[] } } | undefined
+      if (!resultIbov) return
 
-      // Timestamps do IBOV como eixo de referência
-      const tsIbov: number[] = resultIbov.timestamp || []
+      // ── 4. Custos e base ──
+      const custoRV  = posRV.reduce((a, p)  => a + p.precoMedio * p.quantidade, 0)
+      const custoRF  = posRF.reduce((a, p)  => a + p.precoMedio * p.quantidade, 0)
+      // Futuros: custo = margem
+      const custoFut = posFut.reduce((a, p) => {
+        const m = p.nomeAtivo.match(/margem:(\d+)/); return a + (m ? parseInt(m[1]) * p.quantidade : 0)
+      }, 0)
+      const custoTotal = custoRV + custoRF + custoFut
+      // Base = capital alocado nas posições (não inclui caixa livre), alinhado com o cabeçalho
+      const aporteBase = custoTotal > 0 ? custoTotal : (aporteTotal > 0 ? aporteTotal : 1)
+
+      // ── 5. Eixo de tempo: timestamps do IBOVESPA ──
+      const tsInicio = new Date(inicio).getTime() / 1000
+      const tsFim    = new Date(fim).getTime() / 1000 + 86400
+      const tsIbov: number[]        = resultIbov.timestamp || []
       const closesIbov: (number | null)[] = resultIbov.indicators?.quote?.[0]?.close || []
-
-      const pontosFiltrados = tsIbov
-        .map((ts, i) => ({ ts, closeIbov: closesIbov[i] }))
+      const pontos = tsIbov.map((ts, i) => ({ ts, closeIbov: closesIbov[i] }))
         .filter(p => p.closeIbov != null && p.ts >= tsInicio && p.ts <= tsFim)
+      if (pontos.length === 0) return
+      const baseIbov = pontos[0].closeIbov!
 
-      if (pontosFiltrados.length === 0) return
-
-      const baseIbov = pontosFiltrados[0].closeIbov!
-
-      // Agrupa por mês — último ponto de cada mês
+      // ── 6. Calcular valor do portfólio por dia ──
       const porMes: Record<string, { portfolio: number; ibovespa: number }> = {}
-      for (const { ts, closeIbov } of pontosFiltrados) {
-        // Valor de mercado de todas as posições neste dia
+      for (const { ts, closeIbov } of pontos) {
         const diaStr = new Date(ts * 1000).toISOString().slice(0, 10)
-        let valorMercado = 0
-        for (const { pos, precoAte } of historicosPosicoes) {
-          valorMercado += precoAte(diaStr) * pos.quantidade
-        }
-        const lucro = valorMercado - custoTotal
-        const pctPortfolio = parseFloat(((lucro / aporteBase) * 100).toFixed(2))
-        const pctIbov = parseFloat((((closeIbov! - baseIbov) / baseIbov) * 100).toFixed(2))
 
-        const data = new Date(ts * 1000)
-        const chave = `${data.getFullYear()}-${String(data.getMonth()).padStart(2,'0')}`
+        // RV: preço de mercado histórico × quantidade
+        let valorTotal = rvSeries.reduce((a, { pos, precoAte }) => a + precoAte(diaStr) * pos.quantidade, 0)
+
+        // Futuros: margem + P&L baseado no preço histórico
+        for (const { pos, precoAte } of futSeries) {
+          const m = pos.nomeAtivo.match(/margem:(\d+)/)
+          if (m) {
+            const margem = parseInt(m[1]) * pos.quantidade
+            const pa = precoAte(diaStr)
+            const pl = (pa - pos.precoMedio) * pos.quantidade * 0.20
+            valorTotal += margem + pl
+          }
+        }
+
+        // Renda Fixa: usar fator CDI acumulado desde dataEntrada até este dia
+        for (const pos of posRF) {
+          const rfMatch = pos.nomeAtivo.match(/\(([^)]+)\)/)
+          if (!rfMatch) { valorTotal += pos.precoMedio * pos.quantidade; continue }
+          const parts = rfMatch[1].split('|')
+          const indexador = parts[1] || '% do CDI'
+          const taxaStr   = (parts[2] || '100').replace('%','').replace(',','.')
+          const taxa = parseFloat(taxaStr) || 100
+          const dataEnt  = pos.dataEntrada.slice(0, 10)
+
+          if (diaStr < dataEnt) { /* posição ainda não existia — ignorar */ continue }
+
+          const fatAtual   = cdiAcum[diaStr]   ?? Object.values(cdiAcum).at(-1) ?? 1
+          const fatEntrada = cdiAcum[dataEnt]  ?? 1
+          const ratioCdi   = fatAtual / fatEntrada
+
+          let vf = pos.precoMedio
+          if (indexador === '% do CDI' || indexador === 'SELIC') {
+            vf = pos.precoMedio * Math.pow(ratioCdi, taxa / 100)
+          } else if (indexador === 'CDI +') {
+            const diasEnt = Object.keys(cdiAcum).filter(d => d >= dataEnt && d <= diaStr).length
+            const spreadDiario = Math.pow(1 + taxa / 100, 1 / 252) - 1
+            vf = pos.precoMedio * ratioCdi * Math.pow(1 + spreadDiario, diasEnt)
+          } else if (parts[0] === 'Prefixado' || indexador === 'Prefixado') {
+            const diasCorr = Math.max(0, Math.floor((new Date(diaStr).getTime() - new Date(dataEnt).getTime()) / 86400000))
+            vf = pos.precoMedio * Math.pow(1 + taxa / 100, diasCorr / 252)
+          } else {
+            vf = pos.precoMedio * Math.pow(ratioCdi, taxa / 100)
+          }
+          valorTotal += vf * pos.quantidade
+        }
+
+        const pctPortfolio = parseFloat((((valorTotal - custoTotal) / aporteBase) * 100).toFixed(2))
+        const pctIbov      = parseFloat((((closeIbov! - baseIbov) / baseIbov) * 100).toFixed(2))
+
+        const data  = new Date(ts * 1000)
+        const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2,'0')}`
         porMes[chave] = { portfolio: pctPortfolio, ibovespa: pctIbov }
       }
 
       const dados = Object.entries(porMes).sort(([a], [b]) => a.localeCompare(b)).map(([chave, vals]) => {
-        const [ano, mes] = chave.split('-').map(Number)
-        return { mes: `${meses[mes]}/${String(ano).slice(2)}`, ...vals }
+        const [ano, mesNum] = chave.split('-').map(Number)
+        return { mes: `${meses[mesNum - 1]}/${String(ano).slice(2)}`, ...vals }
       })
-
       setDadosRentabilidade(dados)
     } catch (e) { console.error('Erro ao carregar gráfico:', e) }
     finally { setCarregandoGrafico(false) }
@@ -374,13 +505,14 @@ export default function PortfolioDetalhe() {
     setSalvandoTransacao(true)
     try {
       const margemUnit = ftTipoOp === 'Intraday' ? 150 : 5000
+      const rfNomeAtivo = `${txTicker.toUpperCase()} (${rfModalidade}|${rfIndexador}|${rfTaxa.replace(',', '.')}%|${rfVencimento || 'indefinido'}|${rfBanco || ''})`
       const body = isRendaFixa
         ? {
             ticker: txTicker.toUpperCase(),
-            nomeAtivo: txAtivo?.nome || txTicker,
+            nomeAtivo: rfNomeAtivo,
             classeAtivo: 'Renda Fixa',
             quantidade: 1,
-            precoMedio: parseFloat(rfValor),
+            precoMedio: parseFloat(rfValor.replace(',', '.')),
             dataEntrada: txData || null
           }
         : isFuturo
@@ -741,10 +873,17 @@ export default function PortfolioDetalhe() {
                             const twr = inv > 0 ? (pl / inv) * 100 : 0
                             const pctPort = totalPort > 0 ? (atual / totalPort) * 100 : 0
                             return (
-                              <tr key={p.id} className="pd-row-ativo">
+                              <tr key={p.id} className="pd-row-ativo" onClick={() => { setPosicaoDetalhe(p); setBoletarAberto(false) }}>
                                 <td style={{paddingLeft:28}}>
                                   <span className="pd-ticker">{p.ticker}</span>
-                                  <span className="pd-ativo-nome">{p.nomeAtivo}</span>
+                                  {p.classeAtivo === 'Renda Fixa' ? (() => {
+                                    const rfMatch = p.nomeAtivo.match(/\(([^)]+)\)/)
+                                    const parts = rfMatch ? rfMatch[1].split('|') : []
+                                    const label = parts.length >= 3 ? `${parts[0]} · ${parts[1]} ${parts[2]}` : p.nomeAtivo
+                                    return <span className="pd-ativo-nome" title={p.nomeAtivo}>{label}</span>
+                                  })() : (
+                                    <span className="pd-ativo-nome">{p.nomeAtivo}</span>
+                                  )}
                                 </td>
                                 <td style={{textAlign:'right'}}>{formatBRL(atual)}</td>
                                 <td style={{textAlign:'right'}}>{formatBRL(inv)}</td>
@@ -759,7 +898,7 @@ export default function PortfolioDetalhe() {
                                 <td style={{textAlign:'right'}}>{pctPort.toFixed(2)}%</td>
                                 <td>
                                   <div style={{position:'relative'}}>
-                                    <button className="pd-btn-3pontos" onClick={() => setMenuAberto(menuAberto === p.id ? null : p.id)}>⋮</button>
+                                    <button className="pd-btn-3pontos" onClick={e => { e.stopPropagation(); setMenuAberto(menuAberto === p.id ? null : p.id) }}>⋮</button>
                                     {menuAberto === p.id && (
                                       <div className="pd-dropdown-menu">
                                         <button className="pd-dropdown-item" onClick={() => { setModalPrecoManual({ posicaoId: p.id, ticker: p.ticker }); setPrecoManualInput(''); setMenuAberto(null) }}>✏️ Atualizar preço</button>
@@ -910,6 +1049,163 @@ export default function PortfolioDetalhe() {
           )}
         </div>
       </div>
+
+      {/* Drawer — Detalhe da Posição */}
+      {posicaoDetalhe && (() => {
+        const p = posicaoDetalhe
+        const margemMatch = p.nomeAtivo.match(/margem:(\d+)/)
+        const isFut = p.classeAtivo === 'Futuros' && margemMatch
+        const pa = precosAtuais[p.ticker] ?? p.precoMedio
+        const inv = isFut ? parseInt(margemMatch![1]) * p.quantidade : p.precoMedio * p.quantidade
+        const pl  = isFut ? (pa - p.precoMedio) * p.quantidade * 0.20 : pa * p.quantidade - inv
+        const atual = isFut ? inv + pl : pa * p.quantidade
+        const twr = inv > 0 ? (pl / inv) * 100 : 0
+        // TIR: TWR anualizado (simplificado)
+        const diasCorridos = Math.max(1, Math.floor((Date.now() - new Date(p.dataEntrada).getTime()) / 86400000))
+        const tir = (Math.pow(1 + twr / 100, 365 / diasCorridos) - 1) * 100
+        // Histórico: todas as posições deste ticker no portfólio (cada uma = 1 transação)
+        const historico = portfolio?.posicoes?.filter(x => x.ticker === p.ticker) ?? []
+        // Label RF
+        const rfMatch = p.nomeAtivo.match(/\(([^)]+)\)/)
+        const rfParts = rfMatch ? rfMatch[1].split('|') : []
+        const subLabel = p.classeAtivo === 'Renda Fixa' && rfParts.length >= 3
+          ? `${rfParts[0]} · ${rfParts[1]} ${rfParts[2]}`
+          : p.classeAtivo
+        return (
+          <>
+            <div className="pd-drawer-overlay" onClick={() => setPosicaoDetalhe(null)} />
+            <div className="pd-drawer">
+              {/* Header */}
+              <div className="pd-drawer-header">
+                <div className="pd-drawer-header-left">
+                  <span className="pd-drawer-classe-tag">{p.classeAtivo}</span>
+                  <h2 className="pd-drawer-ticker">{p.ticker}</h2>
+                  <span className="pd-drawer-sublabel">{subLabel}</span>
+                </div>
+                <div className="pd-drawer-header-right">
+                  <div style={{position:'relative'}}>
+                    <button className="pd-drawer-btn-boletar" onClick={() => setBoletarAberto(v => !v)}>
+                      📋 Boletar {boletarAberto ? '▲' : '▼'}
+                    </button>
+                    {boletarAberto && (
+                      <div className="pd-drawer-boletar-menu">
+                        {(['Compra','Venda'] as const).map(op => (
+                          <button key={op} className="pd-drawer-boletar-item" onClick={() => {
+                            setBoletarAberto(false)
+                            setPosicaoDetalhe(null)
+                            // Pré-preencher modal de transação com o ativo atual
+                            setPassoTransacao(1)
+                            setTxTicker(p.ticker)
+                            setTxClasse(p.classeAtivo === 'Renda Fixa' ? 'Renda Fixa' : p.classeAtivo === 'Futuros' ? 'Futuros' : 'Renda Variável')
+                            setTxTipo(op)
+                            setTxAtivo({ nome: p.nomeAtivo.split(' (')[0], classe: p.classeAtivo, preco: precosAtuais[p.ticker] ?? p.precoMedio })
+                            setTxQuantidade('')
+                            setTxPreco(String(precosAtuais[p.ticker] ?? p.precoMedio))
+                            setTxData(new Date().toISOString().slice(0, 10))
+                            setModalTransacao(true)
+                          }}>
+                            {op}
+                          </button>
+                        ))}
+                        <button className="pd-drawer-boletar-item" onClick={() => { setBoletarAberto(false); mostrarToast('📋 Transferência de Custódia — em breve') }}>
+                          Transferência de Custódia
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <button className="pd-drawer-fechar" onClick={() => { setPosicaoDetalhe(null); setBoletarAberto(false) }}>✕</button>
+                </div>
+              </div>
+
+              {/* Métricas */}
+              <div className="pd-drawer-metricas">
+                <div className="pd-drawer-metrica">
+                  <span className="pd-drawer-metrica-label">Valor atualizado</span>
+                  <span className="pd-drawer-metrica-valor">{formatBRL(atual)}</span>
+                </div>
+                <div className="pd-drawer-metrica">
+                  <span className="pd-drawer-metrica-label">P&L</span>
+                  <span className="pd-drawer-metrica-valor" style={{color: pl >= 0 ? '#22c55e' : '#ef4444'}}>
+                    {pl >= 0 ? '+' : ''}{formatBRL(pl)}
+                  </span>
+                </div>
+                <div className="pd-drawer-metrica">
+                  <span className="pd-drawer-metrica-label">Rentabilidade (TWR)</span>
+                  <span className="pd-drawer-metrica-valor" style={{color: twr >= 0 ? '#22c55e' : '#ef4444'}}>
+                    {twr >= 0 ? '+' : ''}{twr.toFixed(2)}% {twr >= 0 ? '↑' : '↓'}
+                  </span>
+                </div>
+                <div className="pd-drawer-metrica">
+                  <span className="pd-drawer-metrica-label">Rentabilidade (TIR)</span>
+                  <span className="pd-drawer-metrica-valor" style={{color: tir >= 0 ? '#22c55e' : '#ef4444'}}>
+                    {tir >= 0 ? '+' : ''}{tir.toFixed(2)}% {tir >= 0 ? '↑' : '↓'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dados da posição */}
+              <div className="pd-drawer-secao">
+                <h4 className="pd-drawer-secao-titulo">Dados da posição</h4>
+                <div className="pd-drawer-dados-grid">
+                  <div className="pd-drawer-dado">
+                    <span className="pd-drawer-dado-label">Valor investido</span>
+                    <span className="pd-drawer-dado-valor">{formatBRL(inv)}</span>
+                  </div>
+                  <div className="pd-drawer-dado">
+                    <span className="pd-drawer-dado-label">Último preço ({new Date().toLocaleDateString('pt-BR')})</span>
+                    <span className="pd-drawer-dado-valor">{formatBRL(pa)}</span>
+                  </div>
+                  <div className="pd-drawer-dado">
+                    <span className="pd-drawer-dado-label">Preço médio</span>
+                    <span className="pd-drawer-dado-valor">{formatBRL(p.precoMedio)}</span>
+                  </div>
+                  <div className="pd-drawer-dado">
+                    <span className="pd-drawer-dado-label">Quantidade total</span>
+                    <span className="pd-drawer-dado-valor">{p.quantidade.toLocaleString('pt-BR')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Histórico */}
+              <div className="pd-drawer-secao">
+                <h4 className="pd-drawer-secao-titulo">Histórico</h4>
+                <table className="pd-drawer-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Tipo</th>
+                      <th style={{textAlign:'right'}}>Quantidade</th>
+                      <th style={{textAlign:'right'}}>Preço</th>
+                      <th style={{textAlign:'right'}}>Custos Op.</th>
+                      <th style={{textAlign:'right'}}>Valor total</th>
+                      <th>Origem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historico.length === 0 ? (
+                      <tr><td colSpan={7} style={{textAlign:'center', color:'#8b949e', padding:'16px'}}>Nenhum registro</td></tr>
+                    ) : historico.map(h => (
+                      <tr key={h.id}>
+                        <td>{new Date(h.dataEntrada).toLocaleDateString('pt-BR')}</td>
+                        <td>
+                          <span className={`pd-drawer-tipo ${h.quantidade >= 0 ? 'compra' : 'venda'}`}>
+                            {h.quantidade >= 0 ? 'Compra' : 'Venda'}
+                          </span>
+                        </td>
+                        <td style={{textAlign:'right'}}>{Math.abs(h.quantidade).toLocaleString('pt-BR')}</td>
+                        <td style={{textAlign:'right'}}>{formatBRL(h.precoMedio)}</td>
+                        <td style={{textAlign:'right', color:'#8b949e'}}>R$ 0,00</td>
+                        <td style={{textAlign:'right'}}>{formatBRL(Math.abs(h.quantidade) * h.precoMedio)}</td>
+                        <td style={{color:'#8b949e'}}>Manual</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* Modal Aporte */}
       {modalAporte && (

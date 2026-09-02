@@ -192,6 +192,96 @@
 .pd-btn-aderir { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
 .pd-btn-aderir:hover { background: rgba(34,197,94,0.25); }
 .pd-btn-aderir:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Drawer detalhe de posição ── */
+.pd-drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 300;
+}
+.pd-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 50vw; max-width: 800px; min-width: 420px;
+  background: #0d1117; border-left: 1px solid rgba(255,255,255,0.1);
+  z-index: 301; display: flex; flex-direction: column; overflow-y: auto;
+  animation: pd-drawer-in 0.22s ease;
+}
+@keyframes pd-drawer-in { from { transform: translateX(60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.pd-drawer-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 24px 28px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+  gap: 12px;
+}
+.pd-drawer-header-left { display: flex; flex-direction: column; gap: 4px; }
+.pd-drawer-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.pd-drawer-classe-tag {
+  font-size: 0.72rem; font-weight: 600; color: #8b949e; text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pd-drawer-ticker {
+  font-size: 1.6rem; font-weight: 800; color: #e6edf3; margin: 0; line-height: 1.1;
+}
+.pd-drawer-sublabel { font-size: 0.82rem; color: #8b949e; }
+
+.pd-drawer-btn-boletar {
+  padding: 8px 16px; background: #00B4D8; border: none; border-radius: 8px;
+  color: #fff; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+}
+.pd-drawer-btn-boletar:hover { background: #0096b7; }
+
+.pd-drawer-boletar-menu {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  background: #1c2128; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; padding: 4px; min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 10;
+}
+.pd-drawer-boletar-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; color: #c9d1d9;
+  font-size: 0.88rem; padding: 10px 14px; border-radius: 7px; cursor: pointer;
+}
+.pd-drawer-boletar-item:hover { background: rgba(0,180,216,0.1); color: #00B4D8; }
+.pd-drawer-fechar {
+  background: none; border: none; color: #8b949e; font-size: 1.1rem;
+  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+}
+.pd-drawer-fechar:hover { background: rgba(255,255,255,0.08); color: #e6edf3; }
+
+.pd-drawer-metricas {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.pd-drawer-metrica {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 18px 24px; background: #0d1117;
+}
+.pd-drawer-metrica-label { font-size: 0.75rem; color: #8b949e; font-weight: 500; }
+.pd-drawer-metrica-valor { font-size: 1.15rem; font-weight: 700; color: #e6edf3; }
+
+.pd-drawer-secao { padding: 20px 28px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.pd-drawer-secao-titulo {
+  font-size: 0.78rem; font-weight: 700; color: #8b949e;
+  text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 14px;
+}
+.pd-drawer-dados-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 32px; }
+.pd-drawer-dado { display: flex; flex-direction: column; gap: 3px; }
+.pd-drawer-dado-label { font-size: 0.78rem; color: #8b949e; }
+.pd-drawer-dado-valor { font-size: 0.97rem; font-weight: 600; color: #e6edf3; }
+
+.pd-drawer-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.pd-drawer-table th {
+  text-align: left; padding: 8px 10px; color: #8b949e; font-size: 0.72rem;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.pd-drawer-table td { padding: 10px 10px; color: #c9d1d9; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.pd-drawer-table tr:last-child td { border-bottom: none; }
+
+.pd-drawer-tipo {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 0.75rem; font-weight: 600;
+}
+.pd-drawer-tipo.compra { background: rgba(34,197,94,0.15); color: #22c55e; }
+.pd-drawer-tipo.venda  { background: rgba(239,68,68,0.15);  color: #ef4444; }
 .pd-btn-recusar { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
 .pd-btn-recusar:hover { background: rgba(239,68,68,0.22); }
 
