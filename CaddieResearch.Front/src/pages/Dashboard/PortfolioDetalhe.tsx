@@ -395,16 +395,20 @@ export default function PortfolioDetalhe() {
       for (const { ts, closeIbov } of pontos) {
         const diaStr = new Date(ts * 1000).toISOString().slice(0, 10)
 
-        // RV: preço de mercado histórico × quantidade
-        let valorTotal = rvSeries.reduce((a, { pos, precoAte }) => a + precoAte(diaStr) * pos.quantidade, 0)
+        // RV: preço de mercado histórico × quantidade — só após dataEntrada; antes = custo (P&L = 0)
+        let valorTotal = rvSeries.reduce((a, { pos, precoAte }) => {
+          const entrou = diaStr >= pos.dataEntrada.slice(0, 10)
+          return a + (entrou ? precoAte(diaStr) : pos.precoMedio) * pos.quantidade
+        }, 0)
 
-        // Futuros: margem + P&L baseado no preço histórico
+        // Futuros: margem + P&L baseado no preço histórico — só após dataEntrada
         for (const { pos, precoAte } of futSeries) {
           const m = pos.nomeAtivo.match(/margem:(\d+)/)
           if (m) {
             const margem = parseInt(m[1]) * pos.quantidade
-            const pa = precoAte(diaStr)
-            const pl = (pa - pos.precoMedio) * pos.quantidade * 0.20
+            const entrou = diaStr >= pos.dataEntrada.slice(0, 10)
+            const pa = entrou ? precoAte(diaStr) : pos.precoMedio
+            const pl = entrou ? (pa - pos.precoMedio) * pos.quantidade * 0.20 : 0
             valorTotal += margem + pl
           }
         }
@@ -1077,9 +1081,9 @@ export default function PortfolioDetalhe() {
         const pl  = isFut ? (pa - p.precoMedio) * p.quantidade * 0.20 : pa * p.quantidade - inv
         const atual = isFut ? inv + pl : pa * p.quantidade
         const twr = inv > 0 ? (pl / inv) * 100 : 0
-        // TIR: TWR anualizado (simplificado)
+        // TIR do período: retorno acumulado desde a data de entrada até hoje (sem anualizar)
         const diasCorridos = Math.max(1, Math.floor((Date.now() - new Date(p.dataEntrada).getTime()) / 86400000))
-        const tir = (Math.pow(1 + twr / 100, 365 / diasCorridos) - 1) * 100
+        const tirRaw = inv > 0 ? (pl / inv) * 100 : 0
         // Histórico: todas as posições deste ticker no portfólio (cada uma = 1 transação)
         const historico = portfolio?.posicoes?.filter(x => x.ticker === p.ticker) ?? []
         // Label RF
@@ -1154,8 +1158,8 @@ export default function PortfolioDetalhe() {
                 </div>
                 <div className="pd-drawer-metrica">
                   <span className="pd-drawer-metrica-label">Rentabilidade (TIR)</span>
-                  <span className="pd-drawer-metrica-valor" style={{color: tir >= 0 ? '#22c55e' : '#ef4444'}}>
-                    {tir >= 0 ? '+' : ''}{tir.toFixed(2)}% {tir >= 0 ? '↑' : '↓'}
+                  <span className="pd-drawer-metrica-valor" style={{color: tirRaw >= 0 ? '#22c55e' : '#ef4444'}}>
+                    {tirRaw >= 0 ? '+' : ''}{tirRaw.toFixed(2)}% {tirRaw >= 0 ? '↑' : '↓'}
                   </span>
                 </div>
               </div>
