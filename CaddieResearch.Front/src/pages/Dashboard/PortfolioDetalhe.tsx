@@ -551,6 +551,10 @@ export default function PortfolioDetalhe() {
     await fetch(`http://localhost:5194/api/portfolio/${id}/aportes/${aporteId}`, { method: 'DELETE', headers })
     setAportes(prev => prev.filter(a => a.id !== aporteId))
   }
+    async function removerPosicao(posicaoId: number) {
+    await fetch(`http://localhost:5194/api/portfolio/${id}/posicoes/${posicaoId}`, { method: 'DELETE', headers })
+    carregarPortfolio()
+  }
 
   const formatBRL = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)

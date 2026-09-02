@@ -4,6 +4,7 @@ using CaddieResearch.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CaddieResearch.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826225544_CriacaoTabelaEventos")]
+    partial class CriacaoTabelaEventos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -160,10 +163,8 @@ namespace CaddieResearch.Api.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<string>("Pais")
-                        .IsRequired()
-                        .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)");
+                    b.Property<bool>("PossuiLink")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Projecao")
                         .HasMaxLength(20)
@@ -269,74 +270,6 @@ namespace CaddieResearch.Api.Migrations
                     b.HasIndex("RemetenteId");
 
                     b.ToTable("Mensagens");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.MorningCall", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Data")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("GestorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GestorId");
-
-                    b.ToTable("MorningCalls");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.MorningCallTopico", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ImagemUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Link")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("MorningCallId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Ordem")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Texto")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MorningCallId");
-
-                    b.ToTable("MorningCallTopicos");
                 });
 
             modelBuilder.Entity("CaddieResearch.Api.Models.Portfolio", b =>
@@ -754,28 +687,6 @@ namespace CaddieResearch.Api.Migrations
                     b.Navigation("Remetente");
                 });
 
-            modelBuilder.Entity("CaddieResearch.Api.Models.MorningCall", b =>
-                {
-                    b.HasOne("CaddieResearch.Api.Models.Usuario", "Gestor")
-                        .WithMany()
-                        .HasForeignKey("GestorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Gestor");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.MorningCallTopico", b =>
-                {
-                    b.HasOne("CaddieResearch.Api.Models.MorningCall", "MorningCall")
-                        .WithMany("Topicos")
-                        .HasForeignKey("MorningCallId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MorningCall");
-                });
-
             modelBuilder.Entity("CaddieResearch.Api.Models.Portfolio", b =>
                 {
                     b.HasOne("CaddieResearch.Api.Models.Usuario", "Usuario")
@@ -867,11 +778,6 @@ namespace CaddieResearch.Api.Migrations
             modelBuilder.Entity("CaddieResearch.Api.Models.Conversa", b =>
                 {
                     b.Navigation("Mensagens");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.MorningCall", b =>
-                {
-                    b.Navigation("Topicos");
                 });
 
             modelBuilder.Entity("CaddieResearch.Api.Models.Portfolio", b =>

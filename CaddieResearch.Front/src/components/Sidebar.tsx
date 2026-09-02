@@ -55,6 +55,33 @@ const menuResearch = [
       </svg>
     ),
   },
+    {
+        label: 'Calendário',
+        path: '/calendario',
+        badge: 'novo',
+        icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+        ),
+    },
+  {
+    label: 'Morning Call',
+    path: '/morning-call',
+    badge: 'novo',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M18 8h1a4 4 0 010 8h-1" />
+        <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+        <line x1="6" y1="1" x2="6" y2="4" />
+        <line x1="10" y1="1" x2="10" y2="4" />
+        <line x1="14" y1="1" x2="14" y2="4" />
+      </svg>
+    ),
+  },
   {
     label: 'Conteudos',
     path: '/conteudos',

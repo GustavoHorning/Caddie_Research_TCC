@@ -9,6 +9,43 @@ const ultimasAtualizacoes = [
   { icon: 'CC', titulo: 'Caddie Call #2026', subtitulo: 'A replicação e os investimentos.', tag: '', tempo: '' },
 ]
 
+
+const morningCallResumo = {
+  titulo: 'Resumo do mercado — 25 de agosto',
+  data: 'Hoje, 25/08/2026',
+  topicos: [
+    'Petrobras anuncia novo plano de dividendos',
+    'Copom mantém taxa Selic — reflexo na renda fixa',
+    'Ibovespa fecha em alta puxado por commodities',
+  ],
+}
+const proximosEventos = [
+  {
+    id: 1,
+    data: 'Hoje, 09:30',
+    titulo: 'EUA: Relatório de Emprego (Payroll)',
+    tipo: 'Macro',
+    impacto: 3, 
+    projecao: '180k',
+    atual: '---'
+  },
+  {
+    id: 2,
+    data: 'Hoje, 18:00',
+    titulo: 'Balanço: WEGE3 (2T26)',
+    tipo: 'Balanço',
+    impacto: 2
+  },
+  {
+    id: 3,
+    data: 'Amanhã, 19:00',
+    titulo: 'Live: Rebalanceamento da Carteira',
+    tipo: 'Caddie',
+    impacto: 1,
+    link: true
+  }
+]
+
 interface Favorito {
   id: number
   ticker: string
@@ -27,11 +64,44 @@ interface Cotacao {
 export default function DashboardHome() {
   const [favoritos, setFavoritos] = useState<Favorito[]>([])
   const [cotacoes, setCotacoes] = useState<Record<string, Cotacao>>({})
+  const [eventos, setEventos] = useState<any[]>([]) 
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
     carregarFavoritos()
+    carregarEventos()
   }, [])
+
+  async function carregarEventos() {
+    try {
+      const response = await fetch('http://localhost:5194/api/calendario');
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        const balancos = data.filter((e: any) => e.tipo?.toLowerCase() === 'balanço' || e.tipo?.toLowerCase() === 'balanco');
+        const outrosEventos = data.filter((e: any) => e.tipo?.toLowerCase() !== 'balanço' && e.tipo?.toLowerCase() !== 'balanco');
+
+        const vitrine = [];
+
+        if (balancos.length > 0) {
+          vitrine.push(balancos[0]);
+        }
+
+        const espacoRestante = 3 - vitrine.length;
+        vitrine.push(...outrosEventos.slice(0, espacoRestante));
+
+        vitrine.sort((a, b) => {
+          const timeA = a.dataStr + "T" + a.hora;
+          const timeB = b.dataStr + "T" + b.hora;
+          return timeA.localeCompare(timeB);
+        });
+
+        setEventos(vitrine);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar eventos do calendário:", error);
+    }
+  }
 
   async function carregarFavoritos() {
     try {
@@ -134,13 +204,48 @@ export default function DashboardHome() {
         <div className="dash-card dash-card-eventos">
           <div className="dash-card-header">
             <h3>Próximos Eventos</h3>
-            <span className="dash-card-icon">E</span>
+            <a href="/calendario" className="dash-card-link-header">Ver calendário ➔</a>
           </div>
-          <div className="dash-eventos-empty">
-            <span className="dash-eventos-check">ok</span>
-            <p>Sem eventos previstos</p>
-            <span className="dash-eventos-sub">Confira os eventos que já foram realizados</span>
-            <a href="#" className="dash-eventos-btn">EVENTOS PASSADOS</a>
+
+          <div className="dash-eventos-timeline">
+            {eventos.length === 0 ? (
+                <p style={{ color: '#7a90a8', fontSize: '0.85rem' }}>Buscando eventos da agenda...</p>
+            ) : (
+                eventos.map((evento, index) => (
+                    <div key={evento.id || index} className="dash-evento-item">
+                      <div className="dash-evento-left">
+                        <span className={`dash-evento-dot tipo-${evento.tipo?.toLowerCase() || 'macro'}`}></span>
+                        <div className="dash-evento-line"></div>
+                      </div>
+
+                      <div className="dash-evento-content">
+                        <span className="dash-evento-data">{evento.hora}</span>
+
+                        <div className="dash-evento-titulo-row">
+                          <strong className="dash-evento-titulo">{evento.titulo}</strong>
+                        </div>
+
+                        <div className="dash-evento-detalhes">
+                          <div className="dash-evento-impacto-barras" title={`Impacto: ${evento.impacto}/3`}>
+                            <div className={`barra-impacto ${evento.impacto >= 1 ? 'ativa' : ''}`}></div>
+                            <div className={`barra-impacto ${evento.impacto >= 2 ? 'ativa' : ''}`}></div>
+                            <div className={`barra-impacto ${evento.impacto >= 3 ? 'ativa' : ''}`}></div>
+                          </div>
+
+                          {evento.projecao && evento.projecao !== "---" && (
+                              <span className="dash-evento-projecao">Proj: {evento.projecao}</span>
+                          )}
+
+                          {evento.link && (
+                              <a href={evento.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                <button className="dash-evento-btn-add">Ver Fonte ➔</button>
+                              </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                ))
+            )}
           </div>
         </div>
 
@@ -160,6 +265,21 @@ export default function DashboardHome() {
             <p className="dash-minuto-text">
               O foco da semana foi a inclusão de novos ativos na carteira de Dividendos, refletindo a estratégia de capturar valor no longo prazo.
             </p>
+          </div>
+        </div>
+
+        <div className="dash-card dash-card-morningcall">
+          <div className="dash-card-header">
+            <h3>☕ Morning Call</h3>
+            <span className="dash-card-sub-header">{morningCallResumo.data}</span>
+          </div>
+          <div className="dash-mc-resumo">
+            <p className="dash-mc-titulo">{morningCallResumo.titulo}</p>
+            <p className="dash-mc-destaque">📰 {morningCallResumo.topicos[0]}</p>
+            <span className="dash-mc-mais">
+              + {morningCallResumo.topicos.length - 1} notícias para ler
+            </span>
+            <a href="/morning-call" className="dash-mc-btn">Ler Morning Call →</a>
           </div>
         </div>
 
