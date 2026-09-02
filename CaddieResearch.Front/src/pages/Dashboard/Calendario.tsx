@@ -25,32 +25,43 @@ export default function Calendario() {
     const [apenasWatchlist, setApenasWatchlist] = useState<boolean>(false);
     const [eventoExpandido, setEventoExpandido] = useState<number | null>(null);
 
-    const meusTickers = ['WEGE3', 'PETR4', 'VALE3'];
+    const [meusTickers, setMeusTickers] = useState<string[]>([]);
 
     useEffect(() => {
-        const buscarEventos = async () => {
+        const buscarDados = async () => {
             try {
-                const response = await fetch('http://localhost:5194/api/calendario');                
-                const data = await response.json();
+                const resEventos = await fetch('http://localhost:5194/api/calendario');
+                const dataEventos = await resEventos.json();
 
-                if (Array.isArray(data)) {
-                    setEventos(data);
-                } else {
-                    console.error("A API não retornou uma lista:", data);
+                if (Array.isArray(dataEventos)) {
+                    setEventos(dataEventos);
+                }
+
+                const token = localStorage.getItem('caddie_token');
+                const resFavs = await fetch('http://localhost:5194/api/favoritos', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (resFavs.ok) {
+                    const dataFavs = await resFavs.json();
+                    const tickersExtraidos = dataFavs.map((fav: any) => fav.ticker);
+                    setMeusTickers(tickersExtraidos);
                 }
             } catch (error) {
-                console.error("Erro ao carregar o calendário:", error);
+                console.error("Erro ao carregar o calendário ou favoritos:", error);
             } finally {
                 setLoading(false);
             }
         };
 
-        buscarEventos();
+        buscarDados();
     }, []);
 
     const eventosFiltrados = eventos.filter(evento => {
         const passaTipo = filtroTipo === 'Todos' || evento.tipo === filtroTipo;
-        const passaWatchlist = apenasWatchlist ? (evento.ticker && meusTickers.includes(evento.ticker)) : true;
+        const passaWatchlist = apenasWatchlist
+            ? (evento.ticker && meusTickers.some(t => t.trim().toUpperCase() === evento.ticker!.trim().toUpperCase()))
+            : true;
         const passaBusca = evento.titulo.toLowerCase().includes(busca.toLowerCase()) ||
             (evento.ticker && evento.ticker.toLowerCase().includes(busca.toLowerCase()));
         return passaTipo && passaWatchlist && passaBusca;
@@ -110,6 +121,9 @@ export default function Calendario() {
                     <button
                         className={`cal-btn-watchlist ${apenasWatchlist ? 'ativo' : ''}`}
                         onClick={() => setApenasWatchlist(!apenasWatchlist)}
+                        disabled={meusTickers.length === 0}
+                        title={meusTickers.length === 0 ? "Você ainda não tem ativos favoritados" : "Filtrar por meus favoritos"}
+                        style={{ opacity: meusTickers.length === 0 ? 0.5 : 1, cursor: meusTickers.length === 0 ? 'not-allowed' : 'pointer' }}
                     >
                         ⭐ Apenas minha Watchlist
                     </button>

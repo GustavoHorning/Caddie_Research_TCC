@@ -22,7 +22,10 @@ public class CalendarioController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetEventos()
     {
+        var hoje = DateTime.UtcNow.Date;
+
         var eventos = await _context.Eventos
+            .Where(e => e.DataHora >= hoje) 
             .OrderBy(e => e.DataHora)
             .Select(e => new 
             {
@@ -75,47 +78,46 @@ public class CalendarioController : ControllerBase
         return Ok(eventos);
     }
     
-    [HttpPost("seed")]
-    [AllowAnonymous] 
-    public async Task<IActionResult> InserirMockNoBanco()
+    public class CriarEventoCaddieDto
     {
-        if (_context.Eventos.Any())
-            return Ok("O banco já possui eventos cadastrados!");
+        public string Titulo { get; set; }
+        public DateTime DataHora { get; set; }
+        public string Descricao { get; set; }
+        public string LinkExterno { get; set; }
+        public int Impacto { get; set; }
+    }
 
-        var hoje = DateTime.UtcNow.Date;
-        var amanha = hoje.AddDays(1);
-
-        var mocks = new List<Evento>
+    [HttpPost("caddie")]
+    public async Task<IActionResult> CriarEventoCaddie([FromBody] CriarEventoCaddieDto dto)
+    {
+        var novoEvento = new Evento
         {
-            new Evento { 
-                Titulo = "Relatório de Emprego (Payroll)", 
-                DataHora = hoje.AddHours(9).AddMinutes(30), 
-                Tipo = "Macro", Impacto = 3, Projecao = "180k", Atual = "---", 
-                Pais = "US", Descricao = "O Nonfarm Payroll mede a variação do número de pessoas empregadas nos EUA durante o mês anterior, excluindo a indústria agrícola. É o principal termômetro de juros do Fed." 
-            },
-            new Evento { 
-                Titulo = "IPCA-15 (Prévia da Inflação)", 
-                DataHora = hoje.AddHours(10),
-                Tipo = "Macro", Impacto = 3, Projecao = "0.35%", Atual = "0.40%", 
-                Pais = "BR", Descricao = "O Índice Nacional de Preços ao Consumidor Amplo 15 (IPCA-15) é uma prévia da inflação oficial do país." 
-            },
-            new Evento { 
-                Titulo = "Balanço: WEGE3", 
-                DataHora = hoje.AddHours(18), 
-                Tipo = "Balanço", Impacto = 2, TickerRelacionado = "WEGE3", 
-                Pais = "BR", Descricao = "Divulgação dos resultados do trimestre da WEG. O mercado aguarda as margens de lucro no exterior.", LinkExterno = "https://ri.weg.net/" 
-            },
-            new Evento { 
-                Titulo = "Live Premium: Rebalanceamento", 
-                DataHora = amanha.AddHours(19), 
-                Tipo = "Caddie", Impacto = 1, 
-                Pais = "CA", Descricao = "Reunião exclusiva com os gestores da Caddie Research para explicar as trocas nas carteiras recomendadas deste mês.", LinkExterno = "https://youtube.com/caddieresearch" 
-            }
+            Titulo = dto.Titulo,
+            DataHora = dto.DataHora,
+            Tipo = "Caddie", 
+            Impacto = dto.Impacto,
+            Pais = "CA", 
+            Descricao = dto.Descricao,
+            LinkExterno = dto.LinkExterno
         };
 
-        _context.Eventos.AddRange(mocks);
+        _context.Eventos.Add(novoEvento);
         await _context.SaveChangesAsync();
 
-        return Ok("4 Eventos de teste criados com sucesso no banco de dados!");
+        return Ok(new { message = "Evento da Caddie criado com sucesso!", eventoId = novoEvento.Id });
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletarEvento(int id)
+    {
+        var evento = await _context.Eventos.FindAsync(id);
+        if (evento == null) return NotFound("Evento não encontrado.");
+
+        _context.Eventos.Remove(evento);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Evento removido com sucesso!" });
+    }
+    
+    
 }
