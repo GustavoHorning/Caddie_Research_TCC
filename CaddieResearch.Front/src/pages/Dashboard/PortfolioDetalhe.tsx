@@ -502,6 +502,19 @@ export default function PortfolioDetalhe() {
     } else {
       if (!txTicker || !txQuantidade || !txPreco) return
     }
+
+    // Validar saldo de caixa livre antes de qualquer compra
+    if (txTipo === 'Compra') {
+      const custoOperacao = isRendaFixa
+        ? parseFloat(rfValor.replace(',', '.') || '0')
+        : parseFloat(txQuantidade) * parseFloat(txPreco)
+      const caixaDisponivel = Math.max(0, totalAportes - custoTotalPosicoes)
+      if (custoOperacao > caixaDisponivel) {
+        mostrarToast(`❌ Saldo insuficiente. Caixa livre: ${formatBRL(caixaDisponivel)} | Operação: ${formatBRL(custoOperacao)}`)
+        return
+      }
+    }
+
     setSalvandoTransacao(true)
     try {
       const margemUnit = ftTipoOp === 'Intraday' ? 150 : 5000
