@@ -131,6 +131,14 @@
     margin-right: 16px;
 }
 
+.cal-impacto-box .cal-barra {
+    background-color: #333; 
+}
+
+.cal-impacto-box .cal-barra.ativa {
+    background-color: #ff3b30; 
+}
+
 .cal-barra {
     width: 4px;
     background: #30363d;

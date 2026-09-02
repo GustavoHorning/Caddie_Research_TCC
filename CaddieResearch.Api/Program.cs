@@ -54,8 +54,8 @@ builder.Services.AddCors(options =>
         policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
-
-
+builder.Services.AddHostedService<CaddieResearch.Api.Workers.MacroCalendarioWorker>();
+builder.Services.AddHostedService<CaddieResearch.Api.Workers.BalancoCalendarioWorker>();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
