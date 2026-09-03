@@ -10,6 +10,12 @@ export default defineConfig({
         target: 'https://caddieresearch-api-gnewb5eebrckadfk.brazilsouth-01.azurewebsites.net',
         changeOrigin: true,
         secure: true,
+      },
+      '/brapi': {
+        target: 'https://brapi.dev',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/brapi/, ''),
       }
     }
   }

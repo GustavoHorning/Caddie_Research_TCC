@@ -31,8 +31,19 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
         const buscarCotacao = async () => {
             try {
                 setCarregando(true);
-                const response = await api.get(`/api/acoes/cotacao/${ticker}`);
-                setCotacao(response.data);
+                const BRAPI_TOKEN = 'dC4awVsCfEBrgrTKK2qph1';
+                const res = await fetch(`/brapi/api/quote/${ticker}?token=${BRAPI_TOKEN}`);
+                if (!res.ok) throw new Error(`${res.status}`);
+                const json = await res.json();
+                const q = json?.results?.[0];
+                if (!q) throw new Error('sem dados');
+                setCotacao({
+                    symbol: q.symbol,
+                    shortName: q.shortName ?? ticker,
+                    logourl: q.logourl ?? '',
+                    regularMarketPrice: q.regularMarketPrice ?? 0,
+                    regularMarketChangePercent: q.regularMarketChangePercent ?? 0,
+                });
             } catch (error) {
                 console.error(`Erro ao buscar ${ticker}:`, error);
             } finally {
