@@ -57,7 +57,7 @@ namespace CaddieResearch.Api.Workers
 
             
 
-            string apiKey = _configuration["Finnhub:ApiKey"]; 
+            string apiKey = _configuration["FinnhubToken"]; 
             
             if (string.IsNullOrEmpty(apiKey))
             {
