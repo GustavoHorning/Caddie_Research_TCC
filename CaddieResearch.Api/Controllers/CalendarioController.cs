@@ -86,6 +86,27 @@ public class CalendarioController : ControllerBase
         public string LinkExterno { get; set; }
         public int Impacto { get; set; }
     }
+    
+    [HttpPut("{id}")]
+    public async Task<IActionResult> AtualizarEventoPeloGestor(int id, [FromBody] Evento eventoAtualizado)
+    {
+        var eventoExistente = await _context.Eventos.FindAsync(id);
+        if (eventoExistente == null) 
+            return NotFound(new { mensagem = "Evento não encontrado." });
+
+        if (eventoExistente.Tipo == "Balanço" || eventoExistente.Tipo == "Macro") 
+        {
+            return BadRequest(new { mensagem = "Operação negada: Apenas eventos da própria Caddie podem ser editados manualmente." });
+        }
+
+        eventoExistente.Titulo = eventoAtualizado.Titulo;
+        eventoExistente.Descricao = eventoAtualizado.Descricao;
+        eventoExistente.DataHora = eventoAtualizado.DataHora; 
+        eventoExistente.LinkExterno = eventoAtualizado.LinkExterno;
+    
+        await _context.SaveChangesAsync();
+        return Ok(eventoExistente);
+    }
 
     [HttpPost("caddie")]
     public async Task<IActionResult> CriarEventoCaddie([FromBody] CriarEventoCaddieDto dto)
