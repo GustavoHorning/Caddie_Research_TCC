@@ -1,15 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
       '/api': {
-        target: 'https://caddieresearch-api-gnewb5eebrckadfk.brazilsouth-01.azurewebsites.net',
+        target: 'http://localhost:5194',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
       '/brapi': {
         target: 'https://brapi.dev',
