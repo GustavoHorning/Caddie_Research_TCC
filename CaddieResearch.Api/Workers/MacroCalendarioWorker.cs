@@ -36,7 +36,7 @@ public class MacroCalendarioWorker : BackgroundService
                 _logger.LogError(ex, "Falha ao sincronizar calendário via RapidAPI.");
             }
             
-            await Task.Delay(TimeSpan.FromDays(7), stoppingToken);
+            await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
         }
     }
 

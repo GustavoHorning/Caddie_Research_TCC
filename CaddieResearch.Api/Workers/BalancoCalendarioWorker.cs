@@ -152,8 +152,11 @@ namespace CaddieResearch.Api.Workers
                     LinkExterno = $"https://finance.yahoo.com/quote/{ticker}"
                 };
 
-                var eventoExistente = context.Eventos.FirstOrDefault(e => e.TickerRelacionado == ticker && e.DataHora == novoEvento.DataHora);
-
+                var dataComparacao = novoEvento.DataHora.Date;
+                var eventoExistente = context.Eventos.FirstOrDefault(e => 
+                    e.TickerRelacionado == ticker && 
+                    e.DataHora.Date == dataComparacao);
+                
                 if (eventoExistente == null)
                 {
                     context.Eventos.Add(novoEvento);
