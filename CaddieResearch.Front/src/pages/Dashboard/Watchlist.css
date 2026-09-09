@@ -1,26 +1,26 @@
 .wl-page {
-  padding: 24px 28px;
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-/* Cabeçalho */
 .wl-header {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 28px;
+  align-items: flex-start;
+  margin-bottom: 24px;
 }
 
 .wl-titulo {
   font-size: 1.6rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #ffffff;
-  margin: 0 0 6px 0;
-  letter-spacing: -0.3px;
+  margin: 0 0 6px;
 }
 
 .wl-subtitulo {
-  font-size: 0.88rem;
   color: #7a90a8;
+  font-size: 0.9rem;
   margin: 0;
 }
 
@@ -30,29 +30,24 @@
 }
 
 .wl-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 12px 20px;
-  text-align: center;
-  min-width: 90px;
+  padding: 10px 20px;
 }
 
 .wl-stat-num {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: #00B4D8;
-  line-height: 1;
 }
 
 .wl-stat-label {
-  display: block;
   font-size: 0.72rem;
   color: #7a90a8;
-  margin-top: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 /* Abas */
@@ -111,64 +106,64 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 60px 0;
+  justify-content: center;
+  padding: 80px 20px;
   color: #7a90a8;
-  font-size: 0.9rem;
 }
 
 .wl-loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.08);
+  border: 3px solid rgba(255, 255, 255, 0.1);
   border-top-color: #00B4D8;
   border-radius: 50%;
   animation: wl-spin 0.8s linear infinite;
+  margin-bottom: 12px;
 }
 
 @keyframes wl-spin {
   to { transform: rotate(360deg); }
 }
 
-/* Vazio */
+/* Estado vazio */
 .wl-vazio {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 60px 24px;
   text-align: center;
+  padding: 80px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
 }
 
 .wl-vazio-icon {
   font-size: 2.5rem;
-  opacity: 0.4;
+  margin-bottom: 12px;
 }
 
 .wl-vazio-titulo {
-  font-size: 1rem;
-  font-weight: 600;
   color: #ffffff;
-  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 6px;
 }
 
 .wl-vazio-sub {
-  font-size: 0.85rem;
   color: #7a90a8;
+  font-size: 0.85rem;
   max-width: 320px;
-  line-height: 1.5;
+  margin-bottom: 20px;
 }
 
 .wl-vazio-btn {
-  margin-top: 8px;
-  padding: 10px 24px;
   background: #00B4D8;
-  color: #fff;
+  color: #ffffff;
+  padding: 10px 22px;
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
-  transition: background 0.2s ease;
 }
 
 .wl-vazio-btn:hover {
@@ -178,84 +173,67 @@
 /* Grid de cards */
 .wl-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 
-/* Card individual */
 .wl-card {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  padding: 18px 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.wl-card:hover {
-  border-color: rgba(0, 180, 216, 0.3);
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .wl-card-top {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
 }
 
 .wl-card-ticker-wrap {
   display: flex;
   flex-direction: column;
-  gap: 3px;
 }
 
 .wl-card-ticker {
-  font-size: 1.05rem;
-  font-weight: 700;
   color: #ffffff;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .wl-card-nome {
-  font-size: 0.75rem;
   color: #7a90a8;
-  max-width: 160px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.75rem;
 }
 
 .wl-card-remove {
   background: transparent;
   border: none;
-  color: #4a6070;
-  font-size: 0.75rem;
+  color: #7a90a8;
   cursor: pointer;
+  font-size: 0.85rem;
   padding: 2px 6px;
-  border-radius: 4px;
-  transition: color 0.2s, background 0.2s;
-  flex-shrink: 0;
 }
 
 .wl-card-remove:hover {
   color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
 }
 
-/* Tags */
 .wl-card-tags {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
 }
 
 .wl-tag {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.68rem;
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: 20px;
+  font-weight: 600;
 }
 
 .wl-tag-cat {
@@ -268,65 +246,52 @@
   color: #7a90a8;
 }
 
-/* Rodapé do card */
 .wl-card-bottom {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-top: auto;
+  margin-top: 12px;
 }
 
 .wl-card-preco {
-  font-size: 1rem;
-  font-weight: 700;
   color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .wl-card-var {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
 }
 
 .wl-card-var.positivo {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
+  color: #4caf50;
 }
 
 .wl-card-var.negativo {
   color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
 }
 
 .wl-card-rentabilidade {
-  font-size: 0.85rem;
+  color: #00B4D8;
   font-weight: 600;
-  color: #93c5fd;
+  font-size: 0.9rem;
 }
 
 .wl-card-indisponivel {
-  font-size: 0.82rem;
-  color: #4a6070;
+  color: #7a90a8;
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
-  .wl-page {
-    padding: 16px;
-  }
-
+@media (max-width: 640px) {
   .wl-header {
     flex-direction: column;
     gap: 16px;
   }
 
-  .wl-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  }
-
   .wl-abas {
-    gap: 4px;
+    overflow-x: auto;
   }
 
   .wl-aba {
@@ -358,4 +323,214 @@
 .wl-card-anotacao:focus {
   outline: none;
   border-color: rgba(99, 179, 237, 0.5);
+}
+
+/* ---------- Abas personalizadas ---------- */
+.wl-aba-custom-wrap {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.wl-aba-custom-wrap .wl-aba-custom {
+  padding-right: 8px;
+}
+
+.wl-aba-custom-excluir {
+  background: transparent;
+  border: none;
+  color: #7a90a8;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 4px 8px 4px 0;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.wl-aba-custom-wrap:hover .wl-aba-custom-excluir {
+  opacity: 1;
+}
+
+.wl-aba-custom-excluir:hover {
+  color: #ef4444;
+}
+
+.wl-aba-nova {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #7a90a8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 6px;
+  align-self: center;
+  transition: all 0.2s ease;
+}
+
+.wl-aba-nova:hover {
+  border-color: #00B4D8;
+  color: #00B4D8;
+}
+
+/* ---------- Botão "adicionar a uma aba" dentro do card ---------- */
+.wl-card-adicionar-aba-wrap {
+  position: relative;
+  margin-top: 10px;
+}
+
+.wl-card-adicionar-aba,
+.wl-card-remover-da-aba {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #7a90a8;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wl-card-adicionar-aba:hover {
+  border-color: #00B4D8;
+  color: #00B4D8;
+}
+
+.wl-card-remover-da-aba {
+  margin-top: 10px;
+  color: #f59e0b;
+}
+
+.wl-card-remover-da-aba:hover {
+  border-color: #f59e0b;
+}
+
+.wl-menu-abas {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #131c2b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.wl-menu-abas-item {
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #e6edf3;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.wl-menu-abas-item:hover:not(:disabled) {
+  background: rgba(0, 180, 216, 0.12);
+}
+
+.wl-menu-abas-item.ja-adicionado {
+  color: #4caf50;
+  cursor: default;
+}
+
+/* ---------- Modal: nova aba ---------- */
+.wl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.wl-modal {
+  background: #101827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.wl-modal h3 {
+  color: #ffffff;
+  font-size: 1.05rem;
+  margin: 0 0 6px;
+}
+
+.wl-modal-sub {
+  color: #7a90a8;
+  font-size: 0.82rem;
+  margin: 0 0 16px;
+}
+
+.wl-modal-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.wl-modal-input:focus {
+  outline: none;
+  border-color: #00B4D8;
+}
+
+.wl-modal-erro {
+  color: #ef4444;
+  font-size: 0.78rem;
+  margin: 8px 0 0;
+}
+
+.wl-modal-acoes {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.wl-modal-cancelar,
+.wl-modal-confirmar {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+}
+
+.wl-modal-cancelar {
+  background: rgba(255, 255, 255, 0.06);
+  color: #7a90a8;
+}
+
+.wl-modal-confirmar {
+  background: #00B4D8;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.wl-modal-confirmar:hover {
+  background: #0096c7;
+}
+
+.wl-modal-confirmar:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
