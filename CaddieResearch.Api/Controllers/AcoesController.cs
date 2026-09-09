@@ -9,10 +9,12 @@ namespace CaddieResearch.Api.Controllers;
 public class AcoesController : ControllerBase
 {
     private readonly HttpClient _http;
+    private readonly IConfiguration _configuration;
 
-    public AcoesController(IHttpClientFactory factory)
+    public AcoesController(IHttpClientFactory factory, IConfiguration configuration)
     {
         _http = factory.CreateClient("yahoo");
+        _configuration = configuration;
     }
 
     [AllowAnonymous]
@@ -22,7 +24,9 @@ public class AcoesController : ControllerBase
         if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
 
         var symbol = ticker.ToUpper();
-        var url = $"https://brapi.dev/api/quote/{Uri.EscapeDataString(symbol)}";
+        var brapiToken = _configuration["BrapiToken"];
+        
+        var url = $"https://brapi.dev/api/quote/{Uri.EscapeDataString(symbol)}?token={brapiToken}";
 
         try
         {
@@ -30,7 +34,7 @@ public class AcoesController : ControllerBase
             var body = await res.Content.ReadAsStringAsync();
 
             if (!res.IsSuccessStatusCode)
-                return StatusCode((int)res.StatusCode, body);
+                return StatusCode((int)res.StatusCode, $"Erro Brapi: {body}");
 
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
