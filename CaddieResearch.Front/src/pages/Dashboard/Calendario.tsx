@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
+import api from '../../services/api'; 
 import './Calendario.css';
 
 interface EventoMercado {
@@ -30,23 +31,15 @@ export default function Calendario() {
     useEffect(() => {
         const buscarDados = async () => {
             try {
-                const resEventos = await fetch('http://localhost:5194/api/calendario');
-                const dataEventos = await resEventos.json();
-
-                if (Array.isArray(dataEventos)) {
-                    setEventos(dataEventos);
+                const resEventos = await api.get('/api/calendario');
+                if (Array.isArray(resEventos.data)) {
+                    setEventos(resEventos.data);
                 }
 
-                const token = localStorage.getItem('caddie_token');
-                const resFavs = await fetch('http://localhost:5194/api/favoritos', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const resFavs = await api.get('/api/favoritos');
+                const tickersExtraidos = resFavs.data.map((fav: any) => fav.ticker);
+                setMeusTickers(tickersExtraidos);
 
-                if (resFavs.ok) {
-                    const dataFavs = await resFavs.json();
-                    const tickersExtraidos = dataFavs.map((fav: any) => fav.ticker);
-                    setMeusTickers(tickersExtraidos);
-                }
             } catch (error) {
                 console.error("Erro ao carregar o calendário ou favoritos:", error);
             } finally {
@@ -59,7 +52,6 @@ export default function Calendario() {
 
     const dataHoje = new Date();
     const hojeIso = `${dataHoje.getFullYear()}-${String(dataHoje.getMonth() + 1).padStart(2, '0')}-${String(dataHoje.getDate()).padStart(2, '0')}`;
-
 
     const eventosFiltrados = eventos.filter(evento => {
         const passaTempo = evento.dataStr >= hojeIso;
@@ -76,17 +68,17 @@ export default function Calendario() {
             ? (tickerEvento && meusTickers.some(t => {
                 const tWatchlist = t.trim().toUpperCase();
 
-                if (tWatchlist.includes('ROXO') && tickerEvento === 'NU') return true; 
-                if (tWatchlist.includes('PETR') && tickerEvento === 'PBR') return true; 
-                if (tWatchlist.includes('VALE') && tickerEvento === 'VALE') return true; 
-                if (tWatchlist.includes('ITUB') && tickerEvento === 'ITUB') return true; 
-                if (tWatchlist.includes('BBDC') && tickerEvento === 'BBD') return true; 
-                if (tWatchlist.includes('ELET') && tickerEvento === 'EBR') return true; 
+                if (tWatchlist.includes('ROXO') && tickerEvento === 'NU') return true;
+                if (tWatchlist.includes('PETR') && tickerEvento === 'PBR') return true;
+                if (tWatchlist.includes('VALE') && tickerEvento === 'VALE') return true;
+                if (tWatchlist.includes('ITUB') && tickerEvento === 'ITUB') return true;
+                if (tWatchlist.includes('BBDC') && tickerEvento === 'BBD') return true;
+                if (tWatchlist.includes('ELET') && tickerEvento === 'EBR') return true;
 
-                if (tWatchlist.includes('AMZO') && tickerEvento === 'AMZN') return true; 
-                if (tWatchlist.includes('MSFT') && tickerEvento === 'MSFT') return true; 
+                if (tWatchlist.includes('AMZO') && tickerEvento === 'AMZN') return true;
+                if (tWatchlist.includes('MSFT') && tickerEvento === 'MSFT') return true;
                 if (tWatchlist.includes('AAPL') && tickerEvento === 'AAPL') return true;
-                if (tWatchlist.includes('MELI') && tickerEvento === 'MELI') return true; 
+                if (tWatchlist.includes('MELI') && tickerEvento === 'MELI') return true;
 
                 return tWatchlist === tickerEvento;
             }))
@@ -198,17 +190,17 @@ export default function Calendario() {
                                                     <span className={`cal-tag tipo-${evento.tipo?.toLowerCase()}`}>{evento.tipo}</span>
                                                     {evento.pais && (evento.tipo === 'Balanço' || evento.tipo === 'Macro') && (
                                                         <span className="cal-bandeira-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>                                                    {evento.pais.length === 2 && (
-                                                        <img
-                                                            src={`https://flagcdn.com/w20/${evento.pais.toLowerCase()}.png`}
-                                                            alt={evento.pais}
-                                                            title={evento.pais}
-                                                            style={{ width: '20px', height: '14px', borderRadius: '2px', objectFit: 'cover' }}
-                                                        />
-                                                    )}
+                                                            <img
+                                                                src={`https://flagcdn.com/w20/${evento.pais.toLowerCase()}.png`}
+                                                                alt={evento.pais}
+                                                                title={evento.pais}
+                                                                style={{ width: '20px', height: '14px', borderRadius: '2px', objectFit: 'cover' }}
+                                                            />
+                                                        )}
                                                             {evento.pais}
                                                         </span>
                                                     )}
-                                                    <strong className="cal-evento-titulo">{evento.titulo}</strong>                                               
+                                                    <strong className="cal-evento-titulo">{evento.titulo}</strong>
                                                 </div>
 
                                                 <div className="cal-dados">

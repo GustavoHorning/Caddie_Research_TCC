@@ -74,8 +74,9 @@ export default function DashboardHome() {
 
   async function carregarEventos() {
     try {
-      const response = await fetch('http://localhost:5194/api/calendario');
-      const data = await response.json();
+      const response = await api.get('/api/calendario');
+
+      const data = response.data;
 
       if (Array.isArray(data)) {
         const balancos = data.filter((e: any) => e.tipo?.toLowerCase() === 'balanço' || e.tipo?.toLowerCase() === 'balanco');
