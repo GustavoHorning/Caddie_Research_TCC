@@ -1,67 +1,173 @@
-﻿using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
+﻿using System;
+using System.Linq; 
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using CaddieResearch.Api.Data;
+using CaddieResearch.Api.Models; 
 
-namespace CaddieResearch.Api.Workers;
-
-public class BalancoCalendarioWorker : BackgroundService
+namespace CaddieResearch.Api.Workers
 {
-    private readonly ILogger<BalancoCalendarioWorker> _logger;
-    private readonly IServiceProvider _serviceProvider;
-
-    public BalancoCalendarioWorker(ILogger<BalancoCalendarioWorker> logger, IServiceProvider serviceProvider)
+    public class BalancoCalendarioWorker : BackgroundService
     {
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-    }
+        private readonly ILogger<BalancoCalendarioWorker> _logger;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IConfiguration _configuration;
+        private readonly HttpClient _httpClient;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("Robô de Balanços (Modo Mock Dinâmico Realista) iniciado.");
-
-        try
+        public BalancoCalendarioWorker(
+            ILogger<BalancoCalendarioWorker> logger, 
+            IServiceProvider serviceProvider, 
+            IConfiguration configuration)
         {
-            await InjetarBalancosFicticios();
+            _logger = logger;
+            _serviceProvider = serviceProvider;
+            _configuration = configuration;
+            _httpClient = new HttpClient();
         }
-        catch (Exception ex)
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogError(ex, "Erro ao injetar balanços simulados.");
+            _logger.LogInformation("Robô de Balanços Globais (Finnhub) iniciado.");
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await BuscarBalancosFinnhub();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Falha ao sincronizar balanços via Finnhub.");
+                }
+
+                await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
+            }
         }
-    }
 
-    private async Task InjetarBalancosFicticios()
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var balancosAntigos = context.Eventos.Where(e => e.Tipo == "Balanço").ToList();
-        if (balancosAntigos.Any())
+        private async Task BuscarBalancosFinnhub()
         {
-            context.Eventos.RemoveRange(balancosAntigos);
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            
+
+            string apiKey = _configuration["Finnhub:ApiKey"]; 
+            
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                _logger.LogError("ERRO CRÍTICO: Chave da Finnhub não encontrada nos Secrets!");
+                return;
+            }
+            
+            string dataInicio = DateTime.UtcNow.ToString("yyyy-MM-dd");
+            string dataFim = DateTime.UtcNow.AddDays(90).ToString("yyyy-MM-dd");
+
+            string url = $"https://finnhub.io/api/v1/calendar/earnings?from={dataInicio}&to={dataFim}&token={apiKey}";
+            
+            var response = await _httpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+
+            using JsonDocument doc = JsonDocument.Parse(jsonResponse);
+            var earnings = doc.RootElement.GetProperty("earningsCalendar");
+
+            int contador = 0;
+
+            foreach (var evt in earnings.EnumerateArray())
+            {
+                string ticker = evt.GetProperty("symbol").GetString();
+
+                long? revEstimate = evt.GetProperty("revenueEstimate").ValueKind != JsonValueKind.Null 
+                    ? evt.GetProperty("revenueEstimate").GetInt64() 
+                    : null;
+
+                if (revEstimate == null || revEstimate < 1_000_000_000) 
+                    continue;
+
+                if (!DateTime.TryParse(evt.GetProperty("date").GetString(), out DateTime dataBalanco)) 
+                    continue;
+
+                double? epsEstimate = evt.GetProperty("epsEstimate").ValueKind != JsonValueKind.Null ? evt.GetProperty("epsEstimate").GetDouble() : null;
+                double? epsActual = evt.GetProperty("epsActual").ValueKind != JsonValueKind.Null ? evt.GetProperty("epsActual").GetDouble() : null;
+
+                string projecaoStr = epsEstimate.HasValue ? $"EPS: ${epsEstimate:F2}" : "---";
+                string atualStr = epsActual.HasValue ? $"EPS: ${epsActual:F2}" : "---";
+                string receitaFormatada = $"${(revEstimate / 1_000_000_000.0):F2} Bilhões";
+
+    string pais = "US"; 
+
+    string[] adrsBr = { "PBR", "VALE", "ITUB", "NU", "ABEV", "BBD", "BSBR", "CIG", "GGB", "SUZ" }; 
+    string[] adrsCa = { "SHOP", "RY", "TD", "ENB", "CNQ", "BMO", "BNS", "CP" };
+    string[] adrsMx = { "AMX", "CX", "FMX", "KOF" };
+    string[] adrsLatam = { "MELI", "EC", "BMA", "GGAL" }; 
+
+    string[] adrsGb = { "SHEL", "BP", "HSBC", "UL", "AZN", "GSK", "LSEG" }; 
+    string[] adrsDe = { "SAP", "SIEGY", "BNTX", "BMWYY", "VWAGY" };
+    string[] adrsFr = { "TTE", "SNY", "LVMUY", "ORAN" }; 
+    string[] adrsCh = { "NVS", "UBS", "NSRGY", "ABB" }; 
+    string[] adrsNl = { "ASML", "ING", "NXPI", "PHG" }; 
+    string[] adrsDk = { "NVO" }; 
+
+    string[] adrsCn = { "BABA", "JD", "PDD", "NIO", "BIDU", "NTES", "LI", "XPEV" }; 
+    string[] adrsJp = { "SONY", "TM", "HMC", "MUFG", "SMFG", "MFG" }; 
+    string[] adrsTw = { "TSM", "UMC" }; 
+    string[] adrsIn = { "INFY", "HDB", "IBN", "TTM", "WIT" }; 
+    string[] adrsKr = { "CPNG", "PKX", "KB" };
+    string[] adrsAu = { "BHP", "RIO", "TEAM", "WMC" }; 
+    
+    if (adrsBr.Contains(ticker)) pais = "BR";
+    else if (adrsCa.Contains(ticker)) pais = "CA";
+    else if (adrsMx.Contains(ticker)) pais = "MX";
+    else if (adrsLatam.Contains(ticker)) pais = ticker == "EC" ? "CO" : "AR";
+    else if (adrsGb.Contains(ticker)) pais = "GB";
+    else if (adrsDe.Contains(ticker)) pais = "DE"; 
+    else if (adrsFr.Contains(ticker)) pais = "FR"; 
+    else if (adrsCh.Contains(ticker)) pais = "CH"; 
+    else if (adrsNl.Contains(ticker)) pais = "NL"; 
+    else if (adrsDk.Contains(ticker)) pais = "DK"; 
+    else if (adrsCn.Contains(ticker)) pais = "CN";
+    else if (adrsJp.Contains(ticker)) pais = "JP";
+    else if (adrsTw.Contains(ticker)) pais = "TW";
+    else if (adrsIn.Contains(ticker)) pais = "IN";
+    else if (adrsKr.Contains(ticker)) pais = "KR"; 
+    else if (adrsAu.Contains(ticker)) pais = "AU"; 
+
+                var novoEvento = new Evento
+                {
+                    Titulo = $"Resultado do Trimestre: {ticker}",
+                    DataHora = dataBalanco.ToUniversalTime(),
+                    Tipo = "Balanço",
+                    Impacto = 3, 
+                    Projecao = projecaoStr,
+                    Atual = atualStr,
+                    TickerRelacionado = ticker,
+                    Pais = pais, 
+                    Descricao = $"Balanço corporativo global.\n\nProjeção de Lucro por Ação (EPS): {projecaoStr}\nProjeção de Receita: {receitaFormatada}.",
+                    LinkExterno = $"https://finance.yahoo.com/quote/{ticker}"
+                };
+
+                var eventoExistente = context.Eventos.FirstOrDefault(e => e.TickerRelacionado == ticker && e.DataHora == novoEvento.DataHora);
+
+                if (eventoExistente == null)
+                {
+                    context.Eventos.Add(novoEvento);
+                    contador++;
+                }
+                else if (eventoExistente.Atual == "---" && atualStr != "---")
+                {
+                    eventoExistente.Atual = atualStr;
+                    _logger.LogInformation($"Resultado divulgado e atualizado para {ticker}: {atualStr}");
+                }
+            }
+
             await context.SaveChangesAsync();
+            _logger.LogInformation($"Sucesso! {contador} Balanços Globais (Acima de $1B) inseridos via Finnhub.");
         }
-
-        var hoje = DateTime.UtcNow.Date;
-
-        var balancosTeste = new List<Evento>
-        {
-            new Evento { Titulo = "Balanço: WEGE3", Descricao = "Resultados do trimestre de WEG. Expectativa de margens resilientes no mercado externo.", DataHora = hoje.AddDays(1).AddHours(18), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "WEGE3" },
-            
-            new Evento { Titulo = "Balanço: PETR4", Descricao = "Resultados Petrobras. Foco na política de distribuição de dividendos extraordinários.", DataHora = hoje.AddDays(3).AddHours(18), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "PETR4" },
-            
-            new Evento { Titulo = "Balanço: VALE3", Descricao = "Resultados operacionais da Vale. Atenção ao custo C1 e variação do preço do minério de ferro.", DataHora = hoje.AddDays(5).AddHours(19), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "VALE3" },
-            
-            new Evento { Titulo = "Balanço: ITUB4", Descricao = "Itaú Unibanco. Foco na evolução da inadimplência e crescimento da carteira de crédito.", DataHora = hoje.AddDays(7).AddHours(18), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "ITUB4" },
-            
-            new Evento { Titulo = "Balanço: RENT3", Descricao = "Localiza. Destaque para o ritmo de renovação da frota e custos de depreciação.", DataHora = hoje.AddDays(9).AddHours(18), Tipo = "Balanço", Impacto = 2, Pais = "BR", TickerRelacionado = "RENT3" },
-            
-            new Evento { Titulo = "Balanço: BBAS3", Descricao = "Banco do Brasil. Expectativa sobre a carteira do agronegócio e Provisões (PDD).", DataHora = hoje.AddDays(11).AddHours(8), Tipo = "Balanço", Impacto = 3, Pais = "BR", TickerRelacionado = "BBAS3" },
-            
-            new Evento { Titulo = "Balanço: SMTO3", Descricao = "São Martinho. Mercado acompanha volume de moagem e curva de preços do açúcar.", DataHora = hoje.AddDays(13).AddHours(18), Tipo = "Balanço", Impacto = 2, Pais = "BR", TickerRelacionado = "SMTO3" },
-        };
-
-        context.Eventos.AddRange(balancosTeste);
-        await context.SaveChangesAsync();
-
-        _logger.LogInformation($"Mocks realistas inseridos com sucesso! {balancosTeste.Count} balanços espalhados para as próximas 2 semanas.");
     }
 }

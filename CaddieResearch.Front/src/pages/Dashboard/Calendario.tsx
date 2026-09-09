@@ -10,7 +10,7 @@ interface EventoMercado {
     impacto: number;
     projecao: string | null;
     atual: string | null;
-    ticker: string | null;
+    TickerRelacionado: string | null;
     pais: string;
     descricao: string | null;
     link: string | null;
@@ -57,14 +57,45 @@ export default function Calendario() {
         buscarDados();
     }, []);
 
+    const dataHoje = new Date();
+    const hojeIso = `${dataHoje.getFullYear()}-${String(dataHoje.getMonth() + 1).padStart(2, '0')}-${String(dataHoje.getDate()).padStart(2, '0')}`;
+
+
     const eventosFiltrados = eventos.filter(evento => {
+        const passaTempo = evento.dataStr >= hojeIso;
         const passaTipo = filtroTipo === 'Todos' || evento.tipo === filtroTipo;
+
+        const tickerBruto = evento.TickerRelacionado || (evento as any).ticker || "";
+        let tickerEvento = tickerBruto.trim().toUpperCase();
+
+        if (!tickerEvento && evento.tipo === 'Balanço' && evento.titulo.includes(':')) {
+            tickerEvento = evento.titulo.split(':')[1].trim().toUpperCase();
+        }
+
         const passaWatchlist = apenasWatchlist
-            ? (evento.ticker && meusTickers.some(t => t.trim().toUpperCase() === evento.ticker!.trim().toUpperCase()))
+            ? (tickerEvento && meusTickers.some(t => {
+                const tWatchlist = t.trim().toUpperCase();
+
+                if (tWatchlist.includes('ROXO') && tickerEvento === 'NU') return true; 
+                if (tWatchlist.includes('PETR') && tickerEvento === 'PBR') return true; 
+                if (tWatchlist.includes('VALE') && tickerEvento === 'VALE') return true; 
+                if (tWatchlist.includes('ITUB') && tickerEvento === 'ITUB') return true; 
+                if (tWatchlist.includes('BBDC') && tickerEvento === 'BBD') return true; 
+                if (tWatchlist.includes('ELET') && tickerEvento === 'EBR') return true; 
+
+                if (tWatchlist.includes('AMZO') && tickerEvento === 'AMZN') return true; 
+                if (tWatchlist.includes('MSFT') && tickerEvento === 'MSFT') return true; 
+                if (tWatchlist.includes('AAPL') && tickerEvento === 'AAPL') return true;
+                if (tWatchlist.includes('MELI') && tickerEvento === 'MELI') return true; 
+
+                return tWatchlist === tickerEvento;
+            }))
             : true;
+
         const passaBusca = evento.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-            (evento.ticker && evento.ticker.toLowerCase().includes(busca.toLowerCase()));
-        return passaTipo && passaWatchlist && passaBusca;
+            tickerEvento.toLowerCase().includes(busca.toLowerCase());
+
+        return passaTempo && passaTipo && passaWatchlist && passaBusca;
     });
 
     const eventosAgrupados = eventosFiltrados.reduce((acc, evento) => {
@@ -165,8 +196,19 @@ export default function Calendario() {
 
                                                 <div className="cal-info">
                                                     <span className={`cal-tag tipo-${evento.tipo?.toLowerCase()}`}>{evento.tipo}</span>
-                                                    <span className="cal-bandeira-badge">{evento.pais}</span>
-                                                    <strong className="cal-evento-titulo">{evento.titulo}</strong>
+                                                    {evento.pais && (evento.tipo === 'Balanço' || evento.tipo === 'Macro') && (
+                                                        <span className="cal-bandeira-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>                                                    {evento.pais.length === 2 && (
+                                                        <img
+                                                            src={`https://flagcdn.com/w20/${evento.pais.toLowerCase()}.png`}
+                                                            alt={evento.pais}
+                                                            title={evento.pais}
+                                                            style={{ width: '20px', height: '14px', borderRadius: '2px', objectFit: 'cover' }}
+                                                        />
+                                                    )}
+                                                            {evento.pais}
+                                                        </span>
+                                                    )}
+                                                    <strong className="cal-evento-titulo">{evento.titulo}</strong>                                               
                                                 </div>
 
                                                 <div className="cal-dados">

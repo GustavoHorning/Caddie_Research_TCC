@@ -1,7 +1,7 @@
 ﻿using CaddieResearch.Api.Data;
 using CaddieResearch.Api.Models;
-using CaddieResearch.Api.DTOs;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace CaddieResearch.Api.Workers;
 
@@ -10,30 +10,33 @@ public class MacroCalendarioWorker : BackgroundService
     private readonly ILogger<MacroCalendarioWorker> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly HttpClient _httpClient;
+    private readonly string _apiKey;
 
-    public MacroCalendarioWorker(ILogger<MacroCalendarioWorker> logger, IServiceProvider serviceProvider)
+    public MacroCalendarioWorker(ILogger<MacroCalendarioWorker> logger, IServiceProvider serviceProvider, IConfiguration configuration)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
         _httpClient = new HttpClient(); 
+        
+        _apiKey = configuration["RapidApiKey"] ?? throw new InvalidOperationException("RapidApiKey não encontrada nos Secrets!");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Robô Macroeconômico Inteligente acordou: {time}", DateTimeOffset.Now);
-
+            _logger.LogInformation("Robô Macroeconômico (RapidAPI/TradingView) acordou: {time}", DateTimeOffset.Now);
+            
             try
             {
                 await BuscarEventosMacro();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Falha ao buscar dados da API pública.");
+                _logger.LogError(ex, "Falha ao sincronizar calendário via RapidAPI.");
             }
-
-            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+            
+            await Task.Delay(TimeSpan.FromDays(7), stoppingToken);
         }
     }
 
@@ -41,80 +44,79 @@ public class MacroCalendarioWorker : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var response = await _httpClient.GetAsync("https://nfs.faireconomy.media/ff_calendar_thisweek.json");
+        DateTime margem = DateTime.UtcNow.AddDays(23);
+        bool temDadosRecentes = context.Eventos.Any(e => e.Tipo == "Macro" && e.DataHora > margem);    
         
-        if (!response.IsSuccessStatusCode) 
+        if (temDadosRecentes)
         {
-            _logger.LogWarning($"A API recusou a conexão. Código: {response.StatusCode}");
+            _logger.LogInformation("Os eventos já estão no banco de dados. Pulando a chamada do RapidAPI para economizar cota!");
+            return; 
+        }
+
+        string dataInicio = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        string dataFim = DateTime.UtcNow.AddDays(30).ToString("yyyy-MM-dd");
+
+        string endpoint = $"https://economic-calendar9.p.rapidapi.com/web-crawling/api/economic-calendar/economic-events?countries=BR,US,EU,GB,CN,JP&from={dataInicio}&to={dataFim}";
+
+        var request = new HttpRequestMessage
+        {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri(endpoint),
+            Headers =
+            {
+                { "x-rapidapi-key", _apiKey },
+                { "x-rapidapi-host", "economic-calendar9.p.rapidapi.com" },
+            }
+        };
+
+        using var response = await _httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning($"RapidAPI recusou a conexão. Código: {response.StatusCode}");
             return;
         }
 
         var jsonStr = await response.Content.ReadAsStringAsync();
-        var eventos = JsonSerializer.Deserialize<List<MacroEventDto>>(jsonStr, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        
+        var apiResponse = JsonSerializer.Deserialize<TradingViewApiResponse>(jsonStr, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        if (eventos == null) return;
+        if (apiResponse?.Result == null || !apiResponse.Result.Any()) return;
 
-        var moedasAlvo = new[] { "BRL", "USD", "EUR", "CNY", "GBP", "JPY", "CAD", "AUD", "CHF" };
-
-        foreach (var evt in eventos)
+        foreach (var evt in apiResponse.Result)
         {
-            if (string.IsNullOrEmpty(evt.Country) || !moedasAlvo.Contains(evt.Country.ToUpper())) continue;
+            int impacto = 1; 
+            if (evt.Importance == 1) impacto = 3;
+            else if (evt.Importance == 0) impacto = 2;
 
-            int impacto = evt.Impact?.ToLower() == "high" ? 3 : evt.Impact?.ToLower() == "medium" ? 2 : 1;
-            
             if (impacto < 2) continue;
 
             if (!DateTime.TryParse(evt.Date, out DateTime dataHora)) continue;
-            
-            dataHora = dataHora.ToUniversalTime();
 
-            string siglaPais = evt.Country.ToUpper() switch
-            {
-                "USD" => "US",
-                "EUR" => "EU",
-                "BRL" => "BR",
-                "GBP" => "UK",
-                "JPY" => "JP",
-                "CNY" => "CN",
-                "CAD" => "CA",
-                "AUD" => "AU",
-                "CHF" => "CH",
-                _ => evt.Country.ToUpper()
-            };
+            DateTime dataHoraBrasilia = dataHora.ToUniversalTime().AddHours(-3);
 
-            string tituloLower = evt.Title?.ToLower() ?? "";
-            string descricaoEnriquecida = "Indicador macroeconômico com potencial de gerar volatilidade nos mercados.";
-            
-            string linkDia = dataHora.ToString("MMMdd", System.Globalization.CultureInfo.InvariantCulture).ToLower();
-            string urlExterna = $"https://www.forexfactory.com/calendar?day={linkDia}";
+            string unidade = evt.Unit ?? "";
+            string projecao = evt.Forecast.HasValue ? $"{evt.Forecast}{unidade}" : "---";
+            string valorAtual = evt.Actual.HasValue ? $"{evt.Actual}{unidade}" : (evt.Previous.HasValue ? $"{evt.Previous}{unidade}" : "---");
 
-            if (tituloLower.Contains("cpi") || tituloLower.Contains("inflation") || tituloLower.Contains("ipca"))
-                descricaoEnriquecida = "Índice de Preços ao Consumidor (Inflação). Números acima da projeção costumam fortalecer a moeda local e pressionar os juros.";
-            else if (tituloLower.Contains("gdp") || tituloLower.Contains("pib"))
-                descricaoEnriquecida = "Produto Interno Bruto (PIB). Principal termômetro da atividade e saúde econômica do país.";
-            else if (tituloLower.Contains("payroll") || tituloLower.Contains("employment") || tituloLower.Contains("unemployment") || tituloLower.Contains("jobless"))
-                descricaoEnriquecida = "Relatório de mercado de trabalho. Um dos eventos que mais gera volatilidade instantânea nas bolsas e moedas globais.";
-            else if (tituloLower.Contains("rate") || tituloLower.Contains("fed") || tituloLower.Contains("boe") || tituloLower.Contains("ecb") || tituloLower.Contains("selic"))
-                descricaoEnriquecida = "Decisão de Taxa de Juros. O evento mais importante para o país, definindo o custo do dinheiro e o fluxo de capital estrangeiro.";
-            else if (tituloLower.Contains("pmi"))
-                descricaoEnriquecida = "Índice de Gerentes de Compras (PMI). Um indicador antecedente importante sobre o aquecimento da indústria e serviços.";
+            string descricaoOriginal = string.IsNullOrWhiteSpace(evt.Comment) 
+                ? "Macroeconomic indicator." 
+                : evt.Comment;
 
             var novoEvento = new Evento
             {
-                Titulo = evt.Title ?? "Evento Macro",
-                DataHora = dataHora,
+                Titulo = evt.Title ?? "Macro Event",
+                DataHora = dataHoraBrasilia,
                 Tipo = "Macro",
                 Impacto = impacto,
-                Projecao = evt.Forecast ?? "---",
-                Atual = evt.Previous ?? "---", 
-                Pais = siglaPais,
-                Descricao = descricaoEnriquecida,
-                LinkExterno = urlExterna
+                Projecao = projecao,
+                Atual = valorAtual, 
+                Pais = evt.Country?.ToUpper() ?? "US", 
+                Descricao = descricaoOriginal,
+                LinkExterno = "https://tradingeconomics.com/calendar"
             };
 
             bool jaExiste = context.Eventos.Any(e => e.Titulo == novoEvento.Titulo && e.DataHora == novoEvento.DataHora);
-            
+    
             if (!jaExiste)
             {
                 context.Eventos.Add(novoEvento);
@@ -122,6 +124,25 @@ public class MacroCalendarioWorker : BackgroundService
         }
 
         await context.SaveChangesAsync();
-        _logger.LogInformation("Eventos Macroeconômicos sincronizados com o banco de dados!");
+        _logger.LogInformation("Sucesso! Eventos Macro (incluindo BRASIL) gravados via TradingView!");
+    }
+
+    private class TradingViewApiResponse
+    {
+        public string Status { get; set; }
+        public List<TradingViewEventDto> Result { get; set; }
+    }
+
+    private class TradingViewEventDto
+    {
+        public string Title { get; set; }
+        public string Country { get; set; }
+        public string Date { get; set; }
+        public int? Importance { get; set; }
+        public double? Forecast { get; set; }
+        public double? Previous { get; set; }
+        public double? Actual { get; set; }
+        public string Unit { get; set; }
+        public string Comment { get; set; }
     }
 }
