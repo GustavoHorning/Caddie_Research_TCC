@@ -26,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<Evento> Eventos { get; set; }
     public DbSet<MorningCall> MorningCalls { get; set; }
     public DbSet<MorningCallTopico> MorningCallTopicos { get; set; }
+    public DbSet<Notificacao> Notificacoes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -28,40 +28,44 @@ import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ConfirmarEmail from "./pages/ConfirmarEmail.tsx";
 import Calendario from './pages/Dashboard/Calendario';
-import GestorAgenda from "./pages/Dashboard/GestorAgenda.tsx"; 
+import GestorAgenda from "./pages/Dashboard/GestorAgenda.tsx";
+
+import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
     return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/cadastro" element={<Cadastro />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/planos" element={<Assinaturas />} />
-                <Route path="/confirmar-email" element={<ConfirmarEmail />} />
-                <Route path="/pagamento-sucesso" element={<PagamentoSucesso />} />
+        <NotificationProvider>
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/cadastro" element={<Cadastro />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/planos" element={<Assinaturas />} />
+                    <Route path="/confirmar-email" element={<ConfirmarEmail />} />
+                    <Route path="/pagamento-sucesso" element={<PagamentoSucesso />} />
 
-                <Route path="/home" element={<ProtectedRoute clientOnly><DashboardLayout /></ProtectedRoute>} />
-                <Route path="/carteiras" element={<ProtectedRoute clientOnly><Carteiras /></ProtectedRoute>} />
-                <Route path="/carteiras/:id" element={<ProtectedRoute clientOnly><CarteiraDetalhes /></ProtectedRoute>} />
-                <Route path="/carteiras/internacional" element={<ProtectedRoute clientOnly><CarteiraInternacional /></ProtectedRoute>} />
-                <Route path="/pagamento" element={<ProtectedRoute clientOnly><Pagamento /></ProtectedRoute>} />
-                <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
-                <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
-                <Route path="/watchlist" element={<ProtectedRoute clientOnly><DashboardLayout><Watchlist /></DashboardLayout></ProtectedRoute>} />
-                <Route path="/portfolio" element={<ProtectedRoute clientOnly><DashboardLayout><Portfolio /></DashboardLayout></ProtectedRoute>} />
-                <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
-                <Route path="/relatorios" element={<Relatorios />} />
-                <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/home" element={<ProtectedRoute clientOnly><DashboardLayout /></ProtectedRoute>} />
+                    <Route path="/carteiras" element={<ProtectedRoute clientOnly><Carteiras /></ProtectedRoute>} />
+                    <Route path="/carteiras/:id" element={<ProtectedRoute clientOnly><CarteiraDetalhes /></ProtectedRoute>} />
+                    <Route path="/carteiras/internacional" element={<ProtectedRoute clientOnly><CarteiraInternacional /></ProtectedRoute>} />
+                    <Route path="/pagamento" element={<ProtectedRoute clientOnly><Pagamento /></ProtectedRoute>} />
+                    <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
+                    <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+                    <Route path="/watchlist" element={<ProtectedRoute clientOnly><DashboardLayout><Watchlist /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/portfolio" element={<ProtectedRoute clientOnly><DashboardLayout><Portfolio /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/relatorios" element={<Relatorios />} />
+                    <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
 
-                <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
-                <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
-                <Route path="/gestor/relatorios" element={<ProtectedRoute roleRequired="Gestor"><RelatoriosGestor /></ProtectedRoute>} />
-                <Route path="/gestor/morning-call" element={<ProtectedRoute roleRequired="Gestor"><MorningCallGestor /></ProtectedRoute>} />
-                <Route path="/calendario" element={<ProtectedRoute clientOnly><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
-                <Route path="/gestor/agenda" element={<ProtectedRoute roleRequired="Gestor"><GestorAgenda /></ProtectedRoute>} />
-            </Routes>
-        </BrowserRouter>
+                    <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/relatorios" element={<ProtectedRoute roleRequired="Gestor"><RelatoriosGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/morning-call" element={<ProtectedRoute roleRequired="Gestor"><MorningCallGestor /></ProtectedRoute>} />
+                    <Route path="/calendario" element={<ProtectedRoute clientOnly><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/gestor/agenda" element={<ProtectedRoute roleRequired="Gestor"><GestorAgenda /></ProtectedRoute>} />
+                </Routes>
+            </BrowserRouter>
+        </NotificationProvider>
     )
 }
 

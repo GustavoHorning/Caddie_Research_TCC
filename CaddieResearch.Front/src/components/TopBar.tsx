@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import api from "../services/api";
 import AtendimentoWidget from './AtendimentoWidget';
 import GlobalSearch from './GlobalSearch';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface UserProfile {
   nome: string;
@@ -26,6 +27,20 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { notificacoes, naoLidas } = useNotification();
+  const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+
+  useEffect(() => {
+    function handleClickOutsideNotif(event: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutsideNotif);
+    return () => document.removeEventListener("mousedown", handleClickOutsideNotif);
+  }, []);
 
   useEffect(() => {
     const carregarPerfil = async () => {
@@ -111,13 +126,59 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
 
             {!isGestor && (
                 <>
-                  <button className="icon-btn" title="Notificações">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                      <path d="M13.73 21a2 2 0 01-3.46 0" />
-                    </svg>
-                    <span className="badge"></span>
-                  </button>
+                  <div style={{ position: 'relative' }} ref={notifRef}>
+                    <button
+                        className="icon-btn"
+                        title="Notificações"
+                        onClick={() => setIsNotifMenuOpen(!isNotifMenuOpen)}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 01-3.46 0" />
+                      </svg>
+                      {naoLidas > 0 && <span className="badge badge-pulse"></span>}
+                    </button>
+
+                    {isNotifMenuOpen && (
+                        <div className="dropdown-menu" style={{ width: '320px', right: '-60px', padding: 0, overflow: 'hidden' }}>
+                          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ color: '#fff', fontSize: '0.9rem' }}>Notificações</strong>
+                            {naoLidas > 0 && <span style={{ background: '#00B4D8', color: '#fff', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: 'bold' }}>{naoLidas} novas</span>}
+                          </div>
+
+                          <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                            {notificacoes.length === 0 ? (
+                                <div style={{ padding: '30px 20px', textAlign: 'center', color: '#8b949e', fontSize: '0.85rem' }}>
+                                  Nenhuma notificação no momento.
+                                </div>
+                            ) : (
+                                notificacoes.map(notif => (
+                                    <div key={notif.id} style={{
+                                      padding: '12px 16px',
+                                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '6px',
+                                      background: notif.lida ? 'transparent' : 'rgba(0, 180, 216, 0.08)',
+                                      cursor: notif.linkDestino ? 'pointer' : 'default',
+                                      transition: 'background 0.2s'
+                                    }}>
+                                      <strong style={{ fontSize: '0.85rem', color: notif.lida ? '#c9d1d9' : '#fff' }}>
+                                        {notif.titulo}
+                                      </strong>
+                                      <span style={{ fontSize: '0.8rem', color: '#8b949e', lineHeight: '1.4' }}>
+                          {notif.mensagem}
+                        </span>
+                                      <span style={{ fontSize: '0.65rem', color: '#5a6a7a', marginTop: '2px' }}>
+                          {new Date(notif.dataCriacao).toLocaleDateString('pt-BR')} às {new Date(notif.dataCriacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                                    </div>
+                                ))
+                            )}
+                          </div>
+                        </div>
+                    )}
+                  </div>
 
                   <button className="icon-btn" title="Configurações da Assinatura" onClick={() => navigate('/gerenciar-plano')}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
