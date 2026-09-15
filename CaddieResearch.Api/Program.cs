@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using CaddieResearch.Api.Hubs;
 using CaddieResearch.Api.Workers;
 using SeuProjeto.Services;
 
@@ -51,20 +52,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:5173", 
+                "https://ashy-flower-0221f7b10.7.azurestaticapps.net" 
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); 
+    });
 });
 
 builder.Services.AddHostedService<CaddieResearch.Api.Workers.MacroCalendarioWorker>();
 builder.Services.AddHostedService<BalancoCalendarioWorker>();
+builder.Services.AddSignalR();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("CorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notificacoes");
 
 app.Run();
