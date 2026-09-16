@@ -34,8 +34,8 @@ import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
     return (
-        <NotificationProvider>
             <BrowserRouter>
+                <NotificationProvider>
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/cadastro" element={<Cadastro />} />
@@ -64,8 +64,9 @@ function App() {
                     <Route path="/calendario" element={<ProtectedRoute clientOnly><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/gestor/agenda" element={<ProtectedRoute roleRequired="Gestor"><GestorAgenda /></ProtectedRoute>} />
                 </Routes>
+                </NotificationProvider>
             </BrowserRouter>
-        </NotificationProvider>
+        
     )
 }
 
