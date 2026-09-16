@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import autoTable, { CellHookData } from 'jspdf-autotable'
 
 export interface PosicaoPDF {
   id: number; ticker: string; nomeAtivo: string; classeAtivo: string
@@ -358,7 +358,7 @@ export function gerarRelatorio(d: RelatorioDados): void {
     styles: { fontSize: 6.5, cellPadding: 1.5, halign: 'center' as const, lineColor: COR_BORDA, lineWidth: 0.1 },
     headStyles: { fillColor: COR_FUNDO_HEADER, textColor: COR_PRETO, fontStyle: 'normal' },
     columnStyles: { 0: { halign: 'left' as const, fontStyle: 'bold' as const, cellWidth: 16 } },
-    didParseCell: (data: { section: string; column: { index: number }; row: { raw: unknown }; cell: { raw: unknown; styles: { textColor: [number, number, number] } } }) => {
+    didParseCell: (data: CellHookData) => {
       if (data.section !== 'body' || data.column.index === 0) return
       const raw = data.cell.raw as string
       if (!raw || raw === '-' || raw === '—') return
@@ -456,7 +456,7 @@ export function gerarRelatorio(d: RelatorioDados): void {
       1: { halign: 'right' as const },
       2: { halign: 'right' as const },
     },
-    didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { raw: unknown; styles: { textColor: [number, number, number]; fontStyle: string; fillColor: [number, number, number] } } }) => {
+    didParseCell: (data: CellHookData) => {
       if (data.section !== 'body') return
       if (data.row.index === atribRows.length - 1) {
         data.cell.styles.fontStyle = 'bold'
@@ -544,7 +544,7 @@ export function gerarRelatorio(d: RelatorioDados): void {
       7: { halign: 'right' as const },
     },
     alternateRowStyles: { fillColor: COR_FUNDO_ALT },
-    didParseCell: (data: { section: string; column: { index: number }; row: { index: number }; cell: { raw: unknown; styles: { textColor: [number, number, number]; fontStyle: string; fillColor: [number, number, number] } } }) => {
+    didParseCell: (data: CellHookData) => {
       if (data.section !== 'body') return
       const ri = data.row.index
       if (isClasseRow[ri]) {
