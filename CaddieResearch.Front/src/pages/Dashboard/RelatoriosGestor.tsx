@@ -164,14 +164,10 @@ export default function RelatoriosGestor() {
 
         try {
             if (relatorioEditandoId) {
-                await api.put(`/api/relatorios/${relatorioEditandoId}`, formData, {
-                    headers: { ...configSeguranca.headers, 'Content-Type': 'multipart/form-data' }
-                });
+                await api.put(`/api/relatorios/${relatorioEditandoId}`, formData, configSeguranca);
                 mostrarNotificacao("Relatório atualizado com sucesso!", "sucesso");
             } else {
-                await api.post('/api/relatorios', formData, {
-                    headers: { ...configSeguranca.headers, 'Content-Type': 'multipart/form-data' }
-                });
+                await api.post('/api/relatorios', formData, configSeguranca);
                 mostrarNotificacao("Relatório publicado com sucesso!", "sucesso");
             }
             limparFormulario();

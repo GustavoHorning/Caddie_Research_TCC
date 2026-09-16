@@ -4,6 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
 import './PortfolioDetalhe.css'
+import { gerarRelatorio } from '../../utils/gerarRelatorio'
 
 type Aba = 'dashboard' | 'posicoes' | 'aportes' | 'transacoes' | 'recomendacoes'
 
@@ -91,6 +92,56 @@ export default function PortfolioDetalhe() {
   const [precosAtuais, setPrecosAtuais] = useState<Record<string, number>>({})
   const [posicaoDetalhe, setPosicaoDetalhe] = useState<Posicao | null>(null)
   const [boletarAberto, setBoletarAberto] = useState(false)
+  const [modalRelatorio, setModalRelatorio] = useState(false)
+  const [relPeriodo, setRelPeriodo] = useState('ano_atual')
+  const [relDataInicial, setRelDataInicial] = useState(`${new Date().getFullYear()}-01-01`)
+  const [relDataFinal, setRelDataFinal] = useState(new Date().toISOString().slice(0, 10))
+  const [gerandoRelatorio, setGerandoRelatorio] = useState(false)
+
+  function aplicarPresetRelatorio(preset: string) {
+    const hoje = new Date()
+    const iso = (d: Date) => d.toISOString().slice(0, 10)
+    setRelPeriodo(preset)
+    if (preset === 'mes_atual') {
+      setRelDataInicial(iso(new Date(hoje.getFullYear(), hoje.getMonth(), 1)))
+      setRelDataFinal(iso(hoje))
+    } else if (preset === 'trimestre_atual') {
+      const trim = Math.floor(hoje.getMonth() / 3)
+      setRelDataInicial(iso(new Date(hoje.getFullYear(), trim * 3, 1)))
+      setRelDataFinal(iso(hoje))
+    } else if (preset === 'ano_atual') {
+      setRelDataInicial(`${hoje.getFullYear()}-01-01`)
+      setRelDataFinal(iso(hoje))
+    } else if (preset === 'desde_inicio' && portfolio) {
+      setRelDataInicial(portfolio.dataInicio?.slice(0, 10) ?? `${hoje.getFullYear()}-01-01`)
+      setRelDataFinal(iso(hoje))
+    }
+  }
+
+  async function gerarRelatorioPDF() {
+    if (!portfolio) return
+    setGerandoRelatorio(true)
+    try {
+      gerarRelatorio({
+        nomeCliente: portfolio.nomeCliente,
+        nomePortfolio: portfolio.nome,
+        dataInicial: relDataInicial,
+        dataFinal: relDataFinal,
+        patrimonio,
+        resultado,
+        totalAportes,
+        posicoes: portfolio.posicoes ?? [],
+        precosAtuais,
+        alocacaoPorClasse,
+        dadosRentabilidade,
+      })
+      setModalRelatorio(false)
+    } catch {
+      mostrarToast('❌ Erro ao gerar relatório.')
+    } finally {
+      setGerandoRelatorio(false)
+    }
+  }
 
   function mostrarToast(msg: string) {
     setToast(msg)
@@ -706,7 +757,7 @@ export default function PortfolioDetalhe() {
             <button className="pd-nav-item pd-nav-acao" onClick={abrirModalTransacao}>
               <span>↕️</span><span>Cadastrar transação</span>
             </button>
-            <button className="pd-nav-item pd-nav-acao">
+            <button className="pd-nav-item pd-nav-acao" onClick={() => { aplicarPresetRelatorio('ano_atual'); setModalRelatorio(true) }}>
               <span>📄</span><span>Gerar relatório</span>
             </button>
           </div>
@@ -1259,6 +1310,59 @@ export default function PortfolioDetalhe() {
       )}
       {/* Toast */}
       {toast && <div className="pd-toast">{toast}</div>}
+
+      {/* Modal Gerar Relatório */}
+      {modalRelatorio && (
+        <div className="pd-modal-overlay" onClick={() => setModalRelatorio(false)}>
+          <div className="pd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div className="pd-modal-header">
+              <h3>Gerar relatório para "{portfolio?.nomeCliente}"</h3>
+              <button className="pd-modal-tx-fechar" onClick={() => setModalRelatorio(false)}>✕</button>
+            </div>
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="pd-form-group">
+                <label>Período de análise</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select
+                    className="pd-form-input"
+                    value={relPeriodo}
+                    onChange={e => aplicarPresetRelatorio(e.target.value)}
+                    style={{ flex: 1 }}
+                  >
+                    <option value="mes_atual">Mês atual</option>
+                    <option value="trimestre_atual">Trimestre atual</option>
+                    <option value="ano_atual">Ano atual</option>
+                    <option value="desde_inicio">Desde o início</option>
+                    <option value="personalizado">Personalizado</option>
+                  </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8b949e', fontSize: 13, whiteSpace: 'nowrap' }}>
+                    {new Date(relDataInicial + 'T00:00:00').toLocaleDateString('pt-BR')} – {new Date(relDataFinal + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+                {relPeriodo === 'personalizado' && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    <input type="date" className="pd-form-input" value={relDataInicial} onChange={e => setRelDataInicial(e.target.value)} style={{ flex: 1 }} />
+                    <input type="date" className="pd-form-input" value={relDataFinal} onChange={e => setRelDataFinal(e.target.value)} style={{ flex: 1 }} />
+                  </div>
+                )}
+              </div>
+              <div className="pd-form-group">
+                <label>Formato</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#00B4D8', display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ fontSize: 14 }}>PDF</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button className="pd-btn-secundario" onClick={() => setModalRelatorio(false)}>Cancelar</button>
+                <button className="pd-btn-primario" onClick={gerarRelatorioPDF} disabled={gerandoRelatorio}>
+                  {gerandoRelatorio ? 'Gerando...' : 'Gerar relatório'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal preço manual */}
       {modalPrecoManual && (

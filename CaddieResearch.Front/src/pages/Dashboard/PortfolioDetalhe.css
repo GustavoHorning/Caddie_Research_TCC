@@ -380,3 +380,12 @@
 .pd-form-group input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; color: #e6edf3; font-size: 0.9rem; outline: none; }
 .pd-form-group input:focus { border-color: #00B4D8; }
 .pd-modal-acoes { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.pd-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.pd-modal-header h3 { margin: 0; color: #e6edf3; font-size: 1.05rem; }
+.pd-btn-primario { background: #00B4D8; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.pd-btn-primario:hover { opacity: 0.85; }
+.pd-btn-primario:disabled { opacity: 0.5; cursor: not-allowed; }
+.pd-btn-secundario { background: rgba(255,255,255,0.06); color: #e6edf3; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 20px; font-size: 0.9rem; cursor: pointer; transition: background 0.15s; }
+.pd-btn-secundario:hover { background: rgba(255,255,255,0.1); }
+.pd-form-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; color: #e6edf3; font-size: 0.9rem; outline: none; width: 100%; box-sizing: border-box; }
+.pd-form-input:focus { border-color: #00B4D8; }
