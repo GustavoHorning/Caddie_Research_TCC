@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import api from '../../services/api';
+import SidebarGestor from '../../components/SidebarGestor';
+import TopBar from '../../components/TopBar';
+import '../../components/DashboardLayout.css';
+import './Gestor/PainelGestor.css';
 import './MorningCall.css';
 
 interface Topico {
@@ -15,6 +19,8 @@ function novoTopico(): Topico {
 }
 
 function MorningCallGestor() {
+    const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+
     const [titulo, setTitulo] = useState('');
     const [data, setData] = useState(new Date().toISOString().split('T')[0]);
     const [topicos, setTopicos] = useState<Topico[]>([novoTopico()]);
@@ -120,129 +126,139 @@ function MorningCallGestor() {
     }
 
     return (
-        <div className="mc-page">
-            <div className="mc-container">
-                <div className="mc-header">
-                    <span className="mc-icon">☕</span>
-                    <div>
-                        <h1 className="mc-title">Publicar Morning Call</h1>
-                        <p className="mc-subtitle">Monte o resumo do dia para seus clientes</p>
+        <div className="dashboard-layout">
+            <SidebarGestor activePath="/gestor/morning-call" isOpen={menuMobileAberto} onClose={() => setMenuMobileAberto(false)} />
+            {menuMobileAberto && <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>}
+
+            <TopBar userName="Gestor" onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} />
+
+            <main className="dashboard-main">
+                <div className="gestor-content">
+                    <div className="gestor-header-title" style={{ textAlign: 'center' }}>
+                        <h2>Publicar Morning Call</h2>
+                        <p>Monte o resumo do dia para seus clientes</p>
                     </div>
-                </div>
 
-                {mensagem && (
-                    <div className={`mc-mensagem mc-mensagem-${mensagem.tipo}`}>
-                        {mensagem.texto}
-                    </div>
-                )}
+                    <div className="gestor-card" style={{ marginTop: '32px', maxWidth: '720px', marginLeft: 'auto', marginRight: 'auto' }}>
+                        <div className="mc-page" style={{ background: 'transparent', padding: 0, minHeight: 'auto', marginTop: 0, paddingTop: 0 }}>
+                            <div className="mc-container" style={{ maxWidth: 'none', margin: 0 }}>
+                                {mensagem && (
+                                    <div className={`mc-mensagem mc-mensagem-${mensagem.tipo}`}>
+                                        {mensagem.texto}
+                                    </div>
+                                )}
 
-                <div className="mc-field">
-                    <label>Data</label>
-                    <input
-                        type="date"
-                        value={data}
-                        onChange={e => setData(e.target.value)}
-                    />
-                </div>
-
-                <div className="mc-field">
-                    <label>Título do Morning Call</label>
-                    <input
-                        type="text"
-                        placeholder="Ex: Resumo do mercado — 25 de agosto"
-                        value={titulo}
-                        onChange={e => setTitulo(e.target.value)}
-                    />
-                </div>
-
-                <div className="mc-divider"></div>
-                <div className="mc-section-label">Tópicos de notícia</div>
-
-                {topicos.map((topico, index) => (
-                    <div className="mc-topico" key={index}>
-                        <div className="mc-topico-head">
-                            <span>Tópico {index + 1}</span>
-                            {topicos.length > 1 && (
-                                <button className="mc-remove" onClick={() => removerTopico(index)}>
-                                    Remover
-                                </button>
-                            )}
-                        </div>
-
-                        {/* ---------- Imagem da notícia (upload ou URL) ---------- */}
-                        <div className="mc-imagem-field">
-                            {topico.imagemUrl ? (
-                                <div className="mc-imagem-preview-wrap">
-                                    <img
-                                        src={topico.imagemUrl}
-                                        alt="Prévia da imagem da notícia"
-                                        className="mc-imagem-preview"
+                                <div className="mc-field">
+                                    <label>Data</label>
+                                    <input
+                                        type="date"
+                                        value={data}
+                                        onChange={e => setData(e.target.value)}
                                     />
-                                    <button
-                                        type="button"
-                                        className="mc-imagem-remover"
-                                        onClick={() => removerImagem(index)}
-                                    >
-                                        ✖ Remover imagem
+                                </div>
+
+                                <div className="mc-field">
+                                    <label>Título do Morning Call</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: Resumo do mercado — 25 de agosto"
+                                        value={titulo}
+                                        onChange={e => setTitulo(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="mc-divider"></div>
+                                <div className="mc-section-label">Tópicos de notícia</div>
+
+                                {topicos.map((topico, index) => (
+                                    <div className="mc-topico" key={index}>
+                                        <div className="mc-topico-head">
+                                            <span>Tópico {index + 1}</span>
+                                            {topicos.length > 1 && (
+                                                <button className="mc-remove" onClick={() => removerTopico(index)}>
+                                                    Remover
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* ---------- Imagem da notícia (upload ou URL) ---------- */}
+                                        <div className="mc-imagem-field">
+                                            {topico.imagemUrl ? (
+                                                <div className="mc-imagem-preview-wrap">
+                                                    <img
+                                                        src={topico.imagemUrl}
+                                                        alt="Prévia da imagem da notícia"
+                                                        className="mc-imagem-preview"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="mc-imagem-remover"
+                                                        onClick={() => removerImagem(index)}
+                                                    >
+                                                        ✖ Remover imagem
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <label className="mc-imagem-upload">
+                                                    <span>🖼️ Clique para enviar uma imagem</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/png, image/jpeg, image/webp"
+                                                        style={{ display: 'none' }}
+                                                        onChange={e => handleImagemArquivo(index, e)}
+                                                    />
+                                                </label>
+                                            )}
+
+                                            <div className="mc-imagem-ou">ou</div>
+
+                                            <input
+                                                type="text"
+                                                placeholder="Colar URL de uma imagem (https://...)"
+                                                value={topico.imagemArquivo ? '' : topico.imagemUrl}
+                                                onChange={e => handleImagemUrl(index, e.target.value)}
+                                                disabled={!!topico.imagemArquivo}
+                                            />
+                                        </div>
+
+                                        <input
+                                            type="text"
+                                            placeholder="Título da notícia"
+                                            value={topico.titulo}
+                                            onChange={e => atualizarTopico(index, 'titulo', e.target.value)}
+                                        />
+                                        <textarea
+                                            placeholder="Escreva o resumo da notícia..."
+                                            value={topico.texto}
+                                            onChange={e => atualizarTopico(index, 'texto', e.target.value)}
+                                            rows={3}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Link da notícia original (https://...)"
+                                            value={topico.link}
+                                            onChange={e => atualizarTopico(index, 'link', e.target.value)}
+                                        />
+                                    </div>
+                                ))}
+
+                                <button className="mc-add-topico" onClick={adicionarTopico}>
+                                    + Adicionar tópico
+                                </button>
+
+                                <div className="mc-actions">
+                                    <button className="mc-btn-cancel" onClick={limparFormulario} disabled={enviando}>
+                                        Cancelar
+                                    </button>
+                                    <button className="mc-btn-publish" onClick={publicar} disabled={enviando}>
+                                        {enviando ? 'Publicando...' : 'Publicar Morning Call'}
                                     </button>
                                 </div>
-                            ) : (
-                                <label className="mc-imagem-upload">
-                                    <span>🖼️ Clique para enviar uma imagem</span>
-                                    <input
-                                        type="file"
-                                        accept="image/png, image/jpeg, image/webp"
-                                        style={{ display: 'none' }}
-                                        onChange={e => handleImagemArquivo(index, e)}
-                                    />
-                                </label>
-                            )}
-
-                            <div className="mc-imagem-ou">ou</div>
-
-                            <input
-                                type="text"
-                                placeholder="Colar URL de uma imagem (https://...)"
-                                value={topico.imagemArquivo ? '' : topico.imagemUrl}
-                                onChange={e => handleImagemUrl(index, e.target.value)}
-                                disabled={!!topico.imagemArquivo}
-                            />
+                            </div>
                         </div>
-
-                        <input
-                            type="text"
-                            placeholder="Título da notícia"
-                            value={topico.titulo}
-                            onChange={e => atualizarTopico(index, 'titulo', e.target.value)}
-                        />
-                        <textarea
-                            placeholder="Escreva o resumo da notícia..."
-                            value={topico.texto}
-                            onChange={e => atualizarTopico(index, 'texto', e.target.value)}
-                            rows={3}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Link da notícia original (https://...)"
-                            value={topico.link}
-                            onChange={e => atualizarTopico(index, 'link', e.target.value)}
-                        />
                     </div>
-                ))}
-
-                <button className="mc-add-topico" onClick={adicionarTopico}>
-                    + Adicionar tópico
-                </button>
-
-                <div className="mc-actions">
-                    <button className="mc-btn-cancel" onClick={limparFormulario} disabled={enviando}>
-                        Cancelar
-                    </button>
-                    <button className="mc-btn-publish" onClick={publicar} disabled={enviando}>
-                        {enviando ? 'Publicando...' : 'Publicar Morning Call'}
-                    </button>
                 </div>
-            </div>
+            </main>
         </div>
     );
 }

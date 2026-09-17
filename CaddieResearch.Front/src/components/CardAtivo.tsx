@@ -39,18 +39,20 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                 setCarregando(false);
             }
         };
+
+        async function verificarFavorito() {
+            try {
+                const response = await api.get('/api/favoritos');
+                setFavoritado(response.data.some((f: any) => f.ticker === ticker));
+            } catch (e) {
+                console.error('Erro ao verificar favorito', e);
+            }
+        }
+
         buscarCotacao();
         verificarFavorito();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ticker]);
-
-    async function verificarFavorito() {
-        try {
-            const response = await api.get('/api/favoritos');
-            setFavoritado(response.data.some((f: any) => f.ticker === ticker));
-        } catch (e) {
-            console.error('Erro ao verificar favorito', e);
-        }
-    }
 
     async function toggleFavorito() {
         setLoadingFav(true);
@@ -125,13 +127,9 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                                 onClick={toggleFavorito}
                                 disabled={loadingFav}
                                 title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
-                                style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    fontSize: '16px', padding: '2px', opacity: loadingFav ? 0.5 : 1,
-                                    transition: 'transform 0.15s ease'
-                                }}
+                                className={`btn-favoritar ${favoritado ? 'favoritado' : ''}`}
                             >
-                                {favoritado ? '⭐' : <span style={{ color: '#f1f0ed', opacity: 0.6 }}>★</span>}
+                                ★
                             </button>
                         </div>
                     </h3>

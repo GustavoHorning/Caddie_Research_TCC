@@ -40,24 +40,24 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
                 setCarregando(false);
             }
         };
-        buscarCotacao();
-        verificarFavorito();
-    }, [ticker]);
 
-    async function verificarFavorito() {
-        try {
-            const token = localStorage.getItem('caddie_token');
-            const response = await api.get('/api/favoritos', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            {
+        async function verificarFavorito() {
+            try {
+                const token = localStorage.getItem('caddie_token');
+                const response = await api.get('/api/favoritos', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
                 const data = response.data;
                 setFavoritado(data.some((f: any) => f.ticker === ticker));
+            } catch (e) {
+                console.error('Erro ao verificar favorito', e);
             }
-        } catch (e) {
-            console.error('Erro ao verificar favorito', e);
         }
-    }
+
+        buscarCotacao();
+        verificarFavorito();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ticker]);
 
     async function toggleFavorito() {
         setLoadingFav(true);
@@ -137,13 +137,9 @@ export default function CardInternacional({ ticker, vies, precoTeto, dataEntrada
                                 onClick={toggleFavorito}
                                 disabled={loadingFav}
                                 title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
-                                style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    fontSize: '16px', padding: '2px', opacity: loadingFav ? 0.5 : 1,
-                                    transition: 'transform 0.15s ease'
-                                }}
+                                className={`btn-favoritar ${favoritado ? 'favoritado' : ''}`}
                             >
-                                {favoritado ? '⭐' : <span style={{ color: '#f1f0ed', opacity: 0.6 }}>★</span>}
+                                ★
                             </button>
                         </div>
                     </h3>
