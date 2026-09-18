@@ -27,6 +27,8 @@ public class AppDbContext : DbContext
     public DbSet<MorningCall> MorningCalls { get; set; }
     public DbSet<MorningCallTopico> MorningCallTopicos { get; set; }
     public DbSet<Notificacao> Notificacoes { get; set; }
+    public DbSet<WatchlistAba> WatchlistAbas { get; set; }
+    public DbSet<WatchlistAbaFavorito> WatchlistAbaFavoritos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +56,24 @@ public class AppDbContext : DbContext
             .HasOne(m => m.Gestor)
             .WithMany()
             .HasForeignKey(m => m.GestorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WatchlistAba>()
+            .HasOne(a => a.Usuario)
+            .WithMany()
+            .HasForeignKey(a => a.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<WatchlistAbaFavorito>()
+            .HasOne(i => i.WatchlistAba)
+            .WithMany(a => a.Itens)
+            .HasForeignKey(i => i.WatchlistAbaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<WatchlistAbaFavorito>()
+            .HasOne(i => i.Favorito)
+            .WithMany()
+            .HasForeignKey(i => i.FavoritoId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
