@@ -55,6 +55,16 @@ export default function SidebarGestor({ activePath, isOpen = false, onClose }: S
                         </li>
                         <li>
                             <Link
+                                to="/gestor/morning-call/gerenciar"
+                                onClick={onClose}
+                                className={`sidebar-link ${activePath === '/gestor/morning-call/gerenciar' ? 'active' : ''}`}
+                            >
+                                <span className="sidebar-link-icon">🗂️</span>
+                                <span className="sidebar-link-label">Gerenciar Morning Call</span>
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
                                 to="/gestor/agenda"
                                 onClick={onClose}
                                 className={`sidebar-link ${activePath === '/gestor/agenda' ? 'active' : ''}`}
