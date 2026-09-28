@@ -112,9 +112,7 @@ function MorningCallGestor() {
         });
 
         try {
-            await api.post('/api/morningcall', formData, {
-                headers: { ...configSeguranca.headers, 'Content-Type': 'multipart/form-data' },
-            });
+            await api.post('/api/morningcall', formData, configSeguranca);
             setMensagem({ texto: 'Morning Call publicado com sucesso!', tipo: 'sucesso' });
             limparFormulario();
         } catch (error) {
