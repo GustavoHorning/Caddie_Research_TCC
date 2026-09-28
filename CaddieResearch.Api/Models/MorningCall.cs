@@ -45,7 +45,6 @@ public class MorningCallTopico
     public string Titulo { get; set; } = string.Empty;
 
     [Required]
-    [MaxLength(2000)]
     public string Texto { get; set; } = string.Empty;
 
     [MaxLength(500)]
