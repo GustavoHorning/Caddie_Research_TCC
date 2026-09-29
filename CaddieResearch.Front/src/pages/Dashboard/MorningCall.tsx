@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import './MorningCall.css';
 
@@ -23,6 +24,14 @@ function tempoLeitura(texto: string): string {
     const palavras = texto.trim().split(/\s+/).length;
     const minutos = Math.max(1, Math.round(palavras / 200));
     return `${minutos} min de leitura`;
+}
+
+// Corta o texto em um limite de caracteres, sem quebrar uma palavra ao meio
+function truncarTexto(texto: string, limite = 180): string {
+    if (texto.length <= limite) return texto;
+    const cortado = texto.slice(0, limite);
+    const ultimoEspaco = cortado.lastIndexOf(' ');
+    return cortado.slice(0, ultimoEspaco > 0 ? ultimoEspaco : limite) + '...';
 }
 
 function formatarData(dataIso: string): string {
@@ -136,13 +145,18 @@ function MorningCall() {
                                             {topico.titulo}
                                         </h2>
 
-                                        <p className="mc-noticia-texto">{topico.texto}</p>
+                                        <p className="mc-noticia-texto">{truncarTexto(topico.texto)}</p>
 
-                                        {topico.link && (
-                                            <a className="mc-reader-link" href={topico.link} target="_blank" rel="noopener noreferrer">
-                                                Ler notícia completa &rarr;
-                                            </a>
-                                        )}
+                                        <div className="mc-noticia-acoes">
+                                            <Link to={`/morning-call/noticia/${topico.id}`} className="mc-veja-mais-link">
+                                                Veja mais →
+                                            </Link>
+                                            {topico.link && (
+                                                <a className="mc-reader-link" href={topico.link} target="_blank" rel="noopener noreferrer">
+                                                    Ler notícia completa &rarr;
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 </article>
                             ))}

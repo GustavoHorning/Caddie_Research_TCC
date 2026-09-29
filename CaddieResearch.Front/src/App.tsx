@@ -16,6 +16,7 @@ import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternaci
 import PainelGestor from './pages/Dashboard/Gestor/PainelGestor';
 import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor';
 import MorningCall from './pages/Dashboard/MorningCall';
+import MorningCallNoticia from './pages/Dashboard/MorningCallNoticia';
 import MorningCallGestor from './pages/Dashboard/MorningCallGestor';
 import MorningCallGerenciar from './pages/Dashboard/MorningCallGerenciar';
 import CaixaEntradaGestor from './pages/Dashboard/Gestor/CaixaEntradaGestor';
@@ -57,6 +58,7 @@ function App() {
                     <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/relatorios" element={<Relatorios />} />
                     <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/morning-call/noticia/:id" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCallNoticia /></DashboardLayout></ProtectedRoute>} />
 
                     <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
                     <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
