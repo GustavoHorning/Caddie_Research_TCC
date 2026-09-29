@@ -10,6 +10,7 @@ interface Favorito {
   rentabilidade?: string
   nomeCarteira?: string
   anotacao?: string
+  dataAdicionado?: string
 }
 
 interface Cotacao {
@@ -348,10 +349,13 @@ export default function Watchlist() {
               <div key={f.id} className="wl-card">
                 <div className="wl-card-top">
                   <div className="wl-card-ticker-wrap">
-                    <span className="wl-card-ticker">{f.ticker}</span>
-                    {f.nomeEmpresa && (
-                      <span className="wl-card-nome">{f.nomeEmpresa}</span>
-                    )}
+                    <div className="wl-card-logo-placeholder">{f.ticker.charAt(0)}</div>
+                    <div className="wl-card-ticker-textos">
+                      <span className="wl-card-ticker">{f.ticker}</span>
+                      {f.nomeEmpresa && (
+                        <span className="wl-card-nome">{f.nomeEmpresa}</span>
+                      )}
+                    </div>
                   </div>
                   <button
                     className="wl-card-remove"
@@ -395,6 +399,12 @@ export default function Watchlist() {
                     <span className="wl-card-indisponivel">Cotação indisponível</span>
                   )}
                 </div>
+
+                {f.dataAdicionado && (
+                  <span className="wl-card-data-favoritado">
+                    ⭐ Favoritado em {new Date(f.dataAdicionado).toLocaleDateString('pt-BR')}
+                  </span>
+                )}
 
                 {/* Dentro de uma aba personalizada: botão para remover o ativo dessa aba */}
                 {abaCustomAtiva && (

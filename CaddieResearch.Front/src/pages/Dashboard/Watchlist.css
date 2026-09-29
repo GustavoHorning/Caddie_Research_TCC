@@ -195,7 +195,28 @@
 
 .wl-card-ticker-wrap {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.wl-card-ticker-textos {
+  display: flex;
   flex-direction: column;
+}
+
+.wl-card-logo-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #00B4D8;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 .wl-card-ticker {
@@ -207,6 +228,13 @@
 .wl-card-nome {
   color: #7a90a8;
   font-size: 0.75rem;
+}
+
+.wl-card-data-favoritado {
+  display: block;
+  color: #6e7681;
+  font-size: 0.7rem;
+  margin-top: 6px;
 }
 
 .wl-card-remove {
@@ -250,7 +278,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
+    margin-top: 12px;
 }
 
 .wl-card-preco {
