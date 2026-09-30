@@ -20,6 +20,7 @@ interface Relatorio {
     carteiraId: number;
     carteira?: Carteira;
     dataPublicacao: string;
+    tagsAtivos: string; // Adicionado aqui
 }
 
 export default function RelatoriosGestor() {
@@ -40,6 +41,7 @@ export default function RelatoriosGestor() {
     const [titulo, setTitulo] = useState('');
     const [assunto, setAssunto] = useState('');
     const [conteudoTexto, setConteudoTexto] = useState('');
+    const [tagsAtivos, setTagsAtivos] = useState(''); // Novo Estado
     const [carteiraId, setCarteiraId] = useState<number | string>('');
     const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
     const [loadingForm, setLoadingForm] = useState(false);
@@ -118,6 +120,7 @@ export default function RelatoriosGestor() {
         setTitulo('');
         setAssunto('');
         setConteudoTexto('');
+        setTagsAtivos('');
         if (carteirasLista.length > 0) setCarteiraId(carteirasLista[0].id);
         setArquivoPdf(null);
     };
@@ -127,6 +130,7 @@ export default function RelatoriosGestor() {
         setTitulo(relatorio.titulo);
         setAssunto(relatorio.assunto);
         setConteudoTexto(relatorio.conteudoTexto);
+        setTagsAtivos(relatorio.tagsAtivos || ''); 
         setCarteiraId(relatorio.carteiraId);
         setArquivoPdf(null); 
         setMostrarForm(true);
@@ -156,6 +160,7 @@ export default function RelatoriosGestor() {
         formData.append('titulo', titulo);
         formData.append('assunto', assunto);
         formData.append('conteudoTexto', conteudoTexto);
+        formData.append('tagsAtivos', tagsAtivos); // Enviando nova coluna
         formData.append('carteiraId', carteiraId.toString());
         
         if (arquivoPdf) {
@@ -269,6 +274,18 @@ export default function RelatoriosGestor() {
 
                                             <div className="gestor-campo-row">
                                                 <div className="gestor-campo">
+                                                    <label>Ativos Vinculados (Opcional)</label>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Ex: PETR4, VALE3 (Para cruzar na Auditoria)" 
+                                                        value={tagsAtivos} 
+                                                        onChange={e => setTagsAtivos(e.target.value)} 
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="gestor-campo-row">
+                                                <div className="gestor-campo">
                                                     <label>Conteúdo (Texto Livre)</label>
                                                     <textarea 
                                                         value={conteudoTexto} 
@@ -339,7 +356,7 @@ export default function RelatoriosGestor() {
                                                 <td className="gestor-td-ticker" data-label="Título">
                                                     {rel.titulo}
                                                     <span style={{ display: 'block', fontSize: '11px', color: '#8b949e', fontWeight: 500, marginTop: '4px' }}>
-                                                        {rel.assunto}
+                                                        {rel.assunto} {rel.tagsAtivos ? `| Ativos: ${rel.tagsAtivos}` : ''}
                                                     </span>
                                                 </td>
 

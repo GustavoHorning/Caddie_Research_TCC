@@ -2,9 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using CaddieResearch.Models;
 using CaddieResearch.Api.Data;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
+using System.Security.Claims;
 using CaddieResearch.Api.Services; 
 
 namespace CaddieResearch.Controllers
@@ -21,10 +22,9 @@ namespace CaddieResearch.Controllers
             _context = context;
             _acoesService = acoesService;
         }
-        
-        
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Gestor")]
         public async Task<IActionResult> DeletarAtivo(int id)
         {
             var ativo = await _context.Ativos.FindAsync(id);
@@ -32,6 +32,25 @@ namespace CaddieResearch.Controllers
             if (ativo == null)
             {
                 return NotFound(new { mensagem = "Ativo não encontrado." });
+            }
+
+            // LOG IMUTÁVEL: EXCLUSÃO
+            var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(gestorIdStr, out int gestorId))
+            {
+                var log = new CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira
+                {
+                    CarteiraId = ativo.CarteiraId,
+                    GestorId = gestorId,
+                    Ticker = ativo.Ticker,
+                    NomeAtivo = ativo.NomeEmpresa ?? ativo.Ticker,
+                    Acao = "Excluiu",
+                    Vies = ativo.Vies,
+                    PrecoAlvo = ativo.PrecoTeto ?? 0,
+                    Justificativa = "Ativo removido da carteira pelo gestor.",
+                    DataRecomendacao = DateTime.UtcNow
+                };
+                _context.HistoricoRecomendacoesCarteiras.Add(log);
             }
 
             _context.Ativos.Remove(ativo);
@@ -47,47 +66,69 @@ namespace CaddieResearch.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             
             var jaExiste = _context.Ativos.Any(a => a.Ticker == novoAtivo.Ticker && a.CarteiraId == novoAtivo.CarteiraId);
-            if (jaExiste)
-            {
-                return BadRequest(new { mensagem = $"O ativo {novoAtivo.Ticker} já existe nesta carteira." });
-            }
+            if (jaExiste) return BadRequest(new { mensagem = $"O ativo {novoAtivo.Ticker} já existe nesta carteira." });
 
             if (string.IsNullOrWhiteSpace(novoAtivo.NomeEmpresa))
             {
                 var dadosAtivo = await _acoesService.ObterCotacaoAsync(novoAtivo.Ticker);
-                
-                if (dadosAtivo != null && !string.IsNullOrWhiteSpace(dadosAtivo.Name))
-                {
-                    novoAtivo.NomeEmpresa = dadosAtivo.Name;
-                }
-                else
-                {
-                    novoAtivo.NomeEmpresa = novoAtivo.Ticker; 
-                }
+                novoAtivo.NomeEmpresa = (dadosAtivo != null && !string.IsNullOrWhiteSpace(dadosAtivo.Name)) ? dadosAtivo.Name : novoAtivo.Ticker;
             }
             _context.Ativos.Add(novoAtivo);
-            await _context.SaveChangesAsync();
 
+            // LOG IMUTÁVEL: ADIÇÃO
+            var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(gestorIdStr, out int gestorId))
+            {
+                var log = new CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira
+                {
+                    CarteiraId = novoAtivo.CarteiraId,
+                    GestorId = gestorId,
+                    Ticker = novoAtivo.Ticker,
+                    NomeAtivo = novoAtivo.NomeEmpresa ?? novoAtivo.Ticker,
+                    Acao = "Adicionou",
+                    Vies = novoAtivo.Vies,
+                    PrecoAlvo = novoAtivo.PrecoTeto ?? 0,
+                    Justificativa = "Inclusão inicial na carteira.",
+                    DataRecomendacao = DateTime.UtcNow
+                };
+                _context.HistoricoRecomendacoesCarteiras.Add(log);
+            }
+
+            await _context.SaveChangesAsync();
             return Ok(new { mensagem = "Recomendação publicada com sucesso!", ativo = novoAtivo });
         }
         
         [HttpPut("{id}")]
-        [Authorize] 
+        [Authorize(Roles = "Gestor")] 
         public async Task<IActionResult> AtualizarAtivo(int id, [FromBody] Ativo ativoAtualizado)
         {
-            var role = User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value 
-                       ?? User.FindFirst("Role")?.Value;
-               
-            if (role != "Gestor") return Forbid(); 
-            
             var conflito = _context.Ativos.Any(a => a.Ticker == ativoAtualizado.Ticker && a.CarteiraId == ativoAtualizado.CarteiraId && a.Id != id);
-            if (conflito)
-            {
-                return BadRequest(new { mensagem = "Já existe outro ativo com este ticker nesta carteira." });
-            }
+            if (conflito) return BadRequest(new { mensagem = "Já existe outro ativo com este ticker nesta carteira." });
 
             var ativoBanco = await _context.Ativos.FindAsync(id);
             if (ativoBanco == null) return NotFound();
+
+            // LOG IMUTÁVEL: ATUALIZAÇÃO (se viés ou preço mudarem)
+            if (ativoBanco.Vies != ativoAtualizado.Vies || ativoBanco.PrecoTeto != ativoAtualizado.PrecoTeto)
+            {
+                var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(gestorIdStr, out int gestorId))
+                {
+                    var log = new CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira
+                    {
+                        CarteiraId = ativoAtualizado.CarteiraId,
+                        GestorId = gestorId,
+                        Ticker = ativoAtualizado.Ticker,
+                        NomeAtivo = ativoAtualizado.NomeEmpresa ?? ativoAtualizado.Ticker,
+                        Acao = "Atualizou",
+                        Vies = ativoAtualizado.Vies,
+                        PrecoAlvo = ativoAtualizado.PrecoTeto ?? 0,
+                        Justificativa = "Atualização estratégica de viés ou preço teto.",
+                        DataRecomendacao = DateTime.UtcNow
+                    };
+                    _context.HistoricoRecomendacoesCarteiras.Add(log);
+                }
+            }
 
             ativoBanco.Ticker = ativoAtualizado.Ticker;
             ativoBanco.PrecoTeto = ativoAtualizado.PrecoTeto;
@@ -96,12 +137,10 @@ namespace CaddieResearch.Controllers
             ativoBanco.Rentabilidade = ativoAtualizado.Rentabilidade;
             ativoBanco.Vencimento = ativoAtualizado.Vencimento;
             ativoBanco.Liquidez = ativoAtualizado.Liquidez;
-
             ativoBanco.DataEntrada = ativoAtualizado.DataEntrada;
             ativoBanco.Categoria = ativoAtualizado.Categoria;
 
             await _context.SaveChangesAsync();
-
             return Ok(ativoBanco);
         }
     }

@@ -28,6 +28,7 @@ import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ConfirmarEmail from "./pages/ConfirmarEmail.tsx";
 import Calendario from './pages/Dashboard/Calendario'; 
+import HistoricoAtivos from './pages/Dashboard/HistoricoAtivos';
 
 function App() {
     return (
@@ -51,6 +52,7 @@ function App() {
                 <Route path="/portfolio" element={<ProtectedRoute clientOnly><DashboardLayout><Portfolio /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/relatorios" element={<Relatorios />} />
+                <Route path="/auditoria" element={<ProtectedRoute><DashboardLayout><HistoricoAtivos /></DashboardLayout></ProtectedRoute>} />
                 <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
 
                 <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />

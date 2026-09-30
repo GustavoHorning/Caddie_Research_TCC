@@ -19,6 +19,9 @@ public class Relatorio
     public string? ArquivoPdfUrl { get; set; }
     public string? ConteudoPdfTexto { get; set; }
     
+    // NOVA COLUNA: Para amarrar o relatório aos ativos reais (Ex: "PETR4, WEGE3")
+    public string TagsAtivos { get; set; } = string.Empty;
+    
     [Required]
     public int CarteiraId { get; set; } 
     

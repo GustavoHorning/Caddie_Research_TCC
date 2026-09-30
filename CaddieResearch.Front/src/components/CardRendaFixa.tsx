@@ -62,7 +62,8 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
         }
     }
 
-    async function toggleFavorito() {
+    async function toggleFavorito(e: React.MouseEvent) {
+        e.stopPropagation(); // Impede que o clique na estrela abra o modal de histórico
         setLoadingFav(true);
         try {
             const token = localStorage.getItem('caddie_token');
@@ -172,6 +173,10 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
                     </span>
                 </div>
             )}
+
+            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '11px', color: config.cor, fontWeight: 600 }}>
+                📜 Ver Histórico e Relatórios
+            </div>
         </div>
     );
 }

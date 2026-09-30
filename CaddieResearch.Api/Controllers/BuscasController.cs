@@ -2,6 +2,8 @@ using CaddieResearch.Api.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace CaddieResearch.Api.Controllers;
 
@@ -49,11 +51,13 @@ public class BuscasController : ControllerBase
             }
         }
 
+        // BUSCA EM RELATÓRIOS
         var relatorios = await _context.Relatorios
             .Include(r => r.Carteira)
             .Where(r => 
                 r.Titulo.ToLower().Contains(termo) || 
                 r.Assunto.ToLower().Contains(termo) ||
+                (r.TagsAtivos != null && r.TagsAtivos.ToLower().Contains(termo)) || 
                 (nivelAcessoUsuario >= (r.Carteira != null ? r.Carteira.NivelAcesso : 1) && 
                  (r.ConteudoTexto.ToLower().Contains(termo) || (r.ConteudoPdfTexto != null && r.ConteudoPdfTexto.ToLower().Contains(termo))))
             )
@@ -72,6 +76,7 @@ public class BuscasController : ControllerBase
             })
             .ToListAsync();
 
+        // BUSCA EM ATIVOS
         var ativos = await _context.Ativos
             .Include(a => a.Carteira)
             .Where(a => 
@@ -93,7 +98,34 @@ public class BuscasController : ControllerBase
             })
             .ToListAsync();
 
-        var resultadosMisturados = relatorios.Cast<object>().Concat(ativos.Cast<object>()).ToList();
+        // BUSCA EM AUDITORIA (LOG IMUTÁVEL) - Correção da tradução do LINQ
+        var auditoriasBrutas = await _context.HistoricoRecomendacoesCarteiras
+            .Include(h => h.Carteira)
+            .Where(h => h.Ticker.ToLower().Contains(termo) || h.NomeAtivo.ToLower().Contains(termo))
+            .ToListAsync(); // Traz para a memória primeiro
+
+        var auditorias = auditoriasBrutas
+            .GroupBy(h => h.Ticker)
+            .Select(g => g.OrderByDescending(h => h.DataRecomendacao).First()) // Agrupa na memória do servidor
+            .Select(h => new
+            {
+                id = "auditoria_" + h.Id,
+                realId = h.Id,
+                tipo = "Auditoria",
+                titulo = $"Auditoria de Ativo: {h.Ticker}",
+                tags = new[] { "Auditoria", h.Carteira != null ? h.Carteira.Nome : "Log" },
+                dataPublicacao = h.DataRecomendacao,
+                arquivoPdfUrl = (string)null,
+                url = "/auditoria",
+                carteiraId = h.CarteiraId,
+                nivelExigido = h.Carteira != null ? h.Carteira.NivelAcesso : 1
+            })
+            .ToList();
+
+        var resultadosMisturados = relatorios.Cast<object>()
+            .Concat(ativos.Cast<object>())
+            .Concat(auditorias.Cast<object>())
+            .ToList();
 
         return Ok(resultadosMisturados);
     }

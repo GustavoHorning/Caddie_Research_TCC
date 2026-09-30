@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<Posicao> Posicoes { get; set; }
     public DbSet<Aporte> Aportes { get; set; }
     public DbSet<Recomendacao> Recomendacoes { get; set; }
+    public DbSet<HistoricoRecomendacaoCarteira> HistoricoRecomendacoesCarteiras { get; set; }
     public DbSet<Evento> Eventos { get; set; }
     public DbSet<MorningCall> MorningCalls { get; set; }
     public DbSet<MorningCallTopico> MorningCallTopicos { get; set; }
@@ -53,6 +54,12 @@ public class AppDbContext : DbContext
             .HasOne(m => m.Gestor)
             .WithMany()
             .HasForeignKey(m => m.GestorId)
+            .OnDelete(DeleteBehavior.Restrict);
+            
+        modelBuilder.Entity<HistoricoRecomendacaoCarteira>()
+            .HasOne(h => h.Gestor)
+            .WithMany()
+            .HasForeignKey(h => h.GestorId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

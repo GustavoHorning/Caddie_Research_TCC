@@ -18,9 +18,10 @@ interface CardAtivoProps {
     categoria?: string;
     nomeEmpresa?: string;
     nomeCarteira?: string;
+    onVerHistorico?: () => void;
 }
 
-export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, categoria, nomeEmpresa, nomeCarteira }: CardAtivoProps) {
+export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, categoria, nomeEmpresa, nomeCarteira, onVerHistorico }: CardAtivoProps) {
     const [cotacao, setCotacao] = useState<CotacaoProps | null>(null);
     const [carregando, setCarregando] = useState(true);
     const [imgErro, setImgErro] = useState(false);
@@ -55,7 +56,8 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
         }
     }
 
-    async function toggleFavorito() {
+    async function toggleFavorito(e: React.MouseEvent) {
+        e.stopPropagation(); // Impede que o clique na estrela abra o modal de histórico
         setLoadingFav(true);
         try {
             const token = localStorage.getItem('caddie_token');
@@ -187,6 +189,12 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                             </span>
                         </div>
                     )}
+                </div>
+            )}
+
+            {onVerHistorico && (
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '11px', color: '#00B4D8', fontWeight: 600 }}>
+                    📜 Ver Histórico e Relatórios
                 </div>
             )}
         </div>

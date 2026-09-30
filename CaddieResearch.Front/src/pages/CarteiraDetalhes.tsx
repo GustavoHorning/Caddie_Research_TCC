@@ -7,6 +7,7 @@ import './CarteiraDetalhes.css';
 import CardAtivo from '../components/CardAtivo';
 import CardInternacional from '../components/CardInternacional';
 import CardRendaFixa from '../components/CardRendaFixa';
+import ModalHistoricoCarteira from '../components/ModalHistoricoCarteira';
 
 export default function CarteiraDetalhes() {
     const { id } = useParams();
@@ -15,8 +16,22 @@ export default function CarteiraDetalhes() {
     const [carteira, setCarteira] = useState<any>(null);
     const [carregando, setCarregando] = useState(true);
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+    
+    // Estados para controlar a abertura do modal (Geral da Carteira ou Focado no Ativo)
+    const [modalHistoricoAberto, setModalHistoricoAberto] = useState(false);
+    const [tickerFocoModal, setTickerFocoModal] = useState<string>('Todos');
 
     const [taxasMacro, setTaxasMacro] = useState({ selic: '---', cdi: '---' });
+
+    const abrirHistoricoCarteira = () => {
+        setTickerFocoModal('Todos');
+        setModalHistoricoAberto(true);
+    };
+
+    const abrirHistoricoAtivo = (ticker: string) => {
+        setTickerFocoModal(ticker);
+        setModalHistoricoAberto(true);
+    };
 
     useEffect(() => {
         const token = localStorage.getItem('caddie_token');
@@ -116,6 +131,13 @@ export default function CarteiraDetalhes() {
                                     <div className="detalhes-badge-tipo">Carteira Recomendada</div>
                                     <h1>{carteira.nome}</h1>
                                     <p>Análise estratégica e recomendações atualizadas pelo nosso time de gestão.</p>
+                                    
+                                    <button 
+                                        onClick={abrirHistoricoCarteira}
+                                        style={{ marginTop: '12px', background: 'transparent', border: '1px solid #00B4D8', color: '#00B4D8', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                                    >
+                                        📜 Ver Histórico de Decisões da Carteira
+                                    </button>
                                 </div>
 
                                 <div className="card-rentabilidade-destaque">
@@ -196,8 +218,8 @@ export default function CarteiraDetalhes() {
                             <h2>Ativos Recomendados</h2>
                             <span className="tabela-subtitle">
                                 {isRendaFixaOuFundo
-                                    ? "Taxas, liquidez e recomendações atualizadas"
-                                    : "Preços teto e viés de mercado atualizados"}
+                                    ? "Taxas, liquidez e recomendações atualizadas (Clique em um ativo para ver seu histórico)"
+                                    : "Preços teto e viés de mercado atualizados (Clique em um ativo para ver seu histórico)"}
                             </span>
                         </div>
 
@@ -217,7 +239,13 @@ export default function CarteiraDetalhes() {
                                         if (carteira?.id === 8) tipoCard = 'reserva';
 
                                         return (
-                                            <div key={index} id={`ativo-${ativo.id}`}>
+                                            <div 
+                                                key={index} 
+                                                id={`ativo-${ativo.id}`} 
+                                                onClick={() => abrirHistoricoAtivo(ativo.ticker)}
+                                                style={{ cursor: 'pointer' }}
+                                                title={`Clique para abrir o histórico de ${ativo.ticker}`}
+                                            >
                                                 <CardRendaFixa
                                                     tipo={tipoCard}
                                                     nome={ativo.ticker}
@@ -236,7 +264,13 @@ export default function CarteiraDetalhes() {
 
                                     if (isInternacional) {
                                         return (
-                                            <div key={index} id={`ativo-${ativo.id}`}>
+                                            <div 
+                                                key={index} 
+                                                id={`ativo-${ativo.id}`}
+                                                onClick={() => abrirHistoricoAtivo(ativo.ticker)}
+                                                style={{ cursor: 'pointer' }}
+                                                title={`Clique para abrir o histórico de ${ativo.ticker}`}
+                                            >
                                                 <CardInternacional
                                                     ticker={ativo.ticker}
                                                     vies={ativo.vies}
@@ -250,7 +284,13 @@ export default function CarteiraDetalhes() {
                                     }
 
                                     return (
-                                        <div key={index} id={`ativo-${ativo.id}`}>
+                                        <div 
+                                            key={index} 
+                                            id={`ativo-${ativo.id}`}
+                                            onClick={() => abrirHistoricoAtivo(ativo.ticker)}
+                                            style={{ cursor: 'pointer' }}
+                                            title={`Clique para abrir o histórico de ${ativo.ticker}`}
+                                        >
                                             <CardAtivo
                                                 ticker={ativo.ticker}
                                                 vies={ativo.vies}
@@ -259,6 +299,7 @@ export default function CarteiraDetalhes() {
                                                 categoria={ativo.categoria}
                                                 nomeEmpresa={ativo.nomeEmpresa}
                                                 nomeCarteira={carteira?.nome}
+                                                onVerHistorico={() => abrirHistoricoAtivo(ativo.ticker)}
                                             />
                                         </div>
                                     );
@@ -283,6 +324,16 @@ export default function CarteiraDetalhes() {
 
                 </div>
             </main>
+
+            {/* Modal injetado aqui (abre tanto no modo Geral quanto Focado no Ativo clicado) */}
+            {modalHistoricoAberto && carteira && (
+                <ModalHistoricoCarteira 
+                    carteiraId={carteira.id} 
+                    carteiraNome={carteira.nome} 
+                    tickerInicial={tickerFocoModal}
+                    onClose={() => setModalHistoricoAberto(false)} 
+                />
+            )}
         </div>
     );
 }
