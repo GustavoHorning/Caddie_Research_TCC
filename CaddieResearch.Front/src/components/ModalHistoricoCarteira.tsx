@@ -64,8 +64,12 @@ export default function ModalHistoricoCarteira({ carteiraId, carteiraNome, ticke
     };
 
     const formatarDataHora = (dataIso: string) => {
-        const d = new Date(dataIso);
-        return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        if (!dataIso) return '--/--/----';
+        const isoUtc = dataIso.endsWith('Z') || dataIso.includes('+') ? dataIso : `${dataIso}Z`;
+        const d = new Date(isoUtc);
+        const data = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+        return `${data} às ${hora}`;
     };
 
     const ativosExibidos = tickerSelecionado === 'Todos'

@@ -99,9 +99,11 @@ export default function HistoricoAtivos() {
     };
 
     const formatarDataHora = (dataIso: string) => {
-        const d = new Date(dataIso);
-        const data = d.toLocaleDateString('pt-BR');
-        const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        if (!dataIso) return '--/--/----';
+        const isoUtc = dataIso.endsWith('Z') || dataIso.includes('+') ? dataIso : `${dataIso}Z`;
+        const d = new Date(isoUtc);
+        const data = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
         return `${data} às ${hora}`;
     };
 
