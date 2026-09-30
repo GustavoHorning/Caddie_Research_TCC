@@ -61,24 +61,8 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
         verificarFavorito();
     }, [nome]);
 
-<<<<<<< HEAD
-    async function verificarFavorito() {
-        try {
-            const token = localStorage.getItem('caddie_token');
-            const response = await api.get('/api/favoritos', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setFavoritado(response.data.some((f: any) => f.ticker === nome));
-        } catch (e) {
-            console.error('Erro ao verificar favorito', e);
-        }
-    }
-
     async function toggleFavorito(e: React.MouseEvent) {
         e.stopPropagation(); // Impede que o clique na estrela abra o modal de histórico
-=======
-    async function toggleFavorito() {
->>>>>>> origin/main
         setLoadingFav(true);
         try {
             const token = localStorage.getItem('caddie_token');

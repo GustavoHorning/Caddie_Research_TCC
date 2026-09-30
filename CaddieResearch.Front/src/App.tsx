@@ -1,177 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import './CardAtivo.css';
-import api from '../services/api';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './index.css';
 
-interface CardRendaFixaProps {
-    tipo: 'renda-fixa' | 'fundo' | 'reserva';
-    nome: string;
-    rentabilidade: string;
-    vencimento?: string;
-    liquidez?: string;
-    cnpj?: string;
-    vies?: string;
-    dataEntrada?: string;
-    categoria?: string;
-    nomeCarteira?: string;
-}
+import Home from './pages/Home';
 
-export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, liquidez, cnpj, vies, dataEntrada, categoria, nomeCarteira }: CardRendaFixaProps) {
-    const [favoritado, setFavoritado] = useState(false);
-    const [loadingFav, setLoadingFav] = useState(false);
+import Cadastro from './pages/Cadastro';
+import Login from './pages/Login';
+import Assinaturas from './pages/Assinaturas';
+import Pagamento from './pages/Pagamento';
+import PagamentoSucesso from './pages/PagamentoSucesso';
+import CarteiraDetalhes from './pages/CarteiraDetalhes';
+import Relatorios from './pages/Dashboard/Relatorios';
 
-    const corVies = vies === 'Comprar' || vies === 'Alocar' ? '#10b981' : vies?.includes('Vender') || vies === 'Resgatar' ? '#ef4444' : '#f59e0b';
+import Carteiras from './pages/Dashboard/Carteiras/Carteiras';
+import CarteiraInternacional from './pages/Dashboard/Carteiras/CarteiraInternacional';
+import PainelGestor from './pages/Dashboard/Gestor/PainelGestor';
+import RelatoriosGestor from './pages/Dashboard/RelatoriosGestor';
+import MorningCall from './pages/Dashboard/MorningCall';
+import MorningCallNoticia from './pages/Dashboard/MorningCallNoticia';
+import MorningCallGestor from './pages/Dashboard/MorningCallGestor';
+import MorningCallGerenciar from './pages/Dashboard/MorningCallGerenciar';
+import CaixaEntradaGestor from './pages/Dashboard/Gestor/CaixaEntradaGestor';
+import GerenciarPlano from './pages/Dashboard/GerenciarPlano';
+import Perfil from "./pages/Dashboard/Perfil";
+import Portfolio from './pages/Dashboard/Portfolio';
+import PortfolioDetalhe from './pages/Dashboard/PortfolioDetalhe';
+import Watchlist from './pages/Dashboard/Watchlist';
 
-    let viesExibicao = vies;
-    if (tipo === 'fundo') {
-        viesExibicao = vies === 'Comprar' ? 'Alocar' : vies === 'Vender' ? 'Resgatar' : 'Manter Posição';
-    } else if (tipo === 'renda-fixa' || tipo === 'reserva') {
-        viesExibicao = vies === 'Comprar' ? 'Alocar' : vies === 'Vender' ? 'Vender Antecipado' : 'Aguardar Taxas';
-    }
+import DashboardLayout from './components/DashboardLayout';
+import ProtectedRoute from './components/ProtectedRoute';
+import ConfirmarEmail from "./pages/ConfirmarEmail.tsx";
+import Calendario from './pages/Dashboard/Calendario';
+import GestorAgenda from "./pages/Dashboard/GestorAgenda.tsx";
+import HistoricoAtivos from './pages/Dashboard/HistoricoAtivos';
 
-    const config = {
-        'renda-fixa': {
-            cor: '#3b82f6', bgTag: 'rgba(59, 130, 246, 0.15)', labelTag: 'RENDA FIXA',
-            labelValor: 'Rentabilidade Alvo', valorCor: '#93c5fd', icone: '📈'
-        },
-        'fundo': {
-            cor: '#8b5cf6', bgTag: 'rgba(139, 92, 246, 0.15)', labelTag: 'FUNDO',
-            labelValor: 'Taxa de Adm', valorCor: '#c4b5fd', icone: '🏢'
-        },
-        'reserva': {
-            cor: '#10b981', bgTag: 'rgba(16, 185, 129, 0.15)', labelTag: 'RESERVA',
-            labelValor: 'Rentabilidade', valorCor: '#6ee7b7', icone: '🛡️'
-        }
-    }[tipo];
+import { NotificationProvider } from './contexts/NotificationContext';
 
-    const dataFormatada = dataEntrada ? dataEntrada.substring(0, 10).split('-').reverse().join('/') : '--/--/----';
-    const vencimentoFormatado = vencimento ? vencimento.split('-').reverse().join('/') : 'N/A';
-
-    useEffect(() => {
-        async function verificarFavorito() {
-            try {
-                const token = localStorage.getItem('caddie_token');
-                const response = await api.get('/api/favoritos', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setFavoritado(response.data.some((f: any) => f.ticker === nome));
-            } catch (e) {
-                console.error('Erro ao verificar favorito', e);
-            }
-        }
-        verificarFavorito();
-    }, [nome]);
-
-    async function toggleFavorito(e: React.MouseEvent) {
-        e.stopPropagation(); // Impede que o clique na estrela abra o modal de histórico
-        setLoadingFav(true);
-        try {
-            const token = localStorage.getItem('caddie_token');
-            if (favoritado) {
-                await api.delete(`/api/favoritos/${nome}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setFavoritado(false);
-            } else {
-                await api.post('/api/favoritos', {
-                    ticker: nome,
-                    nomeEmpresa: cnpj || '',
-                    categoria: categoria || tipo,
-                    rentabilidade: rentabilidade || '',
-                    nomeCarteira: nomeCarteira || ''
-                }, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setFavoritado(true);
-            }
-        } catch (e) {
-            console.error('Erro ao favoritar', e);
-        } finally {
-            setLoadingFav(false);
-        }
-    }
-
+function App() {
     return (
-        <div className="card-ativo" style={{ borderTop: `3px solid ${config.cor}` }}>
-            <div className="ativo-header">
-                <div className="ativo-logo-placeholder" style={{ background: config.cor, fontSize: '1.2rem' }}>
-                    {config.icone}
-                </div>
-                <div className="ativo-info" style={{ overflow: 'hidden' }}>
-                    <h3 className="ativo-symbol" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', margin: 0, width: '100%' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {nome ? (nome.length > 22 ? nome.substring(0, 22) + '...' : nome) : 'Ativo'}
-                            <span style={{
-                                fontSize: '9px', background: config.bgTag, color: config.cor,
-                                padding: '2px 6px', borderRadius: '4px', fontWeight: 600,
-                                letterSpacing: '0.5px', flexShrink: 0
-                            }}>
-                                {config.labelTag}
-                            </span>
-                        </span>
-                        <button
-                            onClick={toggleFavorito}
-                            disabled={loadingFav}
-                            title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
-                            className={`btn-favoritar ${favoritado ? 'favoritado' : ''}`}
-                        >
-                            ★
-                        </button>
-                    </h3>
-                    <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>
-                        {tipo === 'fundo' && cnpj ? `CNPJ: ${cnpj}` : (categoria || 'Ativo de Rendimento')}
-                    </span>
-                </div>
-            </div>
+        <BrowserRouter>
+            <NotificationProvider>
+                <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/cadastro" element={<Cadastro />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/planos" element={<Assinaturas />} />
+                    <Route path="/confirmar-email" element={<ConfirmarEmail />} />
+                    <Route path="/pagamento-sucesso" element={<PagamentoSucesso />} />
 
-            <div className="ativo-realtime" style={{ marginTop: '16px' }}>
-                <span className="preco-label" style={{ color: '#8b949e', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
-                    {config.labelValor}
-                </span>
-                <div className="ativo-price" style={{ color: config.valorCor, fontWeight: 'bold', fontSize: '1.4rem', marginTop: '4px' }}>
-                    {rentabilidade || '--'}
-                </div>
+                    <Route path="/home" element={<ProtectedRoute clientOnly><DashboardLayout /></ProtectedRoute>} />
+                    <Route path="/carteiras" element={<ProtectedRoute clientOnly><Carteiras /></ProtectedRoute>} />
+                    <Route path="/carteiras/:id" element={<ProtectedRoute clientOnly><CarteiraDetalhes /></ProtectedRoute>} />
+                    <Route path="/carteiras/internacional" element={<ProtectedRoute clientOnly><CarteiraInternacional /></ProtectedRoute>} />
+                    <Route path="/pagamento" element={<ProtectedRoute clientOnly><Pagamento /></ProtectedRoute>} />
+                    <Route path="/gerenciar-plano" element={<ProtectedRoute clientOnly><GerenciarPlano /></ProtectedRoute>} />
+                    <Route path="/home/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+                    <Route path="/watchlist" element={<ProtectedRoute clientOnly><DashboardLayout><Watchlist /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/portfolio" element={<ProtectedRoute clientOnly><DashboardLayout><Portfolio /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/relatorios" element={<Relatorios />} />
+                    <Route path="/auditoria" element={<ProtectedRoute><DashboardLayout><HistoricoAtivos /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/morning-call/noticia/:id" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCallNoticia /></DashboardLayout></ProtectedRoute>} />
 
-                <div style={{ fontSize: '12px', color: '#6e7681', marginTop: '16px', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
-                    <div>
-                        <span style={{ color: '#8b949e', fontSize: '10px', display: 'block', marginBottom: '2px', fontWeight: 600 }}>LIQUIDEZ</span>
-                        <strong style={{ color: tipo === 'reserva' ? '#10b981' : '#e6edf3' }}>{liquidez || 'N/A'}</strong>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                        {tipo !== 'fundo' ? (
-                            <>
-                                <span style={{ color: '#8b949e', fontSize: '10px', display: 'block', marginBottom: '2px', fontWeight: 600 }}>VENCIMENTO</span>
-                                <strong style={{ color: '#e6edf3' }}>{vencimentoFormatado}</strong>
-                            </>
-                        ) : (
-                            <>
-                                <span style={{ color: '#8b949e', fontSize: '10px', display: 'block', marginBottom: '2px', fontWeight: 600 }}>CATEGORIA</span>
-                                <strong style={{ color: '#e6edf3' }}>{categoria || 'Fundo'}</strong>
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                <div style={{ fontSize: '11px', color: '#8b949e', marginTop: '12px', textAlign: 'center', backgroundColor: 'rgba(0,0,0,0.2)', padding: '6px', borderRadius: '6px' }}>
-                    Recomendado em: <strong style={{color: '#e6edf3'}}>{dataFormatada}</strong>
-                </div>
-            </div>
-
-            {vies && (
-                <div className="ativo-recomendacao" style={{ marginTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                    <span style={{ color: '#8b949e', fontWeight: 500 }}>Recomendação:</span>
-                    <span style={{
-                        backgroundColor: corVies, color: 'white', padding: '4px 12px',
-                        borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px',
-                        boxShadow: `0 0 10px ${corVies}40`
-                    }}>
-                        {viesExibicao}
-                    </span>
-                </div>
-            )}
-
-            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center', fontSize: '11px', color: config.cor, fontWeight: 600 }}>
-                📜 Ver Histórico e Relatórios
-            </div>
-        </div>
-    );
+                    <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/relatorios" element={<ProtectedRoute roleRequired="Gestor"><RelatoriosGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/morning-call" element={<ProtectedRoute roleRequired="Gestor"><MorningCallGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/morning-call/gerenciar" element={<ProtectedRoute roleRequired="Gestor"><MorningCallGerenciar /></ProtectedRoute>} />
+                    <Route path="/calendario" element={<ProtectedRoute clientOnly><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/gestor/agenda" element={<ProtectedRoute roleRequired="Gestor"><GestorAgenda /></ProtectedRoute>} />
+                </Routes>
+            </NotificationProvider>
+        </BrowserRouter>
+    )
 }
+
+export default App;
