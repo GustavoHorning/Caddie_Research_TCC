@@ -32,18 +32,30 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
         const buscarCotacao = async () => {
             try {
                 setCarregando(true);
-                const response = await api.get(`/api/acoes/cotacao/${ticker}`);
-                setCotacao(response.data);
+                const res = await api.get(`/api/acoes/cotacao/${ticker}`);
+                setCotacao(res.data);
             } catch (error) {
                 console.error(`Erro ao buscar ${ticker}:`, error);
             } finally {
                 setCarregando(false);
             }
         };
+
+        async function verificarFavorito() {
+            try {
+                const response = await api.get('/api/favoritos');
+                setFavoritado(response.data.some((f: any) => f.ticker === ticker));
+            } catch (e) {
+                console.error('Erro ao verificar favorito', e);
+            }
+        }
+
         buscarCotacao();
         verificarFavorito();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ticker]);
 
+<<<<<<< HEAD
     async function verificarFavorito() {
         try {
             const token = localStorage.getItem('caddie_token');
@@ -58,13 +70,13 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
 
     async function toggleFavorito(e: React.MouseEvent) {
         e.stopPropagation(); // Impede que o clique na estrela abra o modal de histórico
+=======
+    async function toggleFavorito() {
+>>>>>>> origin/main
         setLoadingFav(true);
         try {
-            const token = localStorage.getItem('caddie_token');
             if (favoritado) {
-                await api.delete(`/api/favoritos/${ticker}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.delete(`/api/favoritos/${ticker}`);
                 setFavoritado(false);
             } else {
                 await api.post('/api/favoritos', {
@@ -72,8 +84,6 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                     nomeEmpresa: nomeEmpresa || cotacao?.shortName || '',
                     categoria: categoria || '',
                     nomeCarteira: nomeCarteira || ''
-                }, {
-                    headers: { Authorization: `Bearer ${token}` }
                 });
                 setFavoritado(true);
             }
@@ -135,13 +145,9 @@ export default function CardAtivo({ ticker, vies, precoTeto, dataEntrada, catego
                                 onClick={toggleFavorito}
                                 disabled={loadingFav}
                                 title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
-                                style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    fontSize: '16px', padding: '2px', opacity: loadingFav ? 0.5 : 1,
-                                    transition: 'transform 0.15s ease'
-                                }}
+                                className={`btn-favoritar ${favoritado ? 'favoritado' : ''}`}
                             >
-                                {favoritado ? '⭐' : <span style={{ color: '#f1f0ed', opacity: 0.6 }}>★</span>}
+                                ★
                             </button>
                         </div>
                     </h3>

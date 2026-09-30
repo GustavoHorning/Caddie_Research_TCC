@@ -65,4 +65,28 @@ public class MercadoController : ControllerBase
             return StatusCode(500, ex.Message);
         }
     }
+
+    [HttpGet("cdi")]
+    public async Task<IActionResult> GetCdi([FromQuery] string? dataInicial, [FromQuery] string? dataFinal)
+    {
+        // dataInicial e dataFinal no formato dd/MM/yyyy
+        string url;
+        if (!string.IsNullOrWhiteSpace(dataInicial) && !string.IsNullOrWhiteSpace(dataFinal))
+            url = $"https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial={dataInicial}&dataFinal={dataFinal}";
+        else
+            url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json";
+
+        try
+        {
+            var res = await _http.GetAsync(url);
+            var body = await res.Content.ReadAsStringAsync();
+            if (!res.IsSuccessStatusCode)
+                return StatusCode((int)res.StatusCode, body);
+            return Content(body, "application/json");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
+    }
 }

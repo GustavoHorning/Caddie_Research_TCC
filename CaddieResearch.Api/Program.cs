@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using CaddieResearch.Api.Hubs;
+using CaddieResearch.Api.Workers;
 using SeuProjeto.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,24 +48,48 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notificacoes"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:5173", 
+                "https://ashy-flower-0221f7b10.7.azurestaticapps.net" 
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); 
+    });
 });
 
 builder.Services.AddHostedService<CaddieResearch.Api.Workers.MacroCalendarioWorker>();
-builder.Services.AddHostedService<CaddieResearch.Api.Workers.BalancoCalendarioWorker>();
+builder.Services.AddHostedService<BalancoCalendarioWorker>();
+builder.Services.AddSignalR();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("CorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notificacoes");
 
 app.Run();

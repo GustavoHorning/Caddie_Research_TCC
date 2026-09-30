@@ -67,6 +67,37 @@ public class PortfolioController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpPost]
+    public async Task<IActionResult> CriarPortfolio([FromBody] CriarPortfolioRequest req)
+    {
+        var usuarioId = GetUsuarioId();
+        if (usuarioId == 0) return Unauthorized();
+
+        var portfolio = new Portfolio
+        {
+            UsuarioId = usuarioId,
+            Nome = req.Nome,
+            DataInicio = req.DataInicio ?? DateTime.UtcNow
+        };
+        _context.Portfolios.Add(portfolio);
+        await _context.SaveChangesAsync();
+
+        if (req.AporteInicial.HasValue && req.AporteInicial.Value > 0)
+        {
+            _context.Aportes.Add(new Aporte
+            {
+                PortfolioId = portfolio.Id,
+                Valor = req.AporteInicial.Value,
+                Descricao = "Aporte inicial",
+                DataAporte = req.DataInicio ?? DateTime.UtcNow,
+                DataRegistro = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok(new { portfolio.Id, portfolio.Nome });
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPortfolio(int id)
     {
@@ -153,4 +184,11 @@ public class PosicaoDto
     public decimal Quantidade { get; set; }
     public decimal PrecoMedio { get; set; }
     public DateTime? DataEntrada { get; set; }
+}
+
+public class CriarPortfolioRequest
+{
+    public string Nome { get; set; } = "Portfólio Inicial";
+    public DateTime? DataInicio { get; set; }
+    public decimal? AporteInicial { get; set; }
 }

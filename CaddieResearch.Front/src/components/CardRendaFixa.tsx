@@ -47,9 +47,21 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
     const vencimentoFormatado = vencimento ? vencimento.split('-').reverse().join('/') : 'N/A';
 
     useEffect(() => {
+        async function verificarFavorito() {
+            try {
+                const token = localStorage.getItem('caddie_token');
+                const response = await api.get('/api/favoritos', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setFavoritado(response.data.some((f: any) => f.ticker === nome));
+            } catch (e) {
+                console.error('Erro ao verificar favorito', e);
+            }
+        }
         verificarFavorito();
     }, [nome]);
 
+<<<<<<< HEAD
     async function verificarFavorito() {
         try {
             const token = localStorage.getItem('caddie_token');
@@ -64,6 +76,9 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
 
     async function toggleFavorito(e: React.MouseEvent) {
         e.stopPropagation(); // Impede que o clique na estrela abra o modal de histórico
+=======
+    async function toggleFavorito() {
+>>>>>>> origin/main
         setLoadingFav(true);
         try {
             const token = localStorage.getItem('caddie_token');
@@ -113,13 +128,9 @@ export default function CardRendaFixa({ tipo, nome, rentabilidade, vencimento, l
                             onClick={toggleFavorito}
                             disabled={loadingFav}
                             title={favoritado ? 'Remover da watchlist' : 'Adicionar à watchlist'}
-                            style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                fontSize: '16px', padding: '2px', opacity: loadingFav ? 0.5 : 1,
-                                transition: 'transform 0.15s ease', flexShrink: 0
-                            }}
+                            className={`btn-favoritar ${favoritado ? 'favoritado' : ''}`}
                         >
-                            {favoritado ? '⭐' : <span style={{ color: '#f1f0ed', opacity: 0.6 }}>★</span>}
+                            ★
                         </button>
                     </h3>
                     <span className="ativo-name" style={{ color: '#8b949e', fontSize: '0.8rem' }}>

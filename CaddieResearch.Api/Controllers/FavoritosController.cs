@@ -94,6 +94,14 @@ public class FavoritosController : ControllerBase
         if (favorito == null)
             return NotFound();
 
+        // Como o favorito pode estar em uma ou mais abas personalizadas, remove
+        // esses vínculos primeiro (a FK não é mais em cascata para essa relação)
+        var vinculos = await _context.WatchlistAbaFavoritos
+            .Where(v => v.FavoritoId == favorito.Id)
+            .ToListAsync();
+        if (vinculos.Count > 0)
+            _context.WatchlistAbaFavoritos.RemoveRange(vinculos);
+
         _context.Favoritos.Remove(favorito);
         await _context.SaveChangesAsync();
 

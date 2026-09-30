@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CaddieResearch.Api.Models;
 
@@ -32,7 +33,7 @@ public class Evento
     [MaxLength(5)]
     public string Pais { get; set; } = "BR";
 
-    [MaxLength(1000)]
+    [Column(TypeName = "nvarchar(max)")]
     public string? Descricao { get; set; }
 
     [MaxLength(255)]

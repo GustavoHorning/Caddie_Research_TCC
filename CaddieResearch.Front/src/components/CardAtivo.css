@@ -104,3 +104,34 @@
     justify-content: center;
     color: #8b949e;
 }
+
+/* Botão de favoritar (estrela) */
+.btn-favoritar {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px;
+    color: rgba(255, 255, 255, 0.35);
+    transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.btn-favoritar:hover {
+    color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.1);
+}
+
+.btn-favoritar.favoritado {
+    color: #ffffff;
+}
+
+.btn-favoritar.favoritado:hover {
+    color: #ffffff;
+    opacity: 0.85;
+}
+
+.btn-favoritar:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none;
+}

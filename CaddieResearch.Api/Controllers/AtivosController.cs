@@ -7,6 +7,11 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using CaddieResearch.Api.Services; 
+using Microsoft.AspNetCore.SignalR;
+using CaddieResearch.Api.Hubs;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using CaddieResearch.Api.Models;
 
 namespace CaddieResearch.Controllers
 {
@@ -16,11 +21,13 @@ namespace CaddieResearch.Controllers
     {
         private readonly AppDbContext _context;
         private readonly AcoesService _acoesService;
+        private readonly IHubContext<NotificationHub> _hubContext; 
 
-        public AtivosController(AppDbContext context, AcoesService acoesService)
+        public AtivosController(AppDbContext context, AcoesService acoesService, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
             _acoesService = acoesService;
+            _hubContext = hubContext; 
         }
 
         [HttpDelete("{id}")]
@@ -33,6 +40,9 @@ namespace CaddieResearch.Controllers
             {
                 return NotFound(new { mensagem = "Ativo não encontrado." });
             }
+
+            int carteiraId = ativo.CarteiraId;
+            string ticker = ativo.Ticker;
 
             // LOG IMUTÁVEL: EXCLUSÃO
             var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -56,6 +66,12 @@ namespace CaddieResearch.Controllers
             _context.Ativos.Remove(ativo);
             await _context.SaveChangesAsync();
 
+            await DispararNotificacaoCarteiraAsync(
+                carteiraId, 
+                $"⚠️ Ativo Removido da Carteira", 
+                $"O ativo {ticker} encerrou sua tese e foi removido da carteira pelo Gestor."
+            );
+
             return Ok(new { mensagem = "Ativo removido com sucesso!" });
         }
 
@@ -71,8 +87,10 @@ namespace CaddieResearch.Controllers
             if (string.IsNullOrWhiteSpace(novoAtivo.NomeEmpresa))
             {
                 var dadosAtivo = await _acoesService.ObterCotacaoAsync(novoAtivo.Ticker);
-                novoAtivo.NomeEmpresa = (dadosAtivo != null && !string.IsNullOrWhiteSpace(dadosAtivo.Name)) ? dadosAtivo.Name : novoAtivo.Ticker;
+                novoAtivo.NomeEmpresa = (dadosAtivo != null && !string.IsNullOrWhiteSpace(dadosAtivo.Name)) 
+                                        ? dadosAtivo.Name : novoAtivo.Ticker;
             }
+            
             _context.Ativos.Add(novoAtivo);
 
             // LOG IMUTÁVEL: ADIÇÃO
@@ -95,6 +113,13 @@ namespace CaddieResearch.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            await DispararNotificacaoCarteiraAsync(
+                novoAtivo.CarteiraId, 
+                $"🚨 Novo Ativo Adicionado", 
+                $"O Gestor adicionou {novoAtivo.Ticker} na carteira. Confira a tese de investimentos!"
+            );
+
             return Ok(new { mensagem = "Recomendação publicada com sucesso!", ativo = novoAtivo });
         }
         
@@ -141,7 +166,81 @@ namespace CaddieResearch.Controllers
             ativoBanco.Categoria = ativoAtualizado.Categoria;
 
             await _context.SaveChangesAsync();
+
+            await DispararNotificacaoCarteiraAsync(
+                ativoAtualizado.CarteiraId, 
+                $"🔄 Recomendação Atualizada", 
+                $"O Gestor alterou os parâmetros e o racional do ativo {ativoAtualizado.Ticker}. Confira as mudanças."
+            );
+
             return Ok(ativoBanco);
+        }
+
+        private async Task DispararNotificacaoCarteiraAsync(int carteiraId, string titulo, string mensagem)
+        {
+            try
+            {
+                var carteira = await _context.Carteiras.FindAsync(carteiraId);
+                if (carteira == null) return;
+
+                TimeZoneInfo fusoBrasilia;
+                try 
+                {
+                    fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time");
+                } 
+                catch 
+                {
+                    fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+                }
+                DateTime horaBrasilia = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, fusoBrasilia);
+
+                var planosPermitidos = new List<string>();
+
+                if (carteira.NivelAcesso <= 1) planosPermitidos.AddRange(new[] { "Basic", "Premium", "Black" });
+                else if (carteira.NivelAcesso <= 2) planosPermitidos.AddRange(new[] { "Premium", "Black" });
+                else planosPermitidos.Add("Black");
+
+                var usuariosAlvoIds = await _context.Usuarios
+                    .Where(u => u.TipoPerfil == "Gestor" || 
+                                _context.Assinaturas.Any(a => a.UsuarioId == u.Id 
+                                                           && a.Status == "Ativo" 
+                                                           && planosPermitidos.Contains(a.PlanoNome)))
+                    .Select(u => u.Id)
+                    .Distinct()
+                    .ToListAsync();
+
+                var novasNotificacoes = new List<Notificacao>();
+
+                foreach (var usuarioId in usuariosAlvoIds)
+                {
+                    novasNotificacoes.Add(new Notificacao
+                    {
+                        UsuarioId = usuarioId,
+                        Titulo = titulo,
+                        Mensagem = mensagem,
+                        Tipo = "Trade",
+                        LinkDestino = $"/carteiras/{carteira.Id}", 
+                        Lida = false,
+                        DataCriacao = horaBrasilia 
+                    });
+                }
+
+                if (novasNotificacoes.Any())
+                {
+                    _context.Notificacoes.AddRange(novasNotificacoes);
+                    await _context.SaveChangesAsync();
+
+                    foreach (var notif in novasNotificacoes)
+                    {
+                        await _hubContext.Clients.Group($"User_{notif.UsuarioId}")
+                                         .SendAsync("ReceberNotificacao", notif);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao disparar notificação centralizada: {ex.Message}");
+            }
         }
     }
 }

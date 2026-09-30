@@ -91,19 +91,16 @@ export default function CaixaEntradaGestor() {
     }
   }
 
-  // Scroll automático
   useEffect(() => {
     mensagensEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [mensagens])
 
-  // Carrega conversas ao abrir
   useEffect(() => {
     carregarConversas()
     const interval = setInterval(carregarConversas, 5000)
     return () => clearInterval(interval)
   }, [])
 
-  // Carrega mensagens ao selecionar conversa
   useEffect(() => {
     if (!conversaSelecionada) return
     carregarMensagens(conversaSelecionada.id)
@@ -115,7 +112,6 @@ export default function CaixaEntradaGestor() {
     if (!conversaSelecionada || !recForm.ticker || !recForm.quantidade || !recForm.precoSugerido) return
     setEnviandoRec(true)
     try {
-      // Busca clienteId via conversa
       const clienteRes = await api.get('/api/recomendacoes/clientes', { headers })
       const clientes: any[] = clienteRes.data
       const cliente = clientes.find((c: any) => c.email === conversaSelecionada.emailCliente)
@@ -132,7 +128,6 @@ export default function CaixaEntradaGestor() {
         origem: 'Chat'
       }, { headers })
 
-      // Envia mensagem informando a recomendação no chat
       await api.post(`/api/chat/${conversaSelecionada.id}/mensagem`, {
         conteudo: `👍 Recomendação enviada: ${recForm.ticker} (${recForm.nomeAtivo}) — ${recForm.quantidade} unidades a R$ ${recForm.precoSugerido}${recForm.descricao ? '. Tese: ' + recForm.descricao : ''}. Acesse "Recomendações" no seu portfólio para aceitar ou recusar.`
       }, { headers })
@@ -162,7 +157,6 @@ export default function CaixaEntradaGestor() {
       <main className="dashboard-main">
         <div className={`caixa-container ${conversaSelecionada ? 'mostrando-chat' : ''}`}>
 
-          {/* ── LISTA DE CONVERSAS ── */}
           <div className="caixa-lista">
             <div className="caixa-lista-header">
               <h3>Caixa de Entrada</h3>
@@ -210,7 +204,6 @@ export default function CaixaEntradaGestor() {
             )}
           </div>
 
-          {/* ── CHAT ── */}
           <div className="caixa-chat">
             {!conversaSelecionada ? (
               <div className="caixa-chat-vazio">
@@ -301,7 +294,6 @@ export default function CaixaEntradaGestor() {
         </div>
       </main>
 
-      {/* Modal Recomendar Ativo via Chat */}
       {modalRec && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setModalRec(false)}>
           <div style={{ background: '#161b22', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: 28, width: 460, display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
