@@ -4,6 +4,7 @@ using CaddieResearch.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CaddieResearch.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260909234801_AdicionaTagsRelatorios")]
+    partial class AdicionaTagsRelatorios
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -150,7 +153,8 @@ namespace CaddieResearch.Api.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Descricao")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("Impacto")
                         .HasColumnType("int");
@@ -376,7 +380,8 @@ namespace CaddieResearch.Api.Migrations
 
                     b.Property<string>("Texto")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("Titulo")
                         .IsRequired()
@@ -388,43 +393,6 @@ namespace CaddieResearch.Api.Migrations
                     b.HasIndex("MorningCallId");
 
                     b.ToTable("MorningCallTopicos");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.Notificacao", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("Lida")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("LinkDestino")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Mensagem")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Notificacoes");
                 });
 
             modelBuilder.Entity("CaddieResearch.Api.Models.Portfolio", b =>
@@ -690,55 +658,6 @@ namespace CaddieResearch.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Usuarios");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.WatchlistAba", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("WatchlistAbas");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.WatchlistAbaFavorito", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("FavoritoId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("WatchlistAbaId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FavoritoId");
-
-                    b.HasIndex("WatchlistAbaId");
-
-                    b.ToTable("WatchlistAbaFavoritos");
                 });
 
             modelBuilder.Entity("CaddieResearch.Models.Ativo", b =>
@@ -1013,36 +932,6 @@ namespace CaddieResearch.Api.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("CaddieResearch.Api.Models.WatchlistAba", b =>
-                {
-                    b.HasOne("CaddieResearch.Api.Models.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.WatchlistAbaFavorito", b =>
-                {
-                    b.HasOne("CaddieResearch.Api.Models.Favorito", "Favorito")
-                        .WithMany()
-                        .HasForeignKey("FavoritoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("CaddieResearch.Api.Models.WatchlistAba", "WatchlistAba")
-                        .WithMany("Itens")
-                        .HasForeignKey("WatchlistAbaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Favorito");
-
-                    b.Navigation("WatchlistAba");
-                });
-
             modelBuilder.Entity("CaddieResearch.Models.Ativo", b =>
                 {
                     b.HasOne("CaddieResearch.Models.Carteira", "Carteira")
@@ -1072,11 +961,6 @@ namespace CaddieResearch.Api.Migrations
             modelBuilder.Entity("CaddieResearch.Api.Models.Usuario", b =>
                 {
                     b.Navigation("Assinaturas");
-                });
-
-            modelBuilder.Entity("CaddieResearch.Api.Models.WatchlistAba", b =>
-                {
-                    b.Navigation("Itens");
                 });
 
             modelBuilder.Entity("CaddieResearch.Models.Carteira", b =>

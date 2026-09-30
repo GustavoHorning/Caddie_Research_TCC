@@ -31,13 +31,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ConfirmarEmail from "./pages/ConfirmarEmail.tsx";
 import Calendario from './pages/Dashboard/Calendario';
 import GestorAgenda from "./pages/Dashboard/GestorAgenda.tsx";
+import HistoricoAtivos from './pages/Dashboard/HistoricoAtivos';
 
 import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
     return (
-            <BrowserRouter>
-                <NotificationProvider>
+        <BrowserRouter>
+            <NotificationProvider>
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/cadastro" element={<Cadastro />} />
@@ -57,6 +58,7 @@ function App() {
                     <Route path="/portfolio" element={<ProtectedRoute clientOnly><DashboardLayout><Portfolio /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/relatorios" element={<Relatorios />} />
+                    <Route path="/auditoria" element={<ProtectedRoute><DashboardLayout><HistoricoAtivos /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/morning-call/noticia/:id" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCallNoticia /></DashboardLayout></ProtectedRoute>} />
 
@@ -68,9 +70,8 @@ function App() {
                     <Route path="/calendario" element={<ProtectedRoute clientOnly><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/gestor/agenda" element={<ProtectedRoute roleRequired="Gestor"><GestorAgenda /></ProtectedRoute>} />
                 </Routes>
-                </NotificationProvider>
-            </BrowserRouter>
-        
+            </NotificationProvider>
+        </BrowserRouter>
     )
 }
 

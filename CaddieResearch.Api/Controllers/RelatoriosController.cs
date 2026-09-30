@@ -41,6 +41,7 @@ public class RelatoriosController : ControllerBase
                 r.Titulo,
                 r.Assunto,
                 r.ConteudoTexto,
+                r.TagsAtivos,
                 r.ArquivoPdfUrl,
                 r.CarteiraId,
                 r.Carteira,
@@ -52,7 +53,7 @@ public class RelatoriosController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Post([FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] int carteiraId, IFormFile? arquivoPdf)
+    public async Task<IActionResult> Post([FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] string? tagsAtivos, [FromForm] int carteiraId, IFormFile? arquivoPdf)
     {
         string? pdfUrl = null;
         string? pdfTextoExtraido = null;
@@ -68,6 +69,7 @@ public class RelatoriosController : ControllerBase
             Titulo = titulo,
             Assunto = assunto,
             ConteudoTexto = conteudoTexto ?? "",
+            TagsAtivos = tagsAtivos ?? "",
             CarteiraId = carteiraId,
             ArquivoPdfUrl = pdfUrl,
             ConteudoPdfTexto = pdfTextoExtraido 
@@ -86,7 +88,7 @@ public class RelatoriosController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] int carteiraId, IFormFile? arquivoPdf)
+    public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] string? tagsAtivos, [FromForm] int carteiraId, IFormFile? arquivoPdf)
     {
         var relatorio = await _context.Relatorios.FindAsync(id);
         if (relatorio == null) return NotFound();
@@ -94,6 +96,7 @@ public class RelatoriosController : ControllerBase
         relatorio.Titulo = titulo;
         relatorio.Assunto = assunto;
         relatorio.ConteudoTexto = conteudoTexto ?? "";
+        relatorio.TagsAtivos = tagsAtivos ?? "";
         relatorio.CarteiraId = carteiraId;
 
         if (arquivoPdf != null)

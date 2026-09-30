@@ -105,7 +105,10 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
     const handleOpenResult = (item: any) => {
         const temAcesso = nivelAcessoUsuario >= item.nivelExigido;
 
-        if (item.tipo === 'Relatório') {
+        if (item.tipo === 'Auditoria') {
+            const tickerExtraido = item.titulo.replace('Auditoria de Ativo: ', '').trim();
+            navigate(`/auditoria?busca=${encodeURIComponent(tickerExtraido)}&foco=${encodeURIComponent(tickerExtraido)}`);
+        } else if (item.tipo === 'Relatório') {
             navigate(`/relatorios?highlight=${item.realId}`);
         } else {
             if (temAcesso) {
@@ -133,7 +136,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="search-filters">
-                    {['Todos', 'Relatório', 'Ação', 'FII', 'Renda Fixa'].map(filtro => (
+                    {['Todos', 'Relatório', 'Ação', 'FII', 'Renda Fixa', 'Auditoria'].map(filtro => (
                         <button
                             key={filtro}
                             className={`filter-chip ${filtroAtivo === filtro ? 'active' : ''}`}
@@ -185,7 +188,7 @@ export default function GlobalSearch({ onClose }: { onClose: () => void }) {
                     ) : (
                         <div className="search-empty-state">
                             <span>Nenhum resultado encontrado para "{termoDebounced}".</span>
-                            <p style={{fontSize: '0.8rem', marginTop: '8px', opacity: 0.5}}>A busca inteligente pesquisa em relatórios, PDFs e todos os ativos cadastrados.</p>
+                            <p style={{fontSize: '0.8rem', marginTop: '8px', opacity: 0.5}}>A busca inteligente pesquisa em relatórios, PDFs, ativos e logs de auditoria.</p>
                         </div>
                     )}
                 </div>

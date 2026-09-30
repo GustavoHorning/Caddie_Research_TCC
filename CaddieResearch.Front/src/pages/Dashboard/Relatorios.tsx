@@ -17,6 +17,7 @@ interface Relatorio {
     titulo: string;
     assunto: string;
     conteudoTexto: string;
+    tagsAtivos?: string;
     arquivoPdfUrl: string | null;
     carteira?: Carteira;
     dataPublicacao: string;
@@ -39,7 +40,6 @@ export default function Relatorios() {
     const [viewerTitulo, setViewerTitulo] = useState('');
 
     const navigate = useNavigate();
-
     const location = useLocation();
 
     useEffect(() => {
@@ -217,12 +217,31 @@ export default function Relatorios() {
                                 const nivelExigido = rel.carteira?.nivelAcesso || 1;
                                 const temAcesso = nivelAcessoUsuario >= nivelExigido;
                                 const nomeCarteira = rel.carteira?.nome || 'Geral';
+                                const listaTickers = rel.tagsAtivos
+                                    ? rel.tagsAtivos.split(',').map(t => t.trim().toUpperCase()).filter(Boolean)
+                                    : [];
 
                                 return (
                                     <div key={rel.id} id={`relatorio-${rel.id}`} className={`relatorio-cliente-card ${!temAcesso ? 'locked' : ''}`}>
-                                        <span className="relatorio-tag-carteira">
-                                            {nomeCarteira}
-                                        </span>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+                                            <span className="relatorio-tag-carteira" style={{ marginBottom: 0 }}>
+                                                {nomeCarteira}
+                                            </span>
+                                            {listaTickers.map(ticker => (
+                                                <span 
+                                                    key={ticker}
+                                                    onClick={() => navigate(`/auditoria?busca=${encodeURIComponent(ticker)}&foco=${encodeURIComponent(ticker)}`)}
+                                                    title={`Ver histórico de recomendações de ${ticker}`}
+                                                    style={{
+                                                        fontSize: '0.7rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
+                                                        background: 'rgba(255, 255, 255, 0.08)', color: '#e6edf3', cursor: 'pointer',
+                                                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                                                    }}
+                                                >
+                                                    📊 {ticker}
+                                                </span>
+                                            ))}
+                                        </div>
                                         
                                         <h3 className="relatorio-titulo">{rel.titulo}</h3>
                                         <div className="relatorio-assunto">
