@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
+import PlayerAudio from '../../components/PlayerAudio';
 import './MorningCall.css';
 
 interface Topico {
@@ -16,6 +17,7 @@ interface MorningCallItem {
     titulo: string;
     data: string;
     nomeGestor: string;
+    audioUrl: string | null;
     topicos: Topico[];
 }
 
@@ -141,6 +143,8 @@ function MorningCallNoticia() {
                         <span className="mc-editorial-byline-valor">{tempoLeitura(topico.texto)}</span>
                     </div>
                 </div>
+
+                {morningCall.audioUrl && <PlayerAudio url={morningCall.audioUrl} />}
 
                 {topico.imagemUrl && (
                     <figure className="mc-noticia-imagem-destaque-wrap">

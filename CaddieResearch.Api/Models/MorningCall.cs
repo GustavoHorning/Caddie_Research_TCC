@@ -25,6 +25,9 @@ public class MorningCall
 
     public DateTime DataCriacao { get; set; } = DateTime.UtcNow;
 
+    [MaxLength(500)]
+    public string? AudioUrl { get; set; }
+
     public ICollection<MorningCallTopico> Topicos { get; set; } = new List<MorningCallTopico>();
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import PlayerAudio from '../../components/PlayerAudio';
 import './MorningCall.css';
 
 interface Topico {
@@ -16,6 +17,7 @@ interface MorningCallItem {
     titulo: string;
     data: string;
     nomeGestor: string;
+    audioUrl: string | null;
     topicos: Topico[];
 }
 
@@ -115,6 +117,7 @@ function MorningCall() {
                                 <span>📅 {formatarData(mc.data)}</span>
                                 <span>👤 {mc.nomeGestor}</span>
                             </div>
+                            {mc.audioUrl && <PlayerAudio url={mc.audioUrl} />}
                         </div>
 
                         <div className="mc-noticias-grid">

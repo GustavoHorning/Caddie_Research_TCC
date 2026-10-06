@@ -24,6 +24,8 @@ function MorningCallGestor() {
     const [titulo, setTitulo] = useState('');
     const [data, setData] = useState(new Date().toISOString().split('T')[0]);
     const [topicos, setTopicos] = useState<Topico[]>([novoTopico()]);
+    const [audioArquivo, setAudioArquivo] = useState<File | null>(null);
+    const [audioPreview, setAudioPreview] = useState('');
     const [enviando, setEnviando] = useState(false);
     const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
 
@@ -70,10 +72,32 @@ function MorningCallGestor() {
         setTopicos(novos);
     }
 
+    function handleAudioArquivo(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        if (file.size > 25 * 1024 * 1024) {
+            setMensagem({ texto: 'O áudio deve ter no máximo 25 MB.', tipo: 'erro' });
+            return;
+        }
+
+        if (audioPreview) URL.revokeObjectURL(audioPreview);
+        setAudioArquivo(file);
+        setAudioPreview(URL.createObjectURL(file));
+    }
+
+    function removerAudio() {
+        if (audioPreview) URL.revokeObjectURL(audioPreview);
+        setAudioArquivo(null);
+        setAudioPreview('');
+    }
+
     function limparFormulario() {
         setTitulo('');
         setData(new Date().toISOString().split('T')[0]);
         setTopicos([novoTopico()]);
+        removerAudio();
     }
 
     async function publicar() {
@@ -111,13 +135,18 @@ function MorningCallGestor() {
             }
         });
 
+        if (audioArquivo) {
+            formData.append('audio', audioArquivo);
+        }
+
         try {
             await api.post('/api/morningcall', formData, configSeguranca);
             setMensagem({ texto: 'Morning Call publicado com sucesso!', tipo: 'sucesso' });
             limparFormulario();
         } catch (error) {
             console.error('Erro ao publicar Morning Call', error);
-            setMensagem({ texto: 'Ocorreu um erro ao publicar o Morning Call.', tipo: 'erro' });
+            const erroApi = (error as { response?: { data?: { erro?: string } } }).response?.data?.erro;
+            setMensagem({ texto: erroApi || 'Ocorreu um erro ao publicar o Morning Call.', tipo: 'erro' });
         } finally {
             setEnviando(false);
         }
@@ -163,6 +192,31 @@ function MorningCallGestor() {
                                         value={titulo}
                                         onChange={e => setTitulo(e.target.value)}
                                     />
+                                </div>
+
+                                <div className="mc-field">
+                                    <label>Áudio do Morning Call (opcional)</label>
+                                    <div className="mc-imagem-field">
+                                        {audioArquivo ? (
+                                            <>
+                                                <div className="mc-audio-nome">🎧 {audioArquivo.name}</div>
+                                                <audio className="mc-audio-preview" src={audioPreview} controls />
+                                                <button type="button" className="mc-imagem-remover" onClick={removerAudio}>
+                                                    ✖ Remover áudio
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <label className="mc-imagem-upload">
+                                                <span>🎧 Clique para enviar um áudio (.mp4, .m4a ou .mp3 — até 25 MB)</span>
+                                                <input
+                                                    type="file"
+                                                    accept=".mp4,.m4a,.mp3,audio/mp4,audio/mpeg,video/mp4"
+                                                    style={{ display: 'none' }}
+                                                    onChange={handleAudioArquivo}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="mc-divider"></div>
