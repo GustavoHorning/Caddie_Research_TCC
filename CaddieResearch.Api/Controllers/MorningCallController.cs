@@ -33,6 +33,19 @@ public class MorningCallController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
+    private static readonly string[] ExtensoesAudio = { ".mp4", ".m4a", ".mp3" };
+    private const long TamanhoMaximoAudio = 25 * 1024 * 1024;
+
+    private static string? ValidarAudio(IFormFile audio)
+    {
+        var extensao = Path.GetExtension(audio.FileName).ToLowerInvariant();
+        if (!ExtensoesAudio.Contains(extensao))
+            return "Formato de áudio inválido. Envie um arquivo .mp4, .m4a ou .mp3.";
+        if (audio.Length > TamanhoMaximoAudio)
+            return "O áudio deve ter no máximo 25 MB.";
+        return null;
+    }
+
     // Cliente e gestor: lista todos os Morning Calls publicados (mais recente primeiro).
     // Sem filtro por gestor por enquanto — qualquer cliente logado vê todos.
     [HttpGet]
@@ -49,6 +62,7 @@ public class MorningCallController : ControllerBase
                 m.Titulo,
                 m.Data,
                 m.DataCriacao,
+                m.AudioUrl,
                 NomeGestor = m.Gestor!.Nome,
                 Topicos = m.Topicos
                     .OrderBy(t => t.Ordem)
@@ -84,6 +98,7 @@ public class MorningCallController : ControllerBase
                 m.Titulo,
                 m.Data,
                 m.DataCriacao,
+                m.AudioUrl,
                 Topicos = m.Topicos
                     .OrderBy(t => t.Ordem)
                     .Select(t => new
@@ -133,6 +148,13 @@ public class MorningCallController : ControllerBase
         if (topicosInput == null || topicosInput.Count == 0)
             return BadRequest(new { erro = "É necessário pelo menos um tópico." });
 
+        var audio = Request.Form.Files.GetFile("audio");
+        if (audio != null && audio.Length > 0)
+        {
+            var erroAudio = ValidarAudio(audio);
+            if (erroAudio != null) return BadRequest(new { erro = erroAudio });
+        }
+
         var morningCall = new MorningCall
         {
             GestorId = gestorId,
@@ -140,6 +162,9 @@ public class MorningCallController : ControllerBase
             Data = dataConvertida,
             DataCriacao = DateTime.UtcNow
         };
+
+        if (audio != null && audio.Length > 0)
+            morningCall.AudioUrl = await _blobService.UploadAudioAsync(audio, $"morningcall_{gestorId}");
 
         for (int i = 0; i < topicosInput.Count; i++)
         {
@@ -202,6 +227,9 @@ public class MorningCallController : ControllerBase
                 await _blobService.ExcluirImagemAsync(topico.ImagemUrl);
         }
 
+        if (!string.IsNullOrEmpty(morningCall.AudioUrl))
+            await _blobService.ExcluirAudioAsync(morningCall.AudioUrl);
+
         _context.MorningCalls.Remove(morningCall);
         await _context.SaveChangesAsync();
 
@@ -239,7 +267,7 @@ public class MorningCallController : ControllerBase
     // atualizados; tópicos sem "id" são criados; tópicos que existiam mas não vieram
     // nesta lista são removidos (junto com a imagem deles no Blob, se houver).
     [HttpPut("{id}")]
-    public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string data, [FromForm] string topicosJson)
+    public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string data, [FromForm] string topicosJson, [FromForm] string? removerAudio = null)
     {
         var gestorId = GetUsuarioId();
         if (gestorId == 0) return Unauthorized();
@@ -271,6 +299,22 @@ public class MorningCallController : ControllerBase
 
         if (topicosInput == null || topicosInput.Count == 0)
             return BadRequest(new { erro = "É necessário pelo menos um tópico." });
+
+        var audio = Request.Form.Files.GetFile("audio");
+        if (audio != null && audio.Length > 0)
+        {
+            var erroAudio = ValidarAudio(audio);
+            if (erroAudio != null) return BadRequest(new { erro = erroAudio });
+
+            if (!string.IsNullOrEmpty(morningCall.AudioUrl))
+                await _blobService.ExcluirAudioAsync(morningCall.AudioUrl);
+            morningCall.AudioUrl = await _blobService.UploadAudioAsync(audio, $"morningcall_{gestorId}");
+        }
+        else if (removerAudio == "true" && !string.IsNullOrEmpty(morningCall.AudioUrl))
+        {
+            await _blobService.ExcluirAudioAsync(morningCall.AudioUrl);
+            morningCall.AudioUrl = null;
+        }
 
         morningCall.Titulo = titulo;
         morningCall.Data = dataConvertida;

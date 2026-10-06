@@ -18,6 +18,7 @@ interface MorningCallItem {
     id: number;
     titulo: string;
     data: string;
+    audioUrl: string | null;
     topicos: Topico[];
 }
 
@@ -57,6 +58,10 @@ export default function MorningCallGerenciar() {
     const [edTitulo, setEdTitulo] = useState('');
     const [edData, setEdData] = useState('');
     const [edTopicos, setEdTopicos] = useState<TopicoEdicao[]>([]);
+    // edAudioUrl: áudio exibido no modal (o salvo ou a prévia do novo arquivo)
+    const [edAudioUrl, setEdAudioUrl] = useState('');
+    const [edAudioArquivo, setEdAudioArquivo] = useState<File | null>(null);
+    const [edRemoverAudio, setEdRemoverAudio] = useState(false);
     const [salvandoEdicao, setSalvandoEdicao] = useState(false);
     const [erroEdicao, setErroEdicao] = useState('');
 
@@ -133,13 +138,43 @@ export default function MorningCallGerenciar() {
             imagemUrl: t.imagemUrl || '',
             imagemArquivo: null
         })));
+        setEdAudioUrl(mc.audioUrl || '');
+        setEdAudioArquivo(null);
+        setEdRemoverAudio(false);
         setErroEdicao('');
     }
 
     function fecharEdicao() {
         setEditandoId(null);
         setEdTopicos([]);
+        if (edAudioArquivo) URL.revokeObjectURL(edAudioUrl);
+        setEdAudioUrl('');
+        setEdAudioArquivo(null);
+        setEdRemoverAudio(false);
         setErroEdicao('');
+    }
+
+    function edHandleAudioArquivo(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        if (file.size > 25 * 1024 * 1024) {
+            setErroEdicao('O áudio deve ter no máximo 25 MB.');
+            return;
+        }
+
+        if (edAudioArquivo) URL.revokeObjectURL(edAudioUrl);
+        setEdAudioArquivo(file);
+        setEdAudioUrl(URL.createObjectURL(file));
+        setEdRemoverAudio(false);
+    }
+
+    function edRemoverAudioAtual() {
+        if (edAudioArquivo) URL.revokeObjectURL(edAudioUrl);
+        setEdAudioArquivo(null);
+        setEdAudioUrl('');
+        setEdRemoverAudio(true);
     }
 
     function edAdicionarTopico() {
@@ -214,6 +249,12 @@ export default function MorningCallGerenciar() {
             }
         });
 
+        if (edAudioArquivo) {
+            formData.append('audio', edAudioArquivo);
+        } else if (edRemoverAudio) {
+            formData.append('removerAudio', 'true');
+        }
+
         try {
             await api.put(`/api/morningcall/${editandoId}`, formData, {
                 headers: { ...configSeguranca.headers, 'Content-Type': 'multipart/form-data' },
@@ -224,7 +265,8 @@ export default function MorningCallGerenciar() {
             fecharEdicao();
         } catch (error) {
             console.error('Erro ao editar Morning Call', error);
-            setErroEdicao('Ocorreu um erro ao salvar as alterações.');
+            const erroApi = (error as { response?: { data?: { erro?: string } } }).response?.data?.erro;
+            setErroEdicao(erroApi || 'Ocorreu um erro ao salvar as alterações.');
         } finally {
             setSalvandoEdicao(false);
         }
@@ -258,7 +300,7 @@ export default function MorningCallGerenciar() {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px' }}>
                                             <div>
                                                 <h3 style={{ color: '#fff', fontSize: '1.1rem', margin: '0 0 4px' }}>{mc.titulo}</h3>
-                                                <span style={{ color: '#8b949e', fontSize: '0.82rem' }}>{formatarData(mc.data)} · {mc.topicos.length} notícia(s)</span>
+                                                <span style={{ color: '#8b949e', fontSize: '0.82rem' }}>{formatarData(mc.data)} · {mc.topicos.length} notícia(s){mc.audioUrl ? ' · 🎧 com áudio' : ''}</span>
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                                                 <button
@@ -392,6 +434,33 @@ export default function MorningCallGerenciar() {
                         <div className="mc-field">
                             <label>Título do Morning Call</label>
                             <input type="text" value={edTitulo} onChange={e => setEdTitulo(e.target.value)} />
+                        </div>
+
+                        <div className="mc-field">
+                            <label>Áudio do Morning Call (opcional)</label>
+                            <div className="mc-imagem-field">
+                                {edAudioUrl ? (
+                                    <>
+                                        <div className="mc-audio-nome">
+                                            🎧 {edAudioArquivo ? edAudioArquivo.name : 'Áudio atual'}
+                                        </div>
+                                        <audio className="mc-audio-preview" src={edAudioUrl} controls />
+                                        <button type="button" className="mc-imagem-remover" onClick={edRemoverAudioAtual}>
+                                            ✖ Remover áudio
+                                        </button>
+                                    </>
+                                ) : (
+                                    <label className="mc-imagem-upload">
+                                        <span>🎧 Clique para enviar um áudio (.mp4, .m4a ou .mp3 — até 25 MB)</span>
+                                        <input
+                                            type="file"
+                                            accept=".mp4,.m4a,.mp3,audio/mp4,audio/mpeg,video/mp4"
+                                            style={{ display: 'none' }}
+                                            onChange={edHandleAudioArquivo}
+                                        />
+                                    </label>
+                                )}
+                            </div>
                         </div>
 
                         <div className="mc-divider"></div>

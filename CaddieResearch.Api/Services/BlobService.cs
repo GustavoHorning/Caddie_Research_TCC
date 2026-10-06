@@ -67,6 +67,43 @@ public class BlobService
         }
     }
 
+    public async Task<string> UploadAudioAsync(IFormFile arquivo, string prefixo)
+    {
+        var blobServiceClient = new BlobServiceClient(_connectionString);
+        var containerClient = blobServiceClient.GetBlobContainerClient("morningcall-audios");
+
+        await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+
+        var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+        var contentType = extensao == ".mp3" ? "audio/mpeg" : "audio/mp4";
+
+        var blobClient = containerClient.GetBlobClient($"{prefixo}_{Guid.NewGuid()}{extensao}");
+
+        using var stream = arquivo.OpenReadStream();
+        await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = contentType });
+
+        return blobClient.Uri.ToString();
+    }
+
+    public async Task ExcluirAudioAsync(string urlAudio)
+    {
+        if (string.IsNullOrEmpty(urlAudio)) return;
+
+        try
+        {
+            var nomeArquivo = Path.GetFileName(new Uri(urlAudio).LocalPath);
+
+            var blobServiceClient = new BlobServiceClient(_connectionString);
+            var containerClient = blobServiceClient.GetBlobContainerClient("morningcall-audios");
+
+            await containerClient.GetBlobClient(nomeArquivo).DeleteIfExistsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO AZURE EXCLUIR AUDIO]: {ex.Message}");
+        }
+    }
+
     public async Task<string> UploadPdfAsync(IFormFile arquivo)
     {
         var blobServiceClient = new BlobServiceClient(_connectionString);
