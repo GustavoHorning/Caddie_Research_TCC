@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Em desenvolvimento fica vazio: as chamadas /api passam pelo proxy do Vite até o backend local
+export const API_URL = import.meta.env.DEV ? '' : 'https://caddieresearch-api-gnewb5eebrckadfk.brazilsouth-01.azurewebsites.net';
+
 const api = axios.create({
-    baseURL: import.meta.env.DEV ? '' : 'https://caddieresearch-api-gnewb5eebrckadfk.brazilsouth-01.azurewebsites.net',
+    baseURL: API_URL,
 });
 
 api.interceptors.request.use(async config => {

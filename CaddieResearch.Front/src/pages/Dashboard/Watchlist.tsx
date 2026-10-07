@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import api from '../../services/api'
+import api, { API_URL } from '../../services/api'
 import './Watchlist.css'
 
 interface Favorito {
@@ -50,7 +50,7 @@ export default function Watchlist() {
       await Promise.all(
         favs.map(async (f) => {
           try {
-            const res = await fetch(`http://localhost:5194/api/acoes/cotacao/${f.ticker}`, { headers })
+            const res = await fetch(`${API_URL}/api/acoes/cotacao/${f.ticker}`, { headers })
             if (res.ok) {
               const data = await res.json()
               novasCotacoes[f.ticker] = data
@@ -91,7 +91,7 @@ export default function Watchlist() {
 
   async function salvarAnotacao(ticker: string, anotacao: string) {
     try {
-      await fetch(`http://localhost:5194/api/favoritos/${ticker}/anotacao`, {
+      await fetch(`${API_URL}/api/favoritos/${ticker}/anotacao`, {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ anotacao })
@@ -104,7 +104,7 @@ export default function Watchlist() {
 
   async function removerFavorito(ticker: string) {
     try {
-      await fetch(`http://localhost:5194/api/favoritos/${ticker}`, { method: 'DELETE', headers })
+      await fetch(`${API_URL}/api/favoritos/${ticker}`, { method: 'DELETE', headers })
       setFavoritos(prev => prev.filter(f => f.ticker !== ticker))
       setCotacoes(prev => {
         const novo = { ...prev }
@@ -129,7 +129,7 @@ export default function Watchlist() {
     setCriandoAba(true)
     setErroAba('')
     try {
-      const res = await fetch('http://localhost:5194/api/watchlist-abas', {
+      const res = await fetch(API_URL + '/api/watchlist-abas', {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome })
@@ -153,7 +153,7 @@ export default function Watchlist() {
 
   async function excluirAba(id: number) {
     try {
-      await fetch(`http://localhost:5194/api/watchlist-abas/${id}`, { method: 'DELETE', headers })
+      await fetch(`${API_URL}/api/watchlist-abas/${id}`, { method: 'DELETE', headers })
       setAbasPersonalizadas(prev => prev.filter(a => a.id !== id))
       if (abaAtiva === `custom-${id}`) setAbaAtiva('todos')
     } catch (e) {
@@ -163,7 +163,7 @@ export default function Watchlist() {
 
   async function adicionarNaAba(abaId: number, ticker: string) {
     try {
-      const res = await fetch(`http://localhost:5194/api/watchlist-abas/${abaId}/favoritos/${ticker}`, {
+      const res = await fetch(`${API_URL}/api/watchlist-abas/${abaId}/favoritos/${ticker}`, {
         method: 'POST', headers
       })
       if (res.ok) {
@@ -180,7 +180,7 @@ export default function Watchlist() {
 
   async function removerDaAba(abaId: number, ticker: string) {
     try {
-      await fetch(`http://localhost:5194/api/watchlist-abas/${abaId}/favoritos/${ticker}`, {
+      await fetch(`${API_URL}/api/watchlist-abas/${abaId}/favoritos/${ticker}`, {
         method: 'DELETE', headers
       })
       setAbasPersonalizadas(prev => prev.map(a =>

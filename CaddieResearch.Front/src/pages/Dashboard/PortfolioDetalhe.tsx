@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import './PortfolioDetalhe.css'
 import { gerarRelatorio } from '../../utils/gerarRelatorio'
+import { API_URL } from '../../services/api'
 
 type Aba = 'dashboard' | 'posicoes' | 'aportes' | 'transacoes' | 'recomendacoes'
 
@@ -159,6 +160,18 @@ export default function PortfolioDetalhe() {
   useEffect(() => {
     if (portfolio?.posicoes?.length) carregarGrafico(portfolio.posicoes, periodoInicio, periodoFim, totalAportes)
   }, [periodoInicio, periodoFim])
+  // Fecha o menu dos 3 pontinhos ao clicar em qualquer outro lugar (inclusive ao trocar de aba) ou apertar Esc
+  useEffect(() => {
+    if (menuAberto === null) return
+    const fechar = () => setMenuAberto(null)
+    const fecharNoEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuAberto(null) }
+    document.addEventListener('click', fechar)
+    document.addEventListener('keydown', fecharNoEsc)
+    return () => {
+      document.removeEventListener('click', fechar)
+      document.removeEventListener('keydown', fecharNoEsc)
+    }
+  }, [menuAberto])
 
   // Meses de vencimento futuros B3: F=Jan G=Feb H=Mar J=Apr K=Mai M=Jun N=Jul Q=Ago U=Set V=Out X=Nov Z=Dez
   const MESES_FUTURO: Record<string, number> = { F:0,G:1,H:2,J:3,K:4,M:5,N:6,Q:7,U:8,V:9,X:10,Z:11 }
@@ -212,7 +225,7 @@ export default function PortfolioDetalhe() {
             // Pós-fixado: buscar histórico real de CDI diário do BACEN para o período
             try {
               const res = await fetch(
-                `http://localhost:5194/api/mercado/cdi?dataInicial=${encodeURIComponent(fmt(dataEntrada))}&dataFinal=${encodeURIComponent(fmt(hoje))}`,
+                `${API_URL}/api/mercado/cdi?dataInicial=${encodeURIComponent(fmt(dataEntrada))}&dataFinal=${encodeURIComponent(fmt(hoje))}`,
                 { headers }
               )
               if (res.ok) {
@@ -249,7 +262,7 @@ export default function PortfolioDetalhe() {
         if (!vencido) {
           // Contrato ativo → B3 API (cotação em tempo real)
           try {
-            const res = await fetch(`http://localhost:5194/api/mercado/futuro?ticker=${p.ticker}`, { headers })
+            const res = await fetch(`${API_URL}/api/mercado/futuro?ticker=${p.ticker}`, { headers })
             if (res.ok) {
               const json = await res.json()
               const preco = json?.Trad?.[0]?.scty?.SctyQtn?.curPrc
@@ -261,7 +274,7 @@ export default function PortfolioDetalhe() {
           const diasPassados = Math.ceil((hoje.getTime() - venc!.getTime()) / 86400000)
           const range = diasPassados <= 30 ? '1mo' : diasPassados <= 90 ? '3mo' : diasPassados <= 180 ? '6mo' : '1y'
           try {
-            const res = await fetch(`http://localhost:5194/api/mercado/historico?ticker=${encodeURIComponent(tickerContinuo(p.ticker))}&range=${range}&interval=1d`, { headers })
+            const res = await fetch(`${API_URL}/api/mercado/historico?ticker=${encodeURIComponent(tickerContinuo(p.ticker))}&range=${range}&interval=1d`, { headers })
             if (res.ok) {
               const json = await res.json()
               const timestamps: number[] = json?.chart?.result?.[0]?.timestamp || []
@@ -276,7 +289,7 @@ export default function PortfolioDetalhe() {
       } else {
         const tickerYahoo = `${p.ticker}.SA`
         try {
-          const res = await fetch(`http://localhost:5194/api/mercado/historico?ticker=${encodeURIComponent(tickerYahoo)}&range=5d&interval=1d`, { headers })
+          const res = await fetch(`${API_URL}/api/mercado/historico?ticker=${encodeURIComponent(tickerYahoo)}&range=5d&interval=1d`, { headers })
           if (!res.ok) return
           const json = await res.json()
           const fechamentos: (number | null)[] = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []
@@ -291,8 +304,8 @@ export default function PortfolioDetalhe() {
   async function carregarPortfolio() {
     try {
       const [resPortfolio, resAportes] = await Promise.all([
-        fetch(`http://localhost:5194/api/portfolio/${id}`, { headers }),
-        fetch(`http://localhost:5194/api/portfolio/${id}/aportes`, { headers })
+        fetch(`${API_URL}/api/portfolio/${id}`, { headers }),
+        fetch(`${API_URL}/api/portfolio/${id}/aportes`, { headers })
       ])
       const data = resPortfolio.ok ? await resPortfolio.json() : null
       const aps = resAportes.ok ? await resAportes.json() : []
@@ -311,7 +324,7 @@ export default function PortfolioDetalhe() {
 
   async function carregarAportes() {
     try {
-      const res = await fetch(`http://localhost:5194/api/portfolio/${id}/aportes`, { headers })
+      const res = await fetch(`${API_URL}/api/portfolio/${id}/aportes`, { headers })
       if (res.ok) setAportes(await res.json())
     } catch (e) { console.error(e) }
   }
@@ -320,7 +333,7 @@ export default function PortfolioDetalhe() {
     if (!novoAporte.valor) return
     setSalvando(true)
     try {
-      const res = await fetch(`http://localhost:5194/api/portfolio/${id}/aportes`, {
+      const res = await fetch(`${API_URL}/api/portfolio/${id}/aportes`, {
         method: 'POST', headers,
         body: JSON.stringify({ valor: parseFloat(novoAporte.valor), descricao: novoAporte.descricao, dataAporte: novoAporte.dataAporte || null })
       })
@@ -349,7 +362,7 @@ export default function PortfolioDetalhe() {
     if (!posicoes || posicoes.length === 0) return
     setCarregandoGrafico(true)
     try {
-      const base = 'http://localhost:5194/api/mercado/historico'
+      const base = API_URL + '/api/mercado/historico'
       const range = periodoParaRange(inicio, fim)
       const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
@@ -380,7 +393,7 @@ export default function PortfolioDetalhe() {
       if (posRF.length > 0) {
         try {
           const res = await fetch(
-            `http://localhost:5194/api/mercado/cdi?dataInicial=${encodeURIComponent(fmtData(inicio))}&dataFinal=${encodeURIComponent(fmtData(new Date().toISOString()))}`,
+            `${API_URL}/api/mercado/cdi?dataInicial=${encodeURIComponent(fmtData(inicio))}&dataFinal=${encodeURIComponent(fmtData(new Date().toISOString()))}`,
             { headers }
           )
           if (res.ok) {
@@ -515,7 +528,7 @@ export default function PortfolioDetalhe() {
 
   async function carregarRecomendacoes() {
     try {
-      const res = await fetch('http://localhost:5194/api/recomendacoes/minhas', { headers })
+      const res = await fetch(API_URL + '/api/recomendacoes/minhas', { headers })
       if (res.ok) setRecomendacoes(await res.json())
     } catch (e) { console.error(e) }
   }
@@ -523,7 +536,7 @@ export default function PortfolioDetalhe() {
   async function aderir(recId: number) {
     setRespondendo(recId)
     try {
-      const res = await fetch(`http://localhost:5194/api/recomendacoes/${recId}/aderir`, { method: 'POST', headers })
+      const res = await fetch(`${API_URL}/api/recomendacoes/${recId}/aderir`, { method: 'POST', headers })
       if (res.ok) { carregarRecomendacoes(); carregarPortfolio() }
     } catch (e) { console.error(e) }
     finally { setRespondendo(null) }
@@ -532,7 +545,7 @@ export default function PortfolioDetalhe() {
   async function recusar(recId: number) {
     setRespondendo(recId)
     try {
-      const res = await fetch(`http://localhost:5194/api/recomendacoes/${recId}/recusar`, { method: 'POST', headers })
+      const res = await fetch(`${API_URL}/api/recomendacoes/${recId}/recusar`, { method: 'POST', headers })
       if (res.ok) carregarRecomendacoes()
     } catch (e) { console.error(e) }
     finally { setRespondendo(null) }
@@ -600,7 +613,7 @@ export default function PortfolioDetalhe() {
             precoMedio: parseFloat(txPreco),
             dataEntrada: txData || null
           }
-      const res = await fetch(`http://localhost:5194/api/portfolio/${id}/posicoes`, {
+      const res = await fetch(`${API_URL}/api/portfolio/${id}/posicoes`, {
         method: 'POST', headers,
         body: JSON.stringify(body)
       })
@@ -616,11 +629,11 @@ export default function PortfolioDetalhe() {
   }
 
   async function removerAporte(aporteId: number) {
-    await fetch(`http://localhost:5194/api/portfolio/${id}/aportes/${aporteId}`, { method: 'DELETE', headers })
+    await fetch(`${API_URL}/api/portfolio/${id}/aportes/${aporteId}`, { method: 'DELETE', headers })
     setAportes(prev => prev.filter(a => a.id !== aporteId))
   }
     async function removerPosicao(posicaoId: number) {
-    await fetch(`http://localhost:5194/api/portfolio/${id}/posicoes/${posicaoId}`, { method: 'DELETE', headers })
+    await fetch(`${API_URL}/api/portfolio/${id}/posicoes/${posicaoId}`, { method: 'DELETE', headers })
     carregarPortfolio()
   }
 
@@ -972,9 +985,10 @@ export default function PortfolioDetalhe() {
                                   <div style={{position:'relative'}}>
                                     <button className="pd-btn-3pontos" onClick={e => { e.stopPropagation(); setMenuAberto(menuAberto === p.id ? null : p.id) }}>⋮</button>
                                     {menuAberto === p.id && (
-                                      <div className="pd-dropdown-menu">
-                                        <button className="pd-dropdown-item" onClick={() => { setModalPrecoManual({ posicaoId: p.id, ticker: p.ticker }); setPrecoManualInput(''); setMenuAberto(null) }}>✏️ Atualizar preço</button>
-                                        <button className="pd-dropdown-excluir" onClick={() => { removerPosicao(p.id); setMenuAberto(null) }}>Excluir</button>
+                                      <div className="pd-dropdown-menu" onClick={e => e.stopPropagation()}>
+                                        <button className="pd-dropdown-item" onClick={() => { setModalPrecoManual({ posicaoId: p.id, ticker: p.ticker }); setPrecoManualInput(''); setMenuAberto(null) }}>Atualizar preço</button>
+                                        <div className="pd-dropdown-divisor" />
+                                        <button className="pd-dropdown-item pd-dropdown-excluir" onClick={() => { removerPosicao(p.id); setMenuAberto(null) }}>Excluir</button>
                                       </div>
                                     )}
                                   </div>
@@ -1059,12 +1073,13 @@ export default function PortfolioDetalhe() {
                           <button className="pd-btn-3pontos" onClick={e => { e.stopPropagation(); setMenuAberto(menuAberto === p.id ? null : p.id) }}>⋮</button>
                           {menuAberto === p.id && (
                             <div className="pd-dropdown-menu" onClick={e => e.stopPropagation()}>
-                              <button className="pd-dropdown-item">✏️ Editar</button>
+                              <button className="pd-dropdown-item">Editar</button>
+                              <div className="pd-dropdown-divisor" />
                               <button className="pd-dropdown-item pd-dropdown-excluir" onClick={async () => {
-                                await fetch(`http://localhost:5194/api/portfolio/${id}/posicoes/${p.id}`, { method: 'DELETE', headers })
+                                await fetch(`${API_URL}/api/portfolio/${id}/posicoes/${p.id}`, { method: 'DELETE', headers })
                                 setMenuAberto(null)
                                 carregarPortfolio()
-                              }}>🗑️ Excluir</button>
+                              }}>Excluir</button>
                             </div>
                           )}
                         </td>

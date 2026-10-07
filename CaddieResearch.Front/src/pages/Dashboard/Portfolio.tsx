@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_URL } from '../../services/api'
 import './Portfolio.css'
 
 interface PortfolioItem {
@@ -32,7 +33,7 @@ export default function Portfolio() {
   async function carregarPortfolios() {
     try {
       const token = localStorage.getItem('caddie_token')
-      const res = await fetch('http://localhost:5194/api/portfolio', {
+      const res = await fetch(API_URL + '/api/portfolio', {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (res.ok) setPortfolios(await res.json())
@@ -55,7 +56,7 @@ export default function Portfolio() {
     if (!nomeNovo.trim()) return
     setCriando(true)
     try {
-      const res = await fetch('http://localhost:5194/api/portfolio', {
+      const res = await fetch(API_URL + '/api/portfolio', {
         method: 'POST',
         headers,
         body: JSON.stringify({
