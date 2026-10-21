@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { LineChart, Line, YAxis, ResponsiveContainer } from 'recharts'
 import api, { API_URL } from '../../services/api'
 import './Watchlist.css'
 
@@ -19,6 +20,10 @@ interface Cotacao {
   shortName: string
 }
 
+interface PontoHistorico {
+  preco: number
+}
+
 interface AbaPersonalizada {
   id: number
   nome: string
@@ -31,6 +36,7 @@ type AbaAtiva = AbaFixa | `custom-${number}`
 export default function Watchlist() {
   const [favoritos, setFavoritos] = useState<Favorito[]>([])
   const [cotacoes, setCotacoes] = useState<Record<string, Cotacao>>({})
+  const [historicos, setHistoricos] = useState<Record<string, PontoHistorico[]>>({})
   const [carregando, setCarregando] = useState(true)
   const [abaAtiva, setAbaAtiva] = useState<AbaAtiva>('todos')
   const [abasPersonalizadas, setAbasPersonalizadas] = useState<AbaPersonalizada[]>([])
@@ -62,11 +68,43 @@ export default function Watchlist() {
       setCotacoes(novasCotacoes)
     }
 
+    // Busca, para cada favorito, o último mês de fechamentos (ticker.SA para ativos da B3)
+    // e guarda só os preços, na ordem do mais antigo para o mais recente — é tudo que o
+    // sparkline (mini-gráfico) do card precisa para desenhar a linha.
+    async function carregarHistoricos(favs: Favorito[]) {
+      const novosHistoricos: Record<string, PontoHistorico[]> = {}
+      await Promise.all(
+        favs.map(async (f) => {
+          try {
+            const tickerYahoo = f.ticker.includes('.') ? f.ticker : `${f.ticker}.SA`
+            const res = await fetch(
+              `${API_URL}/api/mercado/historico?ticker=${encodeURIComponent(tickerYahoo)}&range=1mo&interval=1d`,
+              { headers }
+            )
+            if (!res.ok) return
+            const json = await res.json()
+            const fechamentos: (number | null)[] = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || []
+            const pontos = fechamentos
+              .filter((preco): preco is number => preco != null)
+              .map(preco => ({ preco }))
+            if (pontos.length > 1) {
+              novosHistoricos[f.ticker] = pontos
+            }
+          } catch (e) {
+            // Sem gráfico para esse ativo não é um erro grave — o card mostra só preço e variação
+            console.error(`Erro ao buscar histórico de ${f.ticker}`, e)
+          }
+        })
+      )
+      setHistoricos(novosHistoricos)
+    }
+
     async function carregarFavoritos() {
       try {
         const response = await api.get('/api/favoritos')
         setFavoritos(response.data)
         carregarCotacoes(response.data)
+        carregarHistoricos(response.data)
       } catch (e) {
         console.error('Erro ao carregar favoritos', e)
       } finally {
@@ -85,6 +123,7 @@ export default function Watchlist() {
 
     carregarFavoritos()
     carregarAbasPersonalizadas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function salvarAnotacao(ticker: string, anotacao: string) {
@@ -339,27 +378,65 @@ export default function Watchlist() {
         <div className="wl-grid">
           {favoritosFiltrados.map((f) => {
             const cotacao = cotacoes[f.ticker]
+            const historico = historicos[f.ticker]
             const isPositivo = cotacao ? cotacao.regularMarketChangePercent >= 0 : null
+            const corLinha = isPositivo === false ? '#ef4444' : '#22c55e'
+            const menuAberto = menuAdicionarAba === f.ticker
             return (
               <div key={f.id} className="wl-card">
+                {cotacao && (
+                  <span className={`wl-card-badge ${isPositivo ? 'positivo' : 'negativo'}`}>
+                    {isPositivo ? '▲' : '▼'} {Math.abs(cotacao.regularMarketChangePercent).toFixed(2)}%
+                  </span>
+                )}
+
+                <button
+                  className="wl-card-remove"
+                  onClick={() => removerFavorito(f.ticker)}
+                  title="Remover da watchlist"
+                >
+                  ✕
+                </button>
+
                 <div className="wl-card-top">
-                  <div className="wl-card-ticker-wrap">
-                    <div className="wl-card-logo-placeholder">{f.ticker.charAt(0)}</div>
-                    <div className="wl-card-ticker-textos">
-                      <span className="wl-card-ticker">{f.ticker}</span>
-                      {f.nomeEmpresa && (
-                        <span className="wl-card-nome">{f.nomeEmpresa}</span>
-                      )}
-                    </div>
+                  <div className="wl-card-logo-placeholder">{f.ticker.charAt(0)}</div>
+                  <div className="wl-card-ticker-textos">
+                    <span className="wl-card-ticker">{f.ticker}</span>
+                    {f.nomeEmpresa && (
+                      <span className="wl-card-nome">{f.nomeEmpresa}</span>
+                    )}
                   </div>
-                  <button
-                    className="wl-card-remove"
-                    onClick={() => removerFavorito(f.ticker)}
-                    title="Remover da watchlist"
-                  >
-                    ✕
-                  </button>
                 </div>
+
+                <div className="wl-card-preco-linha">
+                  {cotacao ? (
+                    <span className="wl-card-preco">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cotacao.regularMarketPrice)}
+                    </span>
+                  ) : f.rentabilidade ? (
+                    <span className="wl-card-rentabilidade">{f.rentabilidade}</span>
+                  ) : (
+                    <span className="wl-card-indisponivel">Cotação indisponível</span>
+                  )}
+                </div>
+
+                {historico && historico.length > 1 && (
+                  <div className="wl-card-sparkline">
+                    <ResponsiveContainer width="100%" height={40}>
+                      <LineChart data={historico}>
+                        <YAxis domain={['dataMin', 'dataMax']} hide />
+                        <Line
+                          type="monotone"
+                          dataKey="preco"
+                          stroke={corLinha}
+                          strokeWidth={1.6}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
 
                 <div className="wl-card-tags">
                   {f.categoria && (
@@ -370,75 +447,62 @@ export default function Watchlist() {
                   )}
                 </div>
 
-                <textarea
-                  className="wl-card-anotacao"
-                  placeholder="Adicione uma anotação..."
-                  defaultValue={f.anotacao || ''}
-                  onBlur={e => salvarAnotacao(f.ticker, e.target.value)}
-                  rows={2}
-                />
+                <details className="wl-card-detalhes">
+                  <summary>Detalhes e anotação</summary>
 
-                <div className="wl-card-bottom">
-                  {cotacao ? (
-                    <>
-                      <span className="wl-card-preco">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cotacao.regularMarketPrice)}
-                      </span>
-                      <span className={`wl-card-var ${isPositivo ? 'positivo' : 'negativo'}`}>
-                        {isPositivo ? '▲' : '▼'} {Math.abs(cotacao.regularMarketChangePercent).toFixed(2)}%
-                      </span>
-                    </>
-                  ) : f.rentabilidade ? (
-                    <span className="wl-card-rentabilidade">{f.rentabilidade}</span>
-                  ) : (
-                    <span className="wl-card-indisponivel">Cotação indisponível</span>
+                  <textarea
+                    className="wl-card-anotacao"
+                    placeholder="Adicione uma anotação..."
+                    defaultValue={f.anotacao || ''}
+                    onBlur={e => salvarAnotacao(f.ticker, e.target.value)}
+                    rows={2}
+                  />
+
+                  {f.dataAdicionado && (
+                    <span className="wl-card-data-favoritado">
+                      ⭐ Favoritado em {new Date(f.dataAdicionado).toLocaleDateString('pt-BR')}
+                    </span>
                   )}
-                </div>
 
-                {f.dataAdicionado && (
-                  <span className="wl-card-data-favoritado">
-                    ⭐ Favoritado em {new Date(f.dataAdicionado).toLocaleDateString('pt-BR')}
-                  </span>
-                )}
-
-                {/* Dentro de uma aba personalizada: botão para remover o ativo dessa aba */}
-                {abaCustomAtiva && (
-                  <button
-                    className="wl-card-remover-da-aba"
-                    onClick={() => removerDaAba(abaCustomAtiva.id, f.ticker)}
-                  >
-                    🗂️ Remover de "{abaCustomAtiva.nome}"
-                  </button>
-                )}
-
-                {/* Fora de uma aba personalizada: botão para adicionar o ativo a uma delas */}
-                {!abaCustomAtiva && abasPersonalizadas.length > 0 && (
-                  <div className="wl-card-adicionar-aba-wrap">
+                  {/* Dentro de uma aba personalizada: botão para remover o ativo dessa aba */}
+                  {abaCustomAtiva && (
                     <button
-                      className="wl-card-adicionar-aba"
-                      onClick={() => setMenuAdicionarAba(menuAdicionarAba === f.ticker ? null : f.ticker)}
+                      className="wl-card-remover-da-aba"
+                      onClick={() => removerDaAba(abaCustomAtiva.id, f.ticker)}
                     >
-                      🗂️ Adicionar a uma aba
+                      🗂️ Remover de "{abaCustomAtiva.nome}"
                     </button>
-                    {menuAdicionarAba === f.ticker && (
-                      <div className="wl-menu-abas">
-                        {abasPersonalizadas.map(aba => {
-                          const jaEsta = aba.tickers.includes(f.ticker)
-                          return (
-                            <button
-                              key={aba.id}
-                              className={`wl-menu-abas-item ${jaEsta ? 'ja-adicionado' : ''}`}
-                              disabled={jaEsta}
-                              onClick={() => adicionarNaAba(aba.id, f.ticker)}
-                            >
-                              {jaEsta ? '✓' : '+'} {aba.nome}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
+
+                  {/* Fora de uma aba personalizada: botão para adicionar o ativo a uma delas */}
+                  {!abaCustomAtiva && abasPersonalizadas.length > 0 && (
+                    <div className="wl-card-adicionar-aba-wrap">
+                      <button
+                        className="wl-card-adicionar-aba"
+                        onClick={() => setMenuAdicionarAba(menuAberto ? null : f.ticker)}
+                      >
+                        🗂️ Adicionar a uma aba
+                      </button>
+                      {menuAberto && (
+                        <div className="wl-menu-abas">
+                          {abasPersonalizadas.map(aba => {
+                            const jaEsta = aba.tickers.includes(f.ticker)
+                            return (
+                              <button
+                                key={aba.id}
+                                className={`wl-menu-abas-item ${jaEsta ? 'ja-adicionado' : ''}`}
+                                disabled={jaEsta}
+                                onClick={() => adicionarNaAba(aba.id, f.ticker)}
+                              >
+                                {jaEsta ? '✓' : '+'} {aba.nome}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </details>
               </div>
             )
           })}

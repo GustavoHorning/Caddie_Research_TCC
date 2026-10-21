@@ -641,6 +641,14 @@ html[data-theme="light"] body .btn-favoritar.favoritado {
   color: #f59e0b !important;
 }
 
+html[data-theme="light"] body .wl-card-detalhes summary {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] body .wl-card-remove {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: #64748b !important;
+}
 html[data-theme="light"] body .wl-titulo,
 html[data-theme="light"] body .wl-vazio-titulo,
 html[data-theme="light"] body .wl-card-ticker,

@@ -173,41 +173,65 @@
 /* Grid de cards */
 .wl-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .wl-card {
+  position: relative;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.wl-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+/* Badge de variação, fixado no canto superior direito do card */
+.wl-card-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.2px;
+}
+
+.wl-card-badge.positivo {
+  background: rgba(34, 197, 94, 0.14);
+  color: #22c55e;
+}
+
+.wl-card-badge.negativo {
+  background: rgba(239, 68, 68, 0.14);
+  color: #ef4444;
 }
 
 .wl-card-top {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 10px;
-}
-
-.wl-card-ticker-wrap {
-  display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-right: 54px; /* espaço reservado para o badge de variação não sobrepor o nome */
 }
 
 .wl-card-ticker-textos {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .wl-card-logo-placeholder {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #00B4D8;
   color: #ffffff;
@@ -215,35 +239,84 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   flex-shrink: 0;
 }
 
 .wl-card-ticker {
   color: #ffffff;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.88rem;
 }
 
 .wl-card-nome {
   color: #7a90a8;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wl-card-preco-linha {
+  margin-bottom: 2px;
+}
+
+.wl-card-sparkline {
+  width: 100%;
+  height: 40px;
+  margin: 2px 0 6px;
+}
+
+.wl-card-detalhes {
+  margin-top: 4px;
+}
+
+.wl-card-detalhes summary {
+  color: #7a90a8;
+  font-size: 0.72rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+
+.wl-card-detalhes summary:hover {
+  color: #00B4D8;
+}
+
+.wl-card-detalhes[open] summary {
+  margin-bottom: 8px;
 }
 
 .wl-card-data-favoritado {
   display: block;
   color: #6e7681;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   margin-top: 6px;
 }
 
 .wl-card-remove {
-  background: transparent;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(15, 20, 30, 0.6);
   border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
   color: #7a90a8;
   cursor: pointer;
-  font-size: 0.85rem;
-  padding: 2px 6px;
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.wl-card:hover .wl-card-remove {
+  opacity: 1;
+}
+
+.wl-card:hover .wl-card-badge {
+  opacity: 0;
 }
 
 .wl-card-remove:hover {
@@ -274,36 +347,17 @@
   color: #7a90a8;
 }
 
-.wl-card-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-    margin-top: 12px;
-}
-
 .wl-card-preco {
   color: #ffffff;
   font-weight: 700;
-  font-size: 1rem;
-}
-
-.wl-card-var {
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.wl-card-var.positivo {
-  color: #4caf50;
-}
-
-.wl-card-var.negativo {
-  color: #ef4444;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .wl-card-rentabilidade {
   color: #00B4D8;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .wl-card-indisponivel {
