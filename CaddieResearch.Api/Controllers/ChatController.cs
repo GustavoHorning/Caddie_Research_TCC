@@ -21,28 +21,24 @@ public class ChatController : ControllerBase
         _emailService = emailService;
     }
 
-    // Retorna o ID do usuário logado pelo token JWT
     private int GetUsuarioId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return int.TryParse(claim, out var id) ? id : 0;
     }
 
-    // Extrai o primeiro nome de um nome completo
     private static string PrimeiroNome(string? nomeCompleto)
     {
         if (string.IsNullOrWhiteSpace(nomeCompleto)) return "Caddie";
         return nomeCompleto.Trim().Split(' ')[0];
     }
 
-    // ── CLIENTE: Abre uma nova conversa ──────────────────────────────
     [HttpPost("abrir")]
     public async Task<IActionResult> AbrirConversa([FromBody] AbrirConversaDto dto)
     {
         var usuarioId = GetUsuarioId();
         if (usuarioId == 0) return Unauthorized();
 
-        // Verifica se já existe uma conversa aberta com o mesmo assunto
         var existente = await _context.Conversas
             .FirstOrDefaultAsync(c => c.UsuarioId == usuarioId
                                    && c.Assunto == dto.Assunto
@@ -62,7 +58,6 @@ public class ChatController : ControllerBase
         _context.Conversas.Add(conversa);
         await _context.SaveChangesAsync();
 
-        // Mantém apenas as 6 conversas mais recentes por usuário
         var todasConversas = await _context.Conversas
             .Where(c => c.UsuarioId == usuarioId)
             .OrderByDescending(c => c.DataAbertura)
@@ -83,7 +78,6 @@ public class ChatController : ControllerBase
         return Ok(new { conversaId = conversa.Id });
     }
 
-    // ── CLIENTE: Envia mensagem ───────────────────────────────────────
     [HttpPost("{conversaId}/mensagem")]
     public async Task<IActionResult> EnviarMensagem(int conversaId, [FromBody] EnviarMensagemDto dto)
     {
@@ -118,7 +112,6 @@ public class ChatController : ControllerBase
         });
     }
 
-    // ── CLIENTE: Busca mensagens de uma conversa ──────────────────────
     [HttpGet("{conversaId}/mensagens")]
     public async Task<IActionResult> BuscarMensagens(int conversaId)
     {
@@ -142,7 +135,6 @@ public class ChatController : ControllerBase
         return Ok(mensagens);
     }
 
-    // ── CLIENTE: Lista suas conversas ────────────────────────────────
     [HttpGet("minhas-conversas")]
     public async Task<IActionResult> MinhasConversas()
     {
@@ -165,7 +157,6 @@ public class ChatController : ControllerBase
         return Ok(conversas);
     }
 
-    // ── GESTOR: Lista todas as conversas abertas ─────────────────────
     [HttpGet("gestor/todas")]
     public async Task<IActionResult> TodasConversas()
     {
@@ -196,7 +187,6 @@ public class ChatController : ControllerBase
         return Ok(conversas);
     }
 
-    // ── GESTOR: Encerra uma conversa ─────────────────────────────────
     [HttpPut("{conversaId}/encerrar")]
     public async Task<IActionResult> EncerrarConversa(int conversaId)
     {
@@ -217,7 +207,6 @@ public class ChatController : ControllerBase
         conversa.Status = "Fechada";
         await _context.SaveChangesAsync();
 
-        // Envia histórico por e-mail ao cliente (silencioso se não configurado)
         try
         {
             var historico = conversa.Mensagens
@@ -244,7 +233,6 @@ public class ChatController : ControllerBase
         return Ok(new { mensagem = "Conversa encerrada com sucesso." });
     }
 
-    // ── GESTOR: Deleta conversa encerrada ────────────────────────────
     [HttpDelete("{conversaId}")]
     public async Task<IActionResult> DeletarConversa(int conversaId)
     {
@@ -268,7 +256,6 @@ public class ChatController : ControllerBase
         return Ok(new { mensagem = "Conversa removida com sucesso." });
     }
 
-    // ── CLIENTE: Verifica status da conversa ─────────────────────────
     [HttpGet("{conversaId}/status")]
     public async Task<IActionResult> VerificarStatus(int conversaId)
     {
@@ -278,7 +265,7 @@ public class ChatController : ControllerBase
     }
 }
 
-// ── DTOs ─────────────────────────────────────────────────────────────
+
 public class AbrirConversaDto
 {
     public string Assunto { get; set; } = string.Empty;

@@ -25,7 +25,6 @@ public class WatchlistAba
     public ICollection<WatchlistAbaFavorito> Itens { get; set; } = new List<WatchlistAbaFavorito>();
 }
 
-// Tabela de ligação: um favorito pode estar em várias abas, e uma aba pode ter vários favoritos
 public class WatchlistAbaFavorito
 {
     [Key]

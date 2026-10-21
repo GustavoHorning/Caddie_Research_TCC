@@ -43,11 +43,9 @@ public class Recomendacao
     [MaxLength(500)]
     public string? Descricao { get; set; }
 
-    // Chat, Estruturada, Painel
     [MaxLength(20)]
     public string Origem { get; set; } = "Painel";
 
-    // Pendente, Aceita, Recusada
     [MaxLength(20)]
     public string Status { get; set; } = "Pendente";
 

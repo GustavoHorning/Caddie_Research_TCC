@@ -44,7 +44,6 @@ namespace CaddieResearch.Controllers
             int carteiraId = ativo.CarteiraId;
             string ticker = ativo.Ticker;
 
-            // LOG IMUTÁVEL: EXCLUSÃO
             var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (int.TryParse(gestorIdStr, out int gestorId))
             {
@@ -93,7 +92,6 @@ namespace CaddieResearch.Controllers
             
             _context.Ativos.Add(novoAtivo);
 
-            // LOG IMUTÁVEL: ADIÇÃO
             var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (int.TryParse(gestorIdStr, out int gestorId))
             {
@@ -133,7 +131,6 @@ namespace CaddieResearch.Controllers
             var ativoBanco = await _context.Ativos.FindAsync(id);
             if (ativoBanco == null) return NotFound();
 
-            // LOG IMUTÁVEL: ATUALIZAÇÃO (se viés ou preço mudarem)
             if (ativoBanco.Vies != ativoAtualizado.Vies || ativoBanco.PrecoTeto != ativoAtualizado.PrecoTeto)
             {
                 var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
