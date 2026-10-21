@@ -19,6 +19,8 @@ interface TopBarProps {
   onMenuToggle?: () => void;
 }
 
+type ThemeMode = 'dark' | 'light';
+
 export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAtendimentoOpen, setIsAtendimentoOpen] = useState(false);
@@ -27,10 +29,35 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
 
+  const [tema, setTema] = useState<ThemeMode>(() => {
+    return localStorage.getItem('caddie_tema') === 'light' ? 'light' : 'dark';
+  });
   const { notificacoes, naoLidas, marcarComoLida, marcarTodasComoLidas } = useNotification();
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', tema);
+    localStorage.setItem('caddie_tema', tema);
+
+    const sincronizar = () => {
+      setTema(localStorage.getItem('caddie_tema') === 'light' ? 'light' : 'dark');
+    };
+    window.addEventListener('temaAtualizado', sincronizar);
+
+    return () => {
+      window.removeEventListener('temaAtualizado', sincronizar);
+    };
+  }, [tema]);
+
+  const alternarTema = () => {
+    const novo = tema === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('caddie_tema', novo);
+    setTema(novo);
+    window.dispatchEvent(new Event('temaAtualizado'));
+  };
 
   useEffect(() => {
     function handleClickOutsideNotif(event: MouseEvent) {
@@ -72,9 +99,10 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
       if (!isAtendimentoOpen) setHasNewMessage(true);
     }, 4000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isAtendimentoOpen]);
 
   const handleLogout = () => {
+    document.documentElement.setAttribute('data-theme', 'dark');
     localStorage.removeItem('caddie_token');
     sessionStorage.clear();
     navigate('/login');
@@ -124,6 +152,18 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
 
           <div className="topbar-actions">
 
+            <button
+                className="theme-toggle-btn"
+                onClick={alternarTema}
+                title="Alternar entre Modo Escuro e Modo Claro"
+            >
+              {tema === 'dark' ? (
+                  <>🌙 <span className="theme-label-text">Dark</span></>
+              ) : (
+                  <>☀️ <span className="theme-label-text">Light</span></>
+              )}
+            </button>
+
             <div style={{ position: 'relative' }} ref={notifRef}>
               <button
                   className="icon-btn"
@@ -150,8 +190,8 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
                               background: '#f44336',
                               color: '#fff',
                               padding: '0 8px',
-                              height: '20px', 
-                              display: 'inline-flex', 
+                              height: '20px',
+                              display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               borderRadius: '10px',
@@ -245,7 +285,6 @@ export default function TopBar({ userName, onMenuToggle }: TopBarProps) {
                 </>
             )}
 
-            {/* PERFIL (Para todos) */}
             <div className="user-profile" ref={menuRef} onClick={() => user && setIsDropdownOpen(!isDropdownOpen)}>
               {!user ? (
                   <>

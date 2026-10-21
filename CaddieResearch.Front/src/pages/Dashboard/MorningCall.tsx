@@ -21,14 +21,12 @@ interface MorningCallItem {
     topicos: Topico[];
 }
 
-// Estimativa simples de tempo de leitura a partir do texto (~200 palavras/min)
 function tempoLeitura(texto: string): string {
     const palavras = texto.trim().split(/\s+/).length;
     const minutos = Math.max(1, Math.round(palavras / 200));
     return `${minutos} min de leitura`;
 }
 
-// Corta o texto em um limite de caracteres, sem quebrar uma palavra ao meio
 function truncarTexto(texto: string, limite = 180): string {
     if (texto.length <= limite) return texto;
     const cortado = texto.slice(0, limite);
@@ -69,7 +67,6 @@ function MorningCall() {
         }
 
         carregarMorningCalls();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     if (carregando) {

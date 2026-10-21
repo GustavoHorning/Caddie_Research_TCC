@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Navbar.css';
 
@@ -6,6 +6,29 @@ export default function Navbar() {
     const [menuAberto, setMenuAberto] = useState(false);
     const location = useLocation();
     const isHome = location.pathname === '/';
+
+    const [tema, setTema] = useState<'dark' | 'light'>(() => {
+        return localStorage.getItem('caddie_tema') === 'light' ? 'light' : 'dark';
+    });
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', tema);
+        localStorage.setItem('caddie_tema', tema);
+
+        const sincronizar = () => {
+            setTema(localStorage.getItem('caddie_tema') === 'light' ? 'light' : 'dark');
+        };
+        window.addEventListener('temaAtualizado', sincronizar);
+        return () => window.removeEventListener('temaAtualizado', sincronizar);
+    }, [tema]);
+
+    const alternarTema = () => {
+        const novo = tema === 'dark' ? 'light' : 'dark';
+        setTema(novo);
+        localStorage.setItem('caddie_tema', novo);
+        document.documentElement.setAttribute('data-theme', novo);
+        window.dispatchEvent(new Event('temaAtualizado'));
+    };
 
     const toggleMenu = () => {
         setMenuAberto(!menuAberto);
@@ -35,6 +58,20 @@ export default function Navbar() {
                 </ul>
 
                 <div className="navbar-actions">
+                    <button
+                        type="button"
+                        className="theme-toggle-btn"
+                        onClick={alternarTema}
+                        style={{ marginRight: '12px' }}
+                        title="Alternar entre Modo Escuro e Modo Claro"
+                    >
+                        {tema === 'dark' ? (
+                            <>🌙 <span className="theme-label-text">Dark</span></>
+                        ) : (
+                            <>☀️ <span className="theme-label-text">Light</span></>
+                        )}
+                    </button>
+
                     <Link to="/login" className="btn-login desktop-btn">Entrar</Link>
                     <Link to="/cadastro" className="btn-cadastro desktop-btn">Cadastre-se</Link>
 

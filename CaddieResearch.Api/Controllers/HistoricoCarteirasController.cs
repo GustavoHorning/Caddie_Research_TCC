@@ -53,7 +53,6 @@ public class HistoricoCarteirasController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
-    // GET: Lista o histórico de uma carteira específica centrado no ativo
     [HttpGet("{carteiraId}")]
     public async Task<IActionResult> GetHistoricoCentradoNoAtivo(int carteiraId)
     {
@@ -115,7 +114,6 @@ public class HistoricoCarteirasController : ControllerBase
         return Ok(resultado);
     }
 
-    // GET: Lista o histórico global (recomendações + histórico de relatórios por ativo)
     [HttpGet]
     public async Task<IActionResult> GetHistoricoGlobal()
     {
@@ -148,7 +146,6 @@ public class HistoricoCarteirasController : ControllerBase
             })
             .ToListAsync();
 
-        // Coleta todos os Tickers que têm log de carteira OU foram vinculados em relatórios
         var tickersNosLogs = historico.Select(h => h.Ticker.ToUpper().Trim());
         var tickersNosRelatorios = relatorios
             .Where(r => !string.IsNullOrWhiteSpace(r.TagsAtivos))

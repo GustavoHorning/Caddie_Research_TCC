@@ -49,7 +49,6 @@ public class PortfolioController : ControllerBase
             var totalAportes = aportesPorPortfolio.GetValueOrDefault(p.Id, 0);
             var temPosicoes = (p.Posicoes?.Count ?? 0) > 0;
 
-            // Sem posições: patrimônio = aportes (Conta Corrente). Com posições: valor de mercado.
             var patrimonio = temPosicoes ? valorPosicoes : totalAportes;
 
             return new

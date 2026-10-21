@@ -46,8 +46,6 @@ public class MorningCallController : ControllerBase
         return null;
     }
 
-    // Cliente e gestor: lista todos os Morning Calls publicados (mais recente primeiro).
-    // Sem filtro por gestor por enquanto — qualquer cliente logado vê todos.
     [HttpGet]
     public async Task<IActionResult> Get()
     {
@@ -80,7 +78,6 @@ public class MorningCallController : ControllerBase
         return Ok(morningCalls);
     }
 
-    // Gestor: lista só os Morning Calls que ele mesmo criou
     [HttpGet("meus")]
     public async Task<IActionResult> GetMeus()
     {
@@ -115,11 +112,6 @@ public class MorningCallController : ControllerBase
         return Ok(morningCalls);
     }
 
-    // Gestor: cria um Morning Call novo.
-    // "topicosJson" é uma lista de tópicos serializada em JSON (titulo, texto, link).
-    // Cada imagem enviada vem no campo "imagem_0", "imagem_1", etc. — o número é o
-    // índice do tópico correspondente em topicosJson. Um tópico sem imagem de upload
-    // simplesmente não tem um campo "imagem_N" no formulário.
     [HttpPost]
     public async Task<IActionResult> Post([FromForm] string titulo, [FromForm] string data, [FromForm] string topicosJson)
     {
@@ -171,7 +163,6 @@ public class MorningCallController : ControllerBase
             var topicoInput = topicosInput[i];
             string? imagemUrl = topicoInput.ImagemUrlExistente;
 
-            // Busca a imagem desse tópico pelo nome do campo (imagem_0, imagem_1, ...)
             var arquivo = Request.Form.Files.GetFile($"imagem_{i}");
             if (arquivo != null && arquivo.Length > 0)
             {
@@ -191,10 +182,9 @@ public class MorningCallController : ControllerBase
         _context.MorningCalls.Add(morningCall);
         await _context.SaveChangesAsync();
 
-        // Notifica todos os clientes que um novo Morning Call foi publicado
         var notificacao = new Notificacao
         {
-            UsuarioId = null, // geral — todos os clientes recebem
+            UsuarioId = null, 
             Titulo = "Novo Morning Call disponível",
             Mensagem = titulo,
             Tipo = "Info",
@@ -208,7 +198,6 @@ public class MorningCallController : ControllerBase
         return Ok(new { mensagem = "Morning Call publicado com sucesso!", id = morningCall.Id });
     }
 
-    // Gestor: exclui um Morning Call que ele mesmo criou
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -236,8 +225,6 @@ public class MorningCallController : ControllerBase
         return Ok(new { mensagem = "Morning Call excluído." });
     }
 
-    // Gestor: exclui um tópico (notícia) específico de um Morning Call que ele mesmo criou,
-    // sem apagar o restante do Morning Call
     [HttpDelete("{morningCallId}/topicos/{topicoId}")]
     public async Task<IActionResult> DeleteTopico(int morningCallId, int topicoId)
     {
@@ -262,10 +249,6 @@ public class MorningCallController : ControllerBase
         return Ok(new { mensagem = "Notícia removida." });
     }
 
-    // Gestor: edita um Morning Call que ele mesmo criou (título, data e tópicos).
-    // Segue o mesmo formato de entrada do Post. Tópicos com "id" preenchido são
-    // atualizados; tópicos sem "id" são criados; tópicos que existiam mas não vieram
-    // nesta lista são removidos (junto com a imagem deles no Blob, se houver).
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string data, [FromForm] string topicosJson, [FromForm] string? removerAudio = null)
     {
@@ -319,7 +302,6 @@ public class MorningCallController : ControllerBase
         morningCall.Titulo = titulo;
         morningCall.Data = dataConvertida;
 
-        // Remove tópicos que existiam antes mas não vieram mais na lista enviada
         var idsEnviados = topicosInput.Where(t => t.Id.HasValue).Select(t => t.Id!.Value).ToHashSet();
         var topicosParaRemover = morningCall.Topicos.Where(t => !idsEnviados.Contains(t.Id)).ToList();
         foreach (var topicoRemovido in topicosParaRemover)
@@ -334,7 +316,6 @@ public class MorningCallController : ControllerBase
             var topicoInput = topicosInput[i];
             string? imagemUrl = topicoInput.ImagemUrlExistente;
 
-            // Nova imagem enviada nessa posição? Faz upload e substitui a anterior
             var arquivo = Request.Form.Files.GetFile($"imagem_{i}");
             if (arquivo != null && arquivo.Length > 0)
             {
@@ -343,7 +324,6 @@ public class MorningCallController : ControllerBase
 
             if (topicoInput.Id.HasValue)
             {
-                // Tópico existente: atualiza os campos
                 var topicoExistente = morningCall.Topicos.FirstOrDefault(t => t.Id == topicoInput.Id.Value);
                 if (topicoExistente != null)
                 {
@@ -352,8 +332,6 @@ public class MorningCallController : ControllerBase
                     topicoExistente.Link = topicoInput.Link;
                     topicoExistente.Ordem = i;
 
-                    // Só troca a imagem se veio uma nova (upload) ou uma URL diferente;
-                    // se o campo ficou vazio, mantém a imagem que já estava salva
                     if (arquivo != null && arquivo.Length > 0)
                     {
                         if (!string.IsNullOrEmpty(topicoExistente.ImagemUrl))
@@ -368,7 +346,6 @@ public class MorningCallController : ControllerBase
             }
             else
             {
-                // Tópico novo, adicionado durante a edição
                 morningCall.Topicos.Add(new MorningCallTopico
                 {
                     Titulo = topicoInput.Titulo,
@@ -388,13 +365,11 @@ public class MorningCallController : ControllerBase
 
 public class TopicoInputDto
 {
-    // Preenchido só quando esse tópico já existia (edição). Nulo = tópico novo.
     public int? Id { get; set; }
 
     public string Titulo { get; set; } = string.Empty;
     public string Texto { get; set; } = string.Empty;
     public string? Link { get; set; }
 
-    // Preenchido quando o gestor colou uma URL de imagem em vez de fazer upload
     public string? ImagemUrlExistente { get; set; }
 }

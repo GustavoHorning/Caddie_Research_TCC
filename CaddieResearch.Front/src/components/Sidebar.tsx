@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './Sidebar.css'
 
 const menuResearch = [
@@ -100,7 +100,23 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activePath = '/home', isOpen = false, onClose }: SidebarProps) {
-    const [darkMode, setDarkMode] = useState(true)
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('caddie_tema') !== 'light')
+
+    useEffect(() => {
+        const sincronizarTema = () => {
+            setDarkMode(localStorage.getItem('caddie_tema') !== 'light')
+        }
+        window.addEventListener('temaAtualizado', sincronizarTema)
+        return () => window.removeEventListener('temaAtualizado', sincronizarTema)
+    }, [])
+
+    const alternarTemaSidebar = () => {
+        const novoTema = darkMode ? 'light' : 'dark'
+        localStorage.setItem('caddie_tema', novoTema)
+        document.documentElement.setAttribute('data-theme', novoTema)
+        setDarkMode(!darkMode)
+        window.dispatchEvent(new Event('temaAtualizado'))
+    }
 
     return (
         <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -133,7 +149,7 @@ export default function Sidebar({ activePath = '/home', isOpen = false, onClose 
                 </div>
 
                 <div className="sidebar-footer">
-                    <div className="sidebar-theme-toggle" onClick={() => setDarkMode(!darkMode)}>
+                    <div className="sidebar-theme-toggle" onClick={alternarTemaSidebar} title="Alternar Tema">
                         <span className={'theme-option' + (darkMode ? ' active' : '')}>🌙</span>
                         <span className={'theme-option' + (!darkMode ? ' active' : '')}>☀️</span>
                     </div>

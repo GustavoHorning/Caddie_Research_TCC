@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import './Pagamento.css'
 
@@ -17,6 +17,22 @@ export default function Pagamento() {
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
+  const [tema, setTema] = useState<'dark' | 'light'>(() => {
+    return localStorage.getItem('caddie_tema') === 'light' ? 'light' : 'dark'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', tema)
+    localStorage.setItem('caddie_tema', tema)
+  }, [tema])
+
+  const alternarTema = () => {
+    const novo = tema === 'dark' ? 'light' : 'dark'
+    setTema(novo)
+    localStorage.setItem('caddie_tema', novo)
+    window.dispatchEvent(new Event('temaAtualizado'))
+  }
+
   async function handlePagar(e: React.FormEvent) {
     e.preventDefault()
     setErro(null)
@@ -31,16 +47,16 @@ export default function Pagamento() {
           const payloadBase64Url = token.split('.')[1];
           const base64 = payloadBase64Url.replace(/-/g, '+').replace(/_/g, '/');
           const decodedJson = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
           }).join(''));
-          
+
           const payload = JSON.parse(decodedJson);
-          
-          const extractedId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] 
-                           || payload.nameid 
-                           || payload.sub 
-                           || "0";
-                           
+
+          const extractedId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]
+              || payload.nameid
+              || payload.sub
+              || "0";
+
           usuarioIdReal = parseInt(extractedId, 10);
         } catch (e) {
           console.error("Falha ao decodificar o token JWT", e);
@@ -50,9 +66,12 @@ export default function Pagamento() {
       if (!usuarioIdReal || isNaN(usuarioIdReal)) {
         throw new Error("Usuário não autenticado ou token inválido. Faça login novamente.");
       }
+
       const urlLocal = 'http://localhost:5194';
       const urlAzure = 'https://caddieresearch-api-gnewb5eebrckadfk.brazilsouth-01.azurewebsites.net';
-      const baseUrl = import.meta.env.DEV ? urlLocal : urlAzure;      const response = await fetch(`${baseUrl}/api/pagamento/checkout`, {        
+      const baseUrl = import.meta.env.DEV ? urlLocal : urlAzure;
+
+      const response = await fetch(`${baseUrl}/api/pagamento/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +80,7 @@ export default function Pagamento() {
         body: JSON.stringify({
           plano: plano?.nome,
           metodo: metodoPagamento,
-          usuarioId: usuarioIdReal 
+          usuarioId: usuarioIdReal
         })
       });
 
@@ -86,106 +105,117 @@ export default function Pagamento() {
 
   if (!plano) {
     return (
-      <div className="pag-page">
-        <div className="pag-glow" />
-        <div className="pag-card" style={{ textAlign: 'center' }}>
-          <p style={{ color: '#7a90a8', marginBottom: 24 }}>Nenhum plano selecionado.</p>
-          <button className="pag-btn" onClick={() => navigate('/planos')}>Ver planos</button>
+        <div className="pag-page">
+          <div className="pag-glow" />
+          <div className="pag-card" style={{ textAlign: 'center' }}>
+            <p className="pag-subtitulo" style={{ marginBottom: 24 }}>Nenhum plano selecionado.</p>
+            <button className="pag-btn" onClick={() => navigate('/planos')}>Ver planos</button>
+          </div>
         </div>
-      </div>
     )
   }
 
   return (
-    <div className="pag-page">
-      <div className="pag-glow" />
-      <div className="pag-container">
+      <div className="pag-page">
+        <div className="pag-glow" />
 
-        <div className="pag-resumo">
-          <a href="/planos" className="pag-logo">Caddie<span>Research</span></a>
-          <div className="pag-resumo-card">
-            <p className="pag-resumo-label">Você está assinando</p>
-            <div className="pag-resumo-plano">
-              <span className="pag-resumo-icone">{plano.icone}</span>
-              <div>
-                <p className="pag-resumo-nome">Plano {plano.nome}</p>
-                <p className="pag-resumo-preco">
-                  R$ {plano.preco.toFixed(2).replace('.', ',')}
-                  <span>/mês</span>
-                </p>
+        <button
+            type="button"
+            className="theme-toggle-btn"
+            onClick={alternarTema}
+            style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 50 }}
+            title="Alternar entre Modo Escuro e Modo Claro"
+        >
+          {tema === 'dark' ? <>🌙 <span className="theme-label-text">Dark</span></> : <>☀️ <span className="theme-label-text">Light</span></>}
+        </button>
+
+        <div className="pag-container">
+
+          <div className="pag-resumo">
+            <a href="/planos" className="pag-logo">Caddie<span>Research</span></a>
+            <div className="pag-resumo-card">
+              <p className="pag-resumo-label">Você está assinando</p>
+              <div className="pag-resumo-plano">
+                <span className="pag-resumo-icone">{plano.icone}</span>
+                <div>
+                  <p className="pag-resumo-nome">Plano {plano.nome}</p>
+                  <p className="pag-resumo-preco">
+                    R$ {plano.preco.toFixed(2).replace('.', ',')}
+                    <span>/mês</span>
+                  </p>
+                </div>
               </div>
+              <div className="pag-resumo-linha" />
+              <div className="pag-resumo-total">
+                <span>Total hoje</span>
+                <span>R$ {plano.preco.toFixed(2).replace('.', ',')}</span>
+              </div>
+              <p className="pag-resumo-obs">Cancele quando quiser.</p>
             </div>
-            <div className="pag-resumo-linha" />
-            <div className="pag-resumo-total">
-              <span>Total hoje</span>
-              <span>R$ {plano.preco.toFixed(2).replace('.', ',')}</span>
-            </div>
-            <p className="pag-resumo-obs">Cancele quando quiser.</p>
-          </div>
-          <button className="pag-voltar" onClick={() => navigate('/gerenciar-plano')}>
-            ← Trocar de plano
-          </button>
-        </div>
-
-        <div className="pag-form-side">
-          <h1 className="pag-titulo">Finalizar Assinatura</h1>
-          <p className="pag-subtitulo">
-            Escolha sua forma de pagamento. O processamento é 100% seguro.
-          </p>
-
-          <div className="pag-metodos">
-            <button
-              className={`pag-metodo-btn ${metodoPagamento === 'credito' ? 'ativo' : ''}`}
-              onClick={() => setMetodoPagamento('credito')}
-              type="button"
-            >
-              💳 Crédito
-            </button>
-            <button
-              className={`pag-metodo-btn ${metodoPagamento === 'pix' ? 'ativo' : ''}`}
-              onClick={() => setMetodoPagamento('pix')}
-              type="button"
-            >
-              ❖ Pix
+            <button className="pag-voltar" onClick={() => navigate('/gerenciar-plano')}>
+              ← Trocar de plano
             </button>
           </div>
 
-          <form onSubmit={handlePagar}>
-            
-            {metodoPagamento === 'credito' && (
-              <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
-                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '12px' }}>Assinatura Mensal Automática</h3>
-                <p style={{ color: '#a0b0c0', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                  Ao escolher o cartão de crédito, sua assinatura será renovada automaticamente a cada mês. Você não precisa se preocupar em pagar boletos ou fazer transferências todo mês.
-                </p>
-              </div>
-            )}
-
-            {metodoPagamento === 'pix' && (
-              <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
-                <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '12px' }}>Pagamento Único (1 Mês)</h3>
-                <p style={{ color: '#a0b0c0', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                  Ao escolher o Pix, você garante o acesso ao plano por exatos 30 dias. Esta modalidade <strong>não possui renovação automática</strong>, e você precisará realizar um novo pagamento quando o plano expirar.
-                </p>
-              </div>
-            )}
-
-            {erro && (
-              <div className="pag-error" style={{ marginBottom: '16px', textAlign: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
-                {erro}
-              </div>
-            )}
-
-            <button type="submit" className="pag-btn" disabled={carregando}>
-              {carregando ? 'Redirecionando...' : `Pagar R$ ${plano.preco.toFixed(2).replace('.', ',')} no ambiente seguro`}
-            </button>
-
-            <p className="pag-seguranca" style={{ marginTop: '24px' }}>
-              🔒 Pagamento processado com segurança via AbacatePay.
+          <div className="pag-form-side">
+            <h1 className="pag-titulo">Finalizar Assinatura</h1>
+            <p className="pag-subtitulo">
+              Escolha sua forma de pagamento. O processamento é 100% seguro.
             </p>
-          </form>
+
+            <div className="pag-metodos">
+              <button
+                  className={`pag-metodo-btn ${metodoPagamento === 'credito' ? 'ativo' : ''}`}
+                  onClick={() => setMetodoPagamento('credito')}
+                  type="button"
+              >
+                💳 Crédito
+              </button>
+              <button
+                  className={`pag-metodo-btn ${metodoPagamento === 'pix' ? 'ativo' : ''}`}
+                  onClick={() => setMetodoPagamento('pix')}
+                  type="button"
+              >
+                ❖ Pix
+              </button>
+            </div>
+
+            <form onSubmit={handlePagar}>
+
+              {metodoPagamento === 'credito' && (
+                  <div className="pag-info-box">
+                    <h3>Assinatura Mensal Automática</h3>
+                    <p>
+                      Ao escolher o cartão de crédito, sua assinatura será renovada automaticamente a cada mês. Você não precisa se preocupar em pagar boletos ou fazer transferências todo mês.
+                    </p>
+                  </div>
+              )}
+
+              {metodoPagamento === 'pix' && (
+                  <div className="pag-info-box">
+                    <h3>Pagamento Único (1 Mês)</h3>
+                    <p>
+                      Ao escolher o Pix, você garante o acesso ao plano por exatos 30 dias. Esta modalidade <strong>não possui renovação automática</strong>, e você precisará realizar um novo pagamento quando o plano expirar.
+                    </p>
+                  </div>
+              )}
+
+              {erro && (
+                  <div className="pag-error" style={{ marginBottom: '16px', textAlign: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
+                    {erro}
+                  </div>
+              )}
+
+              <button type="submit" className="pag-btn" disabled={carregando}>
+                {carregando ? 'Redirecionando...' : `Pagar R$ ${plano.preco.toFixed(2).replace('.', ',')} no ambiente seguro`}
+              </button>
+
+              <p className="pag-seguranca" style={{ marginTop: '24px' }}>
+                🔒 Pagamento processado com segurança via AbacatePay.
+              </p>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
   )
 }

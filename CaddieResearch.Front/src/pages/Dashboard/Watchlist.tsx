@@ -26,7 +26,6 @@ interface AbaPersonalizada {
 }
 
 type AbaFixa = 'todos' | 'acoes' | 'rendafixa' | 'internacional'
-// A aba ativa agora pode ser uma das fixas, OU o id de uma aba personalizada (prefixado com "custom-")
 type AbaAtiva = AbaFixa | `custom-${number}`
 
 export default function Watchlist() {
@@ -86,7 +85,6 @@ export default function Watchlist() {
 
     carregarFavoritos()
     carregarAbasPersonalizadas()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function salvarAnotacao(ticker: string, anotacao: string) {
@@ -111,14 +109,12 @@ export default function Watchlist() {
         delete novo[ticker]
         return novo
       })
-      // Se o ativo saiu da watchlist, ele também não pode continuar em nenhuma aba personalizada
       setAbasPersonalizadas(prev => prev.map(a => ({ ...a, tickers: a.tickers.filter(t => t !== ticker) })))
     } catch (e) {
       console.error('Erro ao remover favorito', e)
     }
   }
 
-  // ---------- Abas personalizadas ----------
 
   async function criarAba() {
     const nome = nomeNovaAba.trim()
@@ -191,7 +187,6 @@ export default function Watchlist() {
     }
   }
 
-  // ---------- Filtros das abas fixas (por palavra-chave da categoria) ----------
 
   function filtroRendaFixa(f: Favorito): boolean {
     const cat = f.categoria?.toLowerCase() || ''

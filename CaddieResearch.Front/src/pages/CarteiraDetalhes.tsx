@@ -16,8 +16,7 @@ export default function CarteiraDetalhes() {
     const [carteira, setCarteira] = useState<any>(null);
     const [carregando, setCarregando] = useState(true);
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
-    
-    // Estados para controlar a abertura do modal (Geral da Carteira ou Focado no Ativo)
+
     const [modalHistoricoAberto, setModalHistoricoAberto] = useState(false);
     const [tickerFocoModal, setTickerFocoModal] = useState<string>('Todos');
 
@@ -64,16 +63,16 @@ export default function CarteiraDetalhes() {
 
         const params = new URLSearchParams(location.search);
         const highlightId = params.get('highlight');
-        
+
         if (highlightId) {
             setTimeout(() => {
                 const element = document.getElementById(`ativo-${highlightId}`);
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     element.classList.add('highlight-pulse');
-                    
+
                     window.history.replaceState(null, '', location.pathname);
-                    
+
                     setTimeout(() => element.classList.remove('highlight-pulse'), 2000);
                 }
             }, 300);
@@ -131,8 +130,8 @@ export default function CarteiraDetalhes() {
                                     <div className="detalhes-badge-tipo">Carteira Recomendada</div>
                                     <h1>{carteira.nome}</h1>
                                     <p>Análise estratégica e recomendações atualizadas pelo nosso time de gestão.</p>
-                                    
-                                    <button 
+
+                                    <button
                                         onClick={abrirHistoricoCarteira}
                                         style={{ marginTop: '12px', background: 'transparent', border: '1px solid #00B4D8', color: '#00B4D8', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
                                     >
@@ -185,7 +184,7 @@ export default function CarteiraDetalhes() {
                                                 <strong className="kpi-valor">{taxasMacro.selic}</strong>
                                             </div>
                                             <div className="detalhes-kpi-item">
-                                                <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c4b5fd' }}>
+                                                <span className="kpi-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8b5cf6' }}>
                                                     📊 Taxa CDI
                                                 </span>
                                                 <strong className="kpi-valor">{taxasMacro.cdi}</strong>
@@ -193,12 +192,12 @@ export default function CarteiraDetalhes() {
                                         </div>
                                     )}
 
-                                    <div style={{ background: '#111', padding: '16px 20px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem', color: '#8b949e', fontWeight: 600 }}>
+                                    <div className="distribuicao-vies-card">
+                                        <div className="distribuicao-vies-header">
                                             <span>Distribuição de Viés</span>
                                             <span>Atualizado hoje</span>
                                         </div>
-                                        <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                                        <div className="distribuicao-vies-barra">
                                             <div style={{ width: `${(qtdComprar / totalAtivos) * 100}%`, backgroundColor: '#4caf50', transition: 'width 1s ease-in-out' }} title={`Comprar: ${qtdComprar}`}></div>
                                             <div style={{ width: `${(qtdAguardar / totalAtivos) * 100}%`, backgroundColor: '#ff9800', transition: 'width 1s ease-in-out' }} title={`Aguardar: ${qtdAguardar}`}></div>
                                             <div style={{ width: `${(qtdVender / totalAtivos) * 100}%`, backgroundColor: '#f44336', transition: 'width 1s ease-in-out' }} title={`Vender: ${qtdVender}`}></div>
@@ -239,9 +238,9 @@ export default function CarteiraDetalhes() {
                                         if (carteira?.id === 8) tipoCard = 'reserva';
 
                                         return (
-                                            <div 
-                                                key={index} 
-                                                id={`ativo-${ativo.id}`} 
+                                            <div
+                                                key={index}
+                                                id={`ativo-${ativo.id}`}
                                                 onClick={() => abrirHistoricoAtivo(ativo.ticker)}
                                                 style={{ cursor: 'pointer' }}
                                                 title={`Clique para abrir o histórico de ${ativo.ticker}`}
@@ -264,8 +263,8 @@ export default function CarteiraDetalhes() {
 
                                     if (isInternacional) {
                                         return (
-                                            <div 
-                                                key={index} 
+                                            <div
+                                                key={index}
                                                 id={`ativo-${ativo.id}`}
                                                 onClick={() => abrirHistoricoAtivo(ativo.ticker)}
                                                 style={{ cursor: 'pointer' }}
@@ -284,8 +283,8 @@ export default function CarteiraDetalhes() {
                                     }
 
                                     return (
-                                        <div 
-                                            key={index} 
+                                        <div
+                                            key={index}
                                             id={`ativo-${ativo.id}`}
                                             onClick={() => abrirHistoricoAtivo(ativo.ticker)}
                                             style={{ cursor: 'pointer' }}
@@ -325,13 +324,12 @@ export default function CarteiraDetalhes() {
                 </div>
             </main>
 
-            {/* Modal injetado aqui (abre tanto no modo Geral quanto Focado no Ativo clicado) */}
             {modalHistoricoAberto && carteira && (
-                <ModalHistoricoCarteira 
-                    carteiraId={carteira.id} 
-                    carteiraNome={carteira.nome} 
+                <ModalHistoricoCarteira
+                    carteiraId={carteira.id}
+                    carteiraNome={carteira.nome}
                     tickerInicial={tickerFocoModal}
-                    onClose={() => setModalHistoricoAberto(false)} 
+                    onClose={() => setModalHistoricoAberto(false)}
                 />
             )}
         </div>
