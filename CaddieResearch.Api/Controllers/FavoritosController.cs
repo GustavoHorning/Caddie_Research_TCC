@@ -18,7 +18,11 @@ public class FavoritosController : ControllerBase
         _context = context;
     }
 
+    /// <summary>
+    /// Lista os ativos salvos na Watchlist Global do usuário.
+    /// </summary>
     [HttpGet]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetFavoritos()
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -33,7 +37,15 @@ public class FavoritosController : ControllerBase
         return Ok(favoritos);
     }
 
+    /// <summary>
+    /// Adiciona um ativo à Watchlist do usuário.
+    /// </summary>
+    /// <remarks>
+    /// Valida duplicidade. Usado no painel do cliente para monitoramento personalizado de cotações.
+    /// </remarks>
     [HttpPost]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> AddFavorito([FromBody] FavoritoDto dto)
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -62,7 +74,11 @@ public class FavoritosController : ControllerBase
         return Ok(new { mensagem = "Adicionado à watchlist!" });
     }
 
+    /// <summary>
+    /// Atualiza as anotações textuais privadas de um ativo favoritado.
+    /// </summary>
     [HttpPatch("{ticker}/anotacao")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> AtualizarAnotacao(string ticker, [FromBody] AnotacaoDto dto)
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -81,7 +97,14 @@ public class FavoritosController : ControllerBase
         return Ok(new { mensagem = "Anotação salva!" });
     }
 
+    /// <summary>
+    /// Remove um ativo da Watchlist.
+    /// </summary>
+    /// <remarks>
+    /// Remove os relacionamentos (abas customizadas) antes de deletar o ativo do painel global.
+    /// </remarks>
     [HttpDelete("{ticker}")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> RemoveFavorito(string ticker)
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -94,8 +117,6 @@ public class FavoritosController : ControllerBase
         if (favorito == null)
             return NotFound();
 
-        // Como o favorito pode estar em uma ou mais abas personalizadas, remove
-        // esses vínculos primeiro (a FK não é mais em cascata para essa relação)
         var vinculos = await _context.WatchlistAbaFavoritos
             .Where(v => v.FavoritoId == favorito.Id)
             .ToListAsync();
@@ -111,7 +132,16 @@ public class FavoritosController : ControllerBase
 
 public class FavoritoDto
 {
+    /// <summary>
+    /// Código do ativo na bolsa.
+    /// </summary>
+    /// <example>ITUB4</example>
     public string Ticker { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Nome da empresa.
+    /// </summary>
+    /// <example>Itaú Unibanco</example>
     public string? NomeEmpresa { get; set; }
     public string? Categoria { get; set; }
     public string? Rentabilidade { get; set; }
@@ -120,5 +150,9 @@ public class FavoritoDto
 
 public class AnotacaoDto
 {
+    /// <summary>
+    /// Lembrete pessoal sobre o ativo.
+    /// </summary>
+    /// <example>Aguardar balanço do 3T26 para comprar.</example>
     public string? Anotacao { get; set; }
 }

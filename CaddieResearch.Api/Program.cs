@@ -7,11 +7,36 @@ using System.Text;
 using CaddieResearch.Api.Hubs;
 using CaddieResearch.Api.Workers;
 using SeuProjeto.Services;
+using System.Reflection;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Caddie Research API",
+        Version = "v1",
+        Description = "API principal para o ecossistema Caddie Research. Gerencia assinaturas, portfólios, morning calls e relatórios.",
+        Contact = new OpenApiContact
+        {
+            Name = "Time Caddie Research",
+            Email = "suporte@caddieresearch.com.br"
+        }
+    });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -28,7 +53,6 @@ builder.Services.AddHttpClient("yahoo", c =>
 {
     c.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
 });
-
 
 builder.Services.AddScoped<AcoesService>();
 builder.Services.AddHttpClient<InternacionalService>();
@@ -78,10 +102,18 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddHostedService<CaddieResearch.Api.Workers.MacroCalendarioWorker>();
+builder.Services.AddHostedService<MacroCalendarioWorker>();
 builder.Services.AddHostedService<BalancoCalendarioWorker>();
 builder.Services.AddSignalR();
+
 var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Caddie Research API v1");
+    c.RoutePrefix = "swagger"; 
+});
 
 app.UseHttpsRedirection();
 app.UseCors("CorsPolicy");

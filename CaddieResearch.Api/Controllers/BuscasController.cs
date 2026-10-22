@@ -18,7 +18,19 @@ public class BuscasController : ControllerBase
         _context = context;
     }
 
+    /// <summary>
+    /// Realiza uma busca global (Omnisearch) no ecossistema Caddie.
+    /// </summary>
+    /// <remarks>
+    /// Procura pelo termo informado nos títulos e conteúdos de Relatórios (inclusive dentro de PDFs), no nome e ticker de Ativos, e no log de Auditoria de mudanças das carteiras. 
+    /// O conteúdo retornado respeita estritamente a hierarquia de acesso (plano) do usuário autenticado.
+    /// </remarks>
+    /// <param name="termo">Palavra-chave a ser pesquisada. Ex: "Petrobras", "Dividendos", "FII".</param>
+    /// <response code="200">Resultados da busca cruzada retornados com sucesso.</response>
+    /// <response code="400">O termo de busca enviado está em branco.</response>
     [HttpGet("global")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> BuscarGlobal([FromQuery] string termo)
     {
         if (string.IsNullOrWhiteSpace(termo)) 
@@ -98,15 +110,15 @@ public class BuscasController : ControllerBase
             })
             .ToListAsync();
 
-        // BUSCA EM AUDITORIA (LOG IMUTÁVEL) - Correção da tradução do LINQ
+        // BUSCA EM AUDITORIA (LOG IMUTÁVEL)
         var auditoriasBrutas = await _context.HistoricoRecomendacoesCarteiras
             .Include(h => h.Carteira)
             .Where(h => h.Ticker.ToLower().Contains(termo) || h.NomeAtivo.ToLower().Contains(termo))
-            .ToListAsync(); // Traz para a memória primeiro
+            .ToListAsync(); 
 
         var auditorias = auditoriasBrutas
             .GroupBy(h => h.Ticker)
-            .Select(g => g.OrderByDescending(h => h.DataRecomendacao).First()) // Agrupa na memória do servidor
+            .Select(g => g.OrderByDescending(h => h.DataRecomendacao).First()) 
             .Select(h => new
             {
                 id = "auditoria_" + h.Id,

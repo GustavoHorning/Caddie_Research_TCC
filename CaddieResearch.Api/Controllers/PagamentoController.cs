@@ -14,6 +14,7 @@ namespace CaddieResearch.Api.Controllers
     public class PagamentoController : ControllerBase
     {
         private readonly AppDbContext _context;
+        // Dicionário Thread-safe para evitar processamento duplicado do mesmo webhook
         private static readonly ConcurrentDictionary<string, bool> _processedWebhooks = new();
         private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
@@ -22,7 +23,17 @@ namespace CaddieResearch.Api.Controllers
             _context = context;
         }
 
+        /// <summary>
+        /// Gera uma URL segura de pagamento/checkout.
+        /// </summary>
+        /// <remarks>
+        /// Comunica-se com a API do AbacatePay (Gateway de Pagamentos), cria uma sessão de cobrança baseada no plano escolhido (Basic, Premium ou Black) e retorna a URL onde o cliente deve inserir os dados do cartão ou realizar o PIX.
+        /// </remarks>
+        /// <response code="200">URL do checkout gerada com sucesso.</response>
+        /// <response code="400">Falha ao comunicar com o Gateway ou parâmetros inválidos.</response>
         [HttpPost("checkout")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         public async Task<IActionResult> CriarCheckout(
             [FromBody] CheckoutDto request, 
             [FromServices] AbacatePayService abacatePayService)
@@ -38,7 +49,21 @@ namespace CaddieResearch.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Recebe callbacks (Webhooks) do Gateway de Pagamento.
+        /// </summary>
+        /// <remarks>
+        /// Endpoint público acionado pelos servidores do AbacatePay quando um pagamento é concluído. 
+        /// Implementa verificação de idempotência e Semáforo (SemaphoreSlim) para evitar condições de corrida (Race Conditions). 
+        /// Cancela eventuais assinaturas antigas do cliente, cadastra a nova vigência de 1 mês e atualiza o Paywall.
+        /// </remarks>
+        /// <response code="200">Webhook processado e assinatura ativada (Ou ignorado caso não seja um evento de sucesso).</response>
+        /// <response code="400">Payload inválido ou falha de negócio.</response>
+        /// <response code="500">Erro interno no servidor ao tentar persistir os dados.</response>
         [HttpPost("webhook")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(500)]
         public async Task<IActionResult> Webhook()
         {
             using var reader = new StreamReader(Request.Body);
@@ -134,8 +159,15 @@ namespace CaddieResearch.Api.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Faz um "Polling" para saber se o Webhook já aprovou o pagamento.
+        /// </summary>
+        /// <remarks>
+        /// Utilizado pela tela de carregamento (Spinner) do Front-end pós-checkout. Quando o pagamento for confirmado pelo Webhook, esta rota devolve um novo Token JWT carregado com as permissões do plano contratado para atualizar a UI do cliente.
+        /// </remarks>
         [HttpGet("verificar-status")]
         [Authorize]
+        [ProducesResponseType(200)]
         public async Task<IActionResult> VerificarStatus([FromQuery] string planoDesejado, [FromServices] TokenService tokenService)
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -166,8 +198,22 @@ namespace CaddieResearch.Api.Controllers
 
     public class CheckoutDto
     {
+        /// <summary>
+        /// O plano selecionado na Landing Page.
+        /// </summary>
+        /// <example>Premium</example>
         public string Plano { get; set; } = string.Empty;
+
+        /// <summary>
+        /// O método de pagamento desejado.
+        /// </summary>
+        /// <example>pix</example>
         public string Metodo { get; set; } = string.Empty;
+
+        /// <summary>
+        /// ID interno do usuário que está fechando a compra.
+        /// </summary>
+        /// <example>42</example>
         public int UsuarioId { get; set; }
     }
 }

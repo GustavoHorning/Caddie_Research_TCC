@@ -17,8 +17,23 @@ public class AcoesController : ControllerBase
         _configuration = configuration;
     }
 
+    /// <summary>
+    /// Retorna a cotação em tempo real de uma ação (B3).
+    /// </summary>
+    /// <remarks>
+    /// Consulta o provedor de dados de mercado para buscar o preço atual, a variação percentual do dia e o logotipo da empresa associada ao ticker informado.
+    /// </remarks>
+    /// <param name="ticker">O código de negociação da ação na bolsa. Ex: PETR4, VALE3</param>
+    /// <response code="200">Cotação retornada com sucesso.</response>
+    /// <response code="400">O parâmetro ticker é obrigatório.</response>
+    /// <response code="404">Ticker não encontrado no provedor de dados.</response>
+    /// <response code="500">Erro de comunicação com o serviço externo.</response>
     [AllowAnonymous]
     [HttpGet("cotacao/{ticker}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> GetCotacao(string ticker)
     {
         if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
