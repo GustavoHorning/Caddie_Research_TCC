@@ -53,7 +53,15 @@ public class HistoricoCarteirasController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
+    /// <summary>
+    /// Busca o histórico de recomendações de um ativo específico.
+    /// </summary>
+    /// <remarks>
+    /// Filtra a linha do tempo (logs imutáveis do Gestor) cruzando com relatórios de tese. O Paywall intercepta dados se a carteira for superior ao plano do cliente.
+    /// </remarks>
     [HttpGet("{carteiraId}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(403)]
     public async Task<IActionResult> GetHistoricoCentradoNoAtivo(int carteiraId)
     {
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -114,7 +122,14 @@ public class HistoricoCarteirasController : ControllerBase
         return Ok(resultado);
     }
 
+    /// <summary>
+    /// Busca o histórico global (Timeline de Auditoria).
+    /// </summary>
+    /// <remarks>
+    /// Monta a árvore de histórico de todos os ativos. Se um ativo pertencer a um plano bloqueado, o banco omite o conteúdo dos logs (retorna texto de 'Restrito') para gerar conversão (Upsell) na UI.
+    /// </remarks>
     [HttpGet]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetHistoricoGlobal()
     {
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -204,8 +219,12 @@ public class HistoricoCarteirasController : ControllerBase
         return Ok(resultado);
     }
 
+    /// <summary>
+    /// Gera um log manual de auditoria (Acesso Gestor).
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = "Gestor")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> CriarRegistro([FromBody] HistoricoRecomendacaoCarteira dto)
     {
         var gestorId = GetUsuarioId();

@@ -15,7 +15,15 @@ public class MercadoController : ControllerBase
         _http = factory.CreateClient("yahoo");
     }
 
+    /// <summary>
+    /// Retorna os dados para os Gráficos Históricos (Candlesticks).
+    /// </summary>
+    /// <remarks>
+    /// Comunica-se com a API do Yahoo Finance para extrair o array de preços, volumes e fechamentos no range solicitado.
+    /// </remarks>
     [HttpGet("historico")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> GetHistorico([FromQuery] string ticker, [FromQuery] string range = "1y", [FromQuery] string interval = "1d")
     {
         if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
@@ -38,7 +46,11 @@ public class MercadoController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Retorna as cotações de Contratos Futuros diretos da B3.
+    /// </summary>
     [HttpGet("futuro")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetCotacaoFuturo([FromQuery] string ticker)
     {
         if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
@@ -66,10 +78,16 @@ public class MercadoController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Retorna a evolução da taxa do CDI.
+    /// </summary>
+    /// <remarks>
+    /// Faz integração direta com o Banco Central do Brasil (SGS) para puxar a rentabilidade histórica oficial do CDI.
+    /// </remarks>
     [HttpGet("cdi")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetCdi([FromQuery] string? dataInicial, [FromQuery] string? dataFinal)
     {
-        // dataInicial e dataFinal no formato dd/MM/yyyy
         string url;
         if (!string.IsNullOrWhiteSpace(dataInicial) && !string.IsNullOrWhiteSpace(dataFinal))
             url = $"https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial={dataInicial}&dataFinal={dataFinal}";

@@ -29,7 +29,14 @@ public class RelatoriosController : ControllerBase
         _hubContext = hubContext; 
     }
 
+    /// <summary>
+    /// Lista todos os relatórios e teses de investimentos publicados (Acesso Geral).
+    /// </summary>
+    /// <remarks>
+    /// Retorna a lista de relatórios disponíveis no sistema, incluindo o conteúdo textual e as tags para indexação no motor de busca (Omnisearch).
+    /// </remarks>
     [HttpGet]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> Get()
     {
         var relatorios = await _context.Relatorios
@@ -52,7 +59,20 @@ public class RelatoriosController : ControllerBase
         return Ok(relatorios);
     }
 
+    /// <summary>
+    /// Publica um novo Relatório de Investimentos com anexo em PDF (Acesso Gestor).
+    /// </summary>
+    /// <remarks>
+    /// Processo complexo que: 1) Faz upload do arquivo para o Azure Blob Storage; 2) Extrai todo o texto interno do PDF (via PdfPig) para indexação invisível na busca global; 3) Vincula o relatório ao Paywall da carteira e 4) Dispara notificações SignalR.
+    /// </remarks>
+    /// <param name="titulo">O título do relatório. Ex: 'Início de Cobertura: WEGE3'</param>
+    /// <param name="assunto">Tema principal. Ex: 'Ações B3'</param>
+    /// <param name="conteudoTexto">Resumo do relatório.</param>
+    /// <param name="tagsAtivos">Tickers relacionados. Ex: 'WEGE3,VALE3'</param>
+    /// <param name="carteiraId">ID da carteira (define o Paywall do relatório).</param>
+    /// <param name="arquivoPdf">O arquivo físico em PDF.</param>
     [HttpPost]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> Post([FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] string? tagsAtivos, [FromForm] int carteiraId, IFormFile? arquivoPdf)
     {
         string? pdfUrl = null;
@@ -87,7 +107,12 @@ public class RelatoriosController : ControllerBase
         return Ok(relatorio);
     }
 
+    /// <summary>
+    /// Atualiza um relatório existente, reprocessando anexos se necessário (Acesso Gestor).
+    /// </summary>
     [HttpPut("{id}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] string? tagsAtivos, [FromForm] int carteiraId, IFormFile? arquivoPdf)
     {
         var relatorio = await _context.Relatorios.FindAsync(id);
@@ -119,7 +144,12 @@ public class RelatoriosController : ControllerBase
         return Ok(relatorio);
     }
 
+    /// <summary>
+    /// Exclui permanentemente um relatório e seu PDF hospedado.
+    /// </summary>
     [HttpDelete("{id}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(int id)
     {
         var relatorio = await _context.Relatorios.FindAsync(id);
@@ -143,8 +173,19 @@ public class RelatoriosController : ControllerBase
         return NoContent();
     }
 
-    
+    /// <summary>
+    /// Realiza o download seguro do PDF original do relatório.
+    /// </summary>
+    /// <remarks>
+    /// A rota é protegida pelo Paywall. Antes de iniciar o download via stream do Azure, a API verifica o nível da carteira do relatório e cruza com a assinatura vigente do usuário. O acesso é bloqueado se o plano for inferior.
+    /// </remarks>
+    /// <response code="200">Stream do arquivo PDF retornado.</response>
+    /// <response code="403">O usuário logado não possui um plano de assinatura compatível.</response>
     [HttpGet("{id}/download")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> Download(int id)
     {
         var relatorio = await _context.Relatorios.Include(r => r.Carteira).FirstOrDefaultAsync(r => r.Id == id);
@@ -190,8 +231,12 @@ public class RelatoriosController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Marca o relatório como lido/revisado pelo usuário logado.
+    /// </summary>
     [HttpPost("{id}/revisado")]
     [Microsoft.AspNetCore.Authorization.Authorize]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> MarcarRevisado(int id)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -205,8 +250,12 @@ public class RelatoriosController : ControllerBase
         return Ok(new { revisado = true });
     }
 
+    /// <summary>
+    /// Desmarca a tag de revisão (Volta para não lido).
+    /// </summary>
     [HttpDelete("{id}/revisado")]
     [Microsoft.AspNetCore.Authorization.Authorize]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> DesmarcarRevisado(int id)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -221,8 +270,12 @@ public class RelatoriosController : ControllerBase
         return Ok(new { revisado = false });
     }
 
+    /// <summary>
+    /// Retorna a lista de IDs de todos os relatórios que o usuário já revisou.
+    /// </summary>
     [HttpGet("revisados")]
     [Microsoft.AspNetCore.Authorization.Authorize]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetRevisados()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

@@ -24,8 +24,14 @@ public class WatchlistAbasController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
-    // Lista as abas do usuário logado, cada uma já com a lista de tickers que ela contém
+    /// <summary>
+    /// Lista todas as abas personalizadas de Watchlist do usuário.
+    /// </summary>
+    /// <remarks>
+    /// Retorna as sub-pastas (abas) organizadoras que o cliente criou e a lista de códigos (Tickers) que estão anexados dentro delas.
+    /// </remarks>
     [HttpGet]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetAbas()
     {
         var usuarioId = GetUsuarioId();
@@ -46,8 +52,15 @@ public class WatchlistAbasController : ControllerBase
         return Ok(abas);
     }
 
-    // Cria uma aba nova para o usuário logado
+    /// <summary>
+    /// Cria uma nova sub-aba na Watchlist.
+    /// </summary>
+    /// <remarks>
+    /// Cria um novo grupo vazio para organizar os favoritos (Ex: "Ativos Promissores", "Bancos"). Impõe restrição de 50 caracteres no nome e impede duplicidade de abas com o mesmo título.
+    /// </remarks>
     [HttpPost]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> CriarAba([FromBody] CriarAbaDto dto)
     {
         var usuarioId = GetUsuarioId();
@@ -77,8 +90,15 @@ public class WatchlistAbasController : ControllerBase
         return Ok(new { aba.Id, aba.Nome, aba.DataCriacao, Tickers = new List<string>() });
     }
 
-    // Exclui uma aba do usuário logado. Os favoritos em si NÃO são apagados, só saem da aba.
+    /// <summary>
+    /// Exclui uma aba da Watchlist (Soft Delete de Itens).
+    /// </summary>
+    /// <remarks>
+    /// Deleta a aba organizadora. Os ativos favoritados que estavam nela não são apagados do banco, apenas perdem o vínculo com esta pasta.
+    /// </remarks>
     [HttpDelete("{id}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> ExcluirAba(int id)
     {
         var usuarioId = GetUsuarioId();
@@ -95,8 +115,16 @@ public class WatchlistAbasController : ControllerBase
         return Ok(new { mensagem = "Aba excluída." });
     }
 
-    // Adiciona um favorito (pelo ticker) a uma aba do usuário logado
+    /// <summary>
+    /// Vincula um ativo já favoritado a uma aba específica.
+    /// </summary>
+    /// <remarks>
+    /// O ativo deve existir na carteira principal de Favoritos do cliente para poder ser inserido na aba.
+    /// </remarks>
     [HttpPost("{id}/favoritos/{ticker}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> AdicionarFavoritoNaAba(int id, string ticker)
     {
         var usuarioId = GetUsuarioId();
@@ -125,8 +153,12 @@ public class WatchlistAbasController : ControllerBase
         return Ok(new { mensagem = "Adicionado à aba!" });
     }
 
-    // Remove um favorito (pelo ticker) de uma aba do usuário logado
+    /// <summary>
+    /// Desvincula um ativo de uma aba específica.
+    /// </summary>
     [HttpDelete("{id}/favoritos/{ticker}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> RemoverFavoritoDaAba(int id, string ticker)
     {
         var usuarioId = GetUsuarioId();
@@ -153,5 +185,9 @@ public class WatchlistAbasController : ControllerBase
 
 public class CriarAbaDto
 {
+    /// <summary>
+    /// Nome da aba organizadora.
+    /// </summary>
+    /// <example>Pagadoras de Dividendos</example>
     public string Nome { get; set; } = string.Empty;
 }

@@ -27,7 +27,17 @@ public class UsuarioController : ControllerBase
         _blobService = blobService;
     }
 
+    /// <summary>
+    /// Retorna os dados de perfil e plano do usuário logado.
+    /// </summary>
+    /// <remarks>
+    /// Além de retornar os dados (nome, e-mail, foto), este endpoint funciona como validador de sessão: caso a assinatura do usuário tenha expirado (data vencida), o sistema atualiza o status de volta para "Sem Plano" em tempo real.
+    /// </remarks>
+    /// <response code="200">Dados do perfil carregados.</response>
+    /// <response code="401">Sessão inválida ou token JWT expirado.</response>
     [HttpGet("meu-perfil")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
     public async Task<IActionResult> ObterPerfil()
     {
         try
@@ -79,7 +89,11 @@ public class UsuarioController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Atualiza o nome de exibição do usuário.
+    /// </summary>
     [HttpPut("atualizar")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> AtualizarPerfil([FromBody] string novoNome)
     {
         var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -94,7 +108,15 @@ public class UsuarioController : ControllerBase
         return Ok(new { mensagem = "Perfil atualizado com sucesso!" });
     }
 
+    /// <summary>
+    /// Permite a alteração segura da senha na área logada.
+    /// </summary>
+    /// <remarks>
+    /// Exige a senha atual para garantir que o dono da conta está realizando a operação, aplicando as validações de força de senha para a nova credencial.
+    /// </remarks>
     [HttpPut("alterar-senha")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> AlterarSenha([FromBody] AlterarSenhaRequest request)
     {
         var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -115,8 +137,16 @@ public class UsuarioController : ControllerBase
         return Ok(new { mensagem = "Senha alterada com sucesso!" });
     }
     
+    /// <summary>
+    /// Envia uma nova foto de perfil e salva no provedor Cloud.
+    /// </summary>
+    /// <remarks>
+    /// O arquivo é convertido e hospedado no Azure Blob Storage. A URL gerada é salva no banco de dados do usuário e propagada para a UI.
+    /// </remarks>
     [HttpPost("upload-foto")]
-    public async Task<IActionResult> UploadFoto([FromForm] IFormFile foto)
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> UploadFoto(IFormFile foto)
     {
         try
         {
@@ -143,7 +173,14 @@ public class UsuarioController : ControllerBase
         }
     }
     
+    /// <summary>
+    /// Remove a foto de perfil do usuário.
+    /// </summary>
+    /// <remarks>
+    /// Além de limpar a URL no banco de dados, exclui permanentemente o arquivo de imagem hospedado no Azure Blob Storage para poupar espaço.
+    /// </remarks>
     [HttpDelete("remover-foto")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> RemoverFoto()
     {
         try
@@ -171,7 +208,14 @@ public class UsuarioController : ControllerBase
         }
     }
     
+    /// <summary>
+    /// Exclusão definitiva da conta (LGPD).
+    /// </summary>
+    /// <remarks>
+    /// Deleta permanentemente o usuário do banco de dados e limpa todos os artefatos visuais anexados (como foto de perfil no Azure) de acordo com o direito ao esquecimento.
+    /// </remarks>
     [HttpDelete("excluir-conta")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> ExcluirConta()
     {
         try
@@ -202,9 +246,17 @@ public class UsuarioController : ControllerBase
 
 public class AlterarSenhaRequest
 {
+    /// <summary>
+    /// A senha antiga para validação de segurança.
+    /// </summary>
+    /// <example>SenhaVelha123!</example>
     [Required(ErrorMessage = "A senha atual é obrigatória.")]
     public string SenhaAtual { get; set; } = string.Empty;
 
+    /// <summary>
+    /// A nova senha desejada, que deve passar pelos testes de robustez.
+    /// </summary>
+    /// <example>Caddie@Nova2026</example>
     [Required(ErrorMessage = "A nova senha é obrigatória.")]
     [MinLength(8, ErrorMessage = "A senha deve ter no mínimo 8 caracteres.")]
     [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$", 

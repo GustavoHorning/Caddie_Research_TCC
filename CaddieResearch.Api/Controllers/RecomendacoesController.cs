@@ -29,8 +29,17 @@ public class RecomendacoesController : ControllerBase
         User.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value
         ?? User.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
-    // Cliente: listar recomendações recebidas
+    /// <summary>
+    /// Lista as recomendações enviadas para o cliente logado.
+    /// </summary>
+    /// <remarks>
+    /// Retorna a caixa de entrada de dicas de investimento recebidas dos gestores, ordenadas da mais recente para a mais antiga.
+    /// </remarks>
+    /// <response code="200">Lista carregada com sucesso.</response>
+    /// <response code="401">Usuário não autenticado.</response>
     [HttpGet("minhas")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
     public async Task<IActionResult> GetMinhas()
     {
         var usuarioId = GetUsuarioId();
@@ -52,8 +61,11 @@ public class RecomendacoesController : ControllerBase
         return Ok(recomendacoes);
     }
 
-    // Gestor: listar recomendações enviadas
+    /// <summary>
+    /// Lista todas as recomendações já emitidas pelo Gestor logado.
+    /// </summary>
     [HttpGet("enviadas")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetEnviadas()
     {
         var usuarioId = GetUsuarioId();
@@ -75,8 +87,14 @@ public class RecomendacoesController : ControllerBase
         return Ok(recomendacoes);
     }
 
-    // Gestor: criar recomendação
+    /// <summary>
+    /// Cria e envia uma nova recomendação direta a um cliente (Acesso Gestor).
+    /// </summary>
+    /// <remarks>
+    /// Registra a indicação de compra (ou alerta) que ficará pendente de aprovação (Aceite/Recusa) pelo cliente destinatário.
+    /// </remarks>
     [HttpPost]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> Criar([FromBody] RecomendacaoDto dto)
     {
         var gestorId = GetUsuarioId();
@@ -107,8 +125,19 @@ public class RecomendacoesController : ControllerBase
         return Ok(recomendacao);
     }
 
-    // Cliente: aderir à recomendação → cria posição no portfólio
+    /// <summary>
+    /// Aceita uma recomendação recebida, transformando-a em posição na carteira.
+    /// </summary>
+    /// <remarks>
+    /// Ao aderir à recomendação, o status é alterado para "Aceita" e o ativo é automaticamente injetado como uma nova posição de compra no Portfólio do cliente, utilizando o preço e a quantidade sugeridos.
+    /// </remarks>
+    /// <param name="id">ID numérico da recomendação.</param>
+    /// <response code="200">Recomendação aceita e convertida em posição com sucesso.</response>
+    /// <response code="400">Recomendação já foi respondida ou o cliente não tem portfólio ativo.</response>
     [HttpPost("{id}/aderir")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> Aderir(int id)
     {
         var clienteId = GetUsuarioId();
@@ -148,8 +177,15 @@ public class RecomendacoesController : ControllerBase
         return Ok(new { mensagem = "Posição adicionada ao portfólio!", posicao });
     }
 
-    // Cliente: recusar recomendação
+    /// <summary>
+    /// Recusa uma recomendação de investimento.
+    /// </summary>
+    /// <remarks>
+    /// Muda o status do card para "Recusada" a fim de manter o histórico documentado para o gestor. Nenhuma alteração financeira é feita na carteira.
+    /// </remarks>
     [HttpPost("{id}/recusar")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> Recusar(int id)
     {
         var clienteId = GetUsuarioId();
@@ -167,8 +203,11 @@ public class RecomendacoesController : ControllerBase
         return Ok(new { mensagem = "Recomendação recusada." });
     }
 
-    // Gestor: listar clientes para enviar recomendação
+    /// <summary>
+    /// Retorna a lista de clientes aptos a receber recomendações.
+    /// </summary>
     [HttpGet("clientes")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetClientes()
     {
         var clientes = await _context.Usuarios
@@ -181,12 +220,33 @@ public class RecomendacoesController : ControllerBase
 
 public class RecomendacaoDto
 {
+    /// <summary>
+    /// ID do cliente destinatário.
+    /// </summary>
+    /// <example>15</example>
     public int ClienteId { get; set; }
+
+    /// <summary>
+    /// Código de negociação do ativo.
+    /// </summary>
+    /// <example>WEGE3</example>
     public string Ticker { get; set; } = string.Empty;
+
     public string NomeAtivo { get; set; } = string.Empty;
     public string ClasseAtivo { get; set; } = "Renda Variável";
     public decimal Quantidade { get; set; }
+
+    /// <summary>
+    /// Preço unitário sugerido para entrada na posição.
+    /// </summary>
+    /// <example>48.50</example>
     public decimal PrecoSugerido { get; set; }
+
+    /// <summary>
+    /// Racional de investimento ou tese do analista.
+    /// </summary>
+    /// <example>Empresa com lucros sólidos e alta previsibilidade de dividendos no 4T.</example>
     public string? Descricao { get; set; }
+    
     public string? Origem { get; set; }
 }

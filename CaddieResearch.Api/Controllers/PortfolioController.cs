@@ -25,7 +25,17 @@ public class PortfolioController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
+    /// <summary>
+    /// Lista todos os portfólios geridos pelo usuário.
+    /// </summary>
+    /// <remarks>
+    /// Compila o patrimônio líquido consolidado cruzando o saldo de aportes financeiros (Conta Corrente) com o volume investido em posições ativas.
+    /// </remarks>
+    /// <response code="200">Visão consolidada dos portfólios retornada.</response>
+    /// <response code="401">Sessão expirada.</response>
     [HttpGet]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
     public async Task<IActionResult> GetPortfolios()
     {
         var usuarioId = GetUsuarioId();
@@ -66,7 +76,15 @@ public class PortfolioController : ControllerBase
         return Ok(resultado);
     }
 
+    /// <summary>
+    /// Cria uma nova estrutura de portfólio para organização de metas.
+    /// </summary>
+    /// <remarks>
+    /// Inicializa a nova carteira de consolidação, processando automaticamente um aporte inicial de caixa caso seja informado.
+    /// </remarks>
     [HttpPost]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
     public async Task<IActionResult> CriarPortfolio([FromBody] CriarPortfolioRequest req)
     {
         var usuarioId = GetUsuarioId();
@@ -97,7 +115,13 @@ public class PortfolioController : ControllerBase
         return Ok(new { portfolio.Id, portfolio.Nome });
     }
 
+    /// <summary>
+    /// Carrega as posições detalhadas (Ativos) alocadas em um portfólio específico.
+    /// </summary>
     [HttpGet("{id}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> GetPortfolio(int id)
     {
         var usuarioId = GetUsuarioId();
@@ -130,7 +154,12 @@ public class PortfolioController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Adiciona um ativo (compra) à carteira do usuário.
+    /// </summary>
     [HttpPost("{id}/posicoes")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> AdicionarPosicao(int id, [FromBody] PosicaoDto dto)
     {
         var usuarioId = GetUsuarioId();
@@ -157,7 +186,12 @@ public class PortfolioController : ControllerBase
         return Ok(new { posicao.Id, posicao.Ticker, posicao.NomeAtivo, posicao.ClasseAtivo, posicao.Quantidade, posicao.PrecoMedio, posicao.DataEntrada });
     }
 
+    /// <summary>
+    /// Exclui um ativo (venda/zeragem) do portfólio do usuário.
+    /// </summary>
     [HttpDelete("{portfolioId}/posicoes/{posicaoId}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> RemoverPosicao(int portfolioId, int posicaoId)
     {
         var usuarioId = GetUsuarioId();
@@ -177,17 +211,52 @@ public class PortfolioController : ControllerBase
 
 public class PosicaoDto
 {
+    /// <summary>
+    /// Ticker negociado na B3.
+    /// </summary>
+    /// <example>BBDC4</example>
     public string Ticker { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Nome da empresa / FII.
+    /// </summary>
+    /// <example>Banco Bradesco</example>
     public string NomeAtivo { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Categoria do ativo (Ação, FII, Exterior).
+    /// </summary>
+    /// <example>Ações (Renda Variável)</example>
     public string ClasseAtivo { get; set; } = "Renda Variável";
+
+    /// <summary>
+    /// Volume de cotas adquiridas.
+    /// </summary>
+    /// <example>250</example>
     public decimal Quantidade { get; set; }
+
+    /// <summary>
+    /// Preço de custo na data da compra.
+    /// </summary>
+    /// <example>11.35</example>
     public decimal PrecoMedio { get; set; }
+
     public DateTime? DataEntrada { get; set; }
 }
 
 public class CriarPortfolioRequest
 {
+    /// <summary>
+    /// Título do novo portfólio.
+    /// </summary>
+    /// <example>Carteira de Aposentadoria</example>
     public string Nome { get; set; } = "Portfólio Inicial";
+
     public DateTime? DataInicio { get; set; }
+
+    /// <summary>
+    /// Caixa financeiro inicial a ser creditado (Conta Corrente).
+    /// </summary>
+    /// <example>15000.00</example>
     public decimal? AporteInicial { get; set; }
 }

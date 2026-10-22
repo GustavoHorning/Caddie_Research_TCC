@@ -2,15 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using CaddieResearch.Models;
 using CaddieResearch.Api.Data;
-using System.Threading.Tasks;
-using System;
-using System.Linq;
 using System.Security.Claims;
 using CaddieResearch.Api.Services; 
 using Microsoft.AspNetCore.SignalR;
 using CaddieResearch.Api.Hubs;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using CaddieResearch.Api.Models;
 
 namespace CaddieResearch.Controllers
@@ -30,8 +26,19 @@ namespace CaddieResearch.Controllers
             _hubContext = hubContext; 
         }
 
+        /// <summary>
+        /// Exclui um ativo de uma carteira recomendada (Acesso Exclusivo Gestor).
+        /// </summary>
+        /// <remarks>
+        /// Remove um ativo da carteira informada, gera um log de exclusão e dispara uma notificação push para todos os clientes elegíveis informando o encerramento da tese.
+        /// </remarks>
+        /// <param name="id">O ID do ativo na carteira.</param>
+        /// <response code="200">Ativo removido e notificação enviada.</response>
+        /// <response code="404">Ativo não encontrado na base de dados.</response>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Gestor")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
         public async Task<IActionResult> DeletarAtivo(int id)
         {
             var ativo = await _context.Ativos.FindAsync(id);
@@ -74,8 +81,18 @@ namespace CaddieResearch.Controllers
             return Ok(new { mensagem = "Ativo removido com sucesso!" });
         }
 
+        /// <summary>
+        /// Cria uma nova recomendação de ativo em uma carteira (Acesso Exclusivo Gestor).
+        /// </summary>
+        /// <remarks>
+        /// Valida a duplicidade na carteira, busca o nome da empresa pela API caso não informado, grava a entrada no banco, salva o log de auditoria e dispara notificação em tempo real (SignalR).
+        /// </remarks>
+        /// <response code="200">Ativo publicado e clientes notificados.</response>
+        /// <response code="400">Falha de validação ou o ativo já existe na carteira selecionada.</response>
         [HttpPost]
         [Authorize(Roles = "Gestor")] 
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
         public async Task<IActionResult> CriarAtivo([FromBody] Ativo novoAtivo)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -121,8 +138,21 @@ namespace CaddieResearch.Controllers
             return Ok(new { mensagem = "Recomendação publicada com sucesso!", ativo = novoAtivo });
         }
         
+        /// <summary>
+        /// Atualiza os parâmetros de uma recomendação ativa na carteira (Acesso Exclusivo Gestor).
+        /// </summary>
+        /// <remarks>
+        /// Caso o viés ou o preço-teto sejam modificados, o sistema automaticamente registra o log de alteração de rota para os clientes e dispara notificações.
+        /// </remarks>
+        /// <param name="id">ID primário do ativo no banco.</param>
+        /// <response code="200">Recomendação atualizada com sucesso.</response>
+        /// <response code="400">Falha de validação ou conflito de ticker.</response>
+        /// <response code="404">Ativo não encontrado.</response>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Gestor")] 
+        [Authorize(Roles = "Gestor")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
         public async Task<IActionResult> AtualizarAtivo(int id, [FromBody] Ativo ativoAtualizado)
         {
             var conflito = _context.Ativos.Any(a => a.Ticker == ativoAtualizado.Ticker && a.CarteiraId == ativoAtualizado.CarteiraId && a.Id != id);

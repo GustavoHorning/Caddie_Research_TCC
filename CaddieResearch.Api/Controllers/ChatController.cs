@@ -33,7 +33,17 @@ public class ChatController : ControllerBase
         return nomeCompleto.Trim().Split(' ')[0];
     }
 
+    /// <summary>
+    /// Abre uma nova conversa com os analistas da Caddie.
+    /// </summary>
+    /// <remarks>
+    /// Inicia um novo canal de suporte/dúvidas. Existe um limite estrutural de 6 conversas ativas por usuário para evitar sobrecarga no banco. Ao ultrapassar o limite, as conversas mais antigas são descartadas.
+    /// </remarks>
+    /// <response code="200">Conversa aberta (ou já existente) com sucesso. Retorna o ID da conversa.</response>
+    /// <response code="401">Usuário não autenticado.</response>
     [HttpPost("abrir")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
     public async Task<IActionResult> AbrirConversa([FromBody] AbrirConversaDto dto)
     {
         var usuarioId = GetUsuarioId();
@@ -78,7 +88,18 @@ public class ChatController : ControllerBase
         return Ok(new { conversaId = conversa.Id });
     }
 
+    /// <summary>
+    /// Envia uma mensagem no chat ativo.
+    /// </summary>
+    /// <remarks>
+    /// Registra a mensagem na base. Se o remetente for um Gestor, a flag `EhGestor` é ativada para renderização no Frontend.
+    /// </remarks>
+    /// <param name="conversaId">O ID da conversa aberta.</param>
+    /// <response code="200">Mensagem registrada com sucesso.</response>
+    /// <response code="404">Conversa não encontrada.</response>
     [HttpPost("{conversaId}/mensagem")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> EnviarMensagem(int conversaId, [FromBody] EnviarMensagemDto dto)
     {
         var usuarioId = GetUsuarioId();
@@ -112,7 +133,12 @@ public class ChatController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Busca o histórico de mensagens de uma conversa.
+    /// </summary>
+    /// <response code="200">Retorna a lista de mensagens ordenadas cronologicamente.</response>
     [HttpGet("{conversaId}/mensagens")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> BuscarMensagens(int conversaId)
     {
         var usuarioId = GetUsuarioId();
@@ -135,7 +161,11 @@ public class ChatController : ControllerBase
         return Ok(mensagens);
     }
 
+    /// <summary>
+    /// Lista os tickets/conversas do usuário logado (Acesso Cliente).
+    /// </summary>
     [HttpGet("minhas-conversas")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> MinhasConversas()
     {
         var usuarioId = GetUsuarioId();
@@ -157,7 +187,17 @@ public class ChatController : ControllerBase
         return Ok(conversas);
     }
 
+    /// <summary>
+    /// Lista todos os tickets/conversas abertos no sistema (Acesso Gestor).
+    /// </summary>
+    /// <remarks>
+    /// Retorna as conversas com cálculo de métricas (mensagens não lidas) para a central de atendimento do painel do Gestor.
+    /// </remarks>
+    /// <response code="200">Lista de tickets.</response>
+    /// <response code="403">Acesso restrito apenas para Gestores.</response>
     [HttpGet("gestor/todas")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(403)]
     public async Task<IActionResult> TodasConversas()
     {
         var usuarioId = GetUsuarioId();
@@ -169,7 +209,7 @@ public class ChatController : ControllerBase
         var conversas = await _context.Conversas
             .Include(c => c.Usuario)
             .Include(c => c.Mensagens)
-            .Where(c => c.Usuario!.TipoPerfil != "Gestor") // Ignora conversas abertas pelo próprio gestor
+            .Where(c => c.Usuario!.TipoPerfil != "Gestor") 
             .OrderByDescending(c => c.DataAbertura)
             .Select(c => new
             {
@@ -187,7 +227,15 @@ public class ChatController : ControllerBase
         return Ok(conversas);
     }
 
+    /// <summary>
+    /// Encerra um ticket de suporte (Acesso Gestor).
+    /// </summary>
+    /// <remarks>
+    /// Muda o status para "Fechada" e dispara um e-mail transacional automático com o histórico completo da conversa para o cliente.
+    /// </remarks>
     [HttpPut("{conversaId}/encerrar")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> EncerrarConversa(int conversaId)
     {
         var usuarioId = GetUsuarioId();
@@ -233,7 +281,12 @@ public class ChatController : ControllerBase
         return Ok(new { mensagem = "Conversa encerrada com sucesso." });
     }
 
+    /// <summary>
+    /// Exclui permanentemente um ticket do banco de dados (Acesso Gestor).
+    /// </summary>
     [HttpDelete("{conversaId}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
     public async Task<IActionResult> DeletarConversa(int conversaId)
     {
         var usuarioId = GetUsuarioId();
@@ -256,7 +309,11 @@ public class ChatController : ControllerBase
         return Ok(new { mensagem = "Conversa removida com sucesso." });
     }
 
+    /// <summary>
+    /// Verifica em tempo real o status de um ticket.
+    /// </summary>
     [HttpGet("{conversaId}/status")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> VerificarStatus(int conversaId)
     {
         var conversa = await _context.Conversas.FindAsync(conversaId);
@@ -265,13 +322,20 @@ public class ChatController : ControllerBase
     }
 }
 
-
 public class AbrirConversaDto
 {
+    /// <summary>
+    /// Assunto do atendimento.
+    /// </summary>
+    /// <example>Dúvida sobre a tese de VALE3</example>
     public string Assunto { get; set; } = string.Empty;
 }
 
 public class EnviarMensagemDto
 {
+    /// <summary>
+    /// Texto da mensagem.
+    /// </summary>
+    /// <example>Olá! Não entendi o racional do último relatório.</example>
     public string Conteudo { get; set; } = string.Empty;
 }

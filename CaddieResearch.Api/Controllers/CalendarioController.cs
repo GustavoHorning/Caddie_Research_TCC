@@ -26,8 +26,16 @@ public class CalendarioController : ControllerBase
         _hubContext = hubContext;
     }
 
+    /// <summary>
+    /// Retorna a agenda completa de eventos futuros e do dia de hoje.
+    /// </summary>
+    /// <remarks>
+    /// Fornece uma lista consolidada de eventos macroeconômicos, datas de divulgação de balanços corporativos e eventos exclusivos organizados pela Caddie Research. Endpoint público (acessível sem login).
+    /// </remarks>
+    /// <response code="200">Lista de eventos retornada com sucesso.</response>
     [HttpGet]
     [AllowAnonymous]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetEventos()
     {
         var hoje = DateTime.UtcNow.Date;
@@ -55,8 +63,16 @@ public class CalendarioController : ControllerBase
         return Ok(eventos);
     }
 
+    /// <summary>
+    /// Retorna os 3 principais eventos de alto impacto para o painel inicial (Dashboard).
+    /// </summary>
+    /// <remarks>
+    /// Filtra a agenda futura ordenando pelos eventos mais críticos (Impacto 3) que ocorrerão em breve, ideal para widgets compactos e resumos de tela. Endpoint público.
+    /// </remarks>
+    /// <response code="200">Top 3 eventos retornados com sucesso.</response>
     [HttpGet("dashboard")]
     [AllowAnonymous]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> GetEventosDashboard()
     {
         var hoje = DateTime.UtcNow.Date;
@@ -86,16 +102,20 @@ public class CalendarioController : ControllerBase
         return Ok(eventos);
     }
     
-    public class CriarEventoCaddieDto
-    {
-        public string Titulo { get; set; }
-        public DateTime DataHora { get; set; }
-        public string Descricao { get; set; }
-        public string LinkExterno { get; set; }
-        public int Impacto { get; set; }
-    }
-    
+    /// <summary>
+    /// Atualiza os dados de um evento personalizado da Caddie Research.
+    /// </summary>
+    /// <remarks>
+    /// Por regra de negócio, eventos injetados automaticamente por robôs (Macro e Balanços) não podem ser alterados manualmente. Edições válidas disparam uma notificação push para os clientes cadastrados via SignalR.
+    /// </remarks>
+    /// <param name="id">ID numérico do evento a ser editado.</param>
+    /// <response code="200">Evento atualizado com sucesso e notificação disparada.</response>
+    /// <response code="400">Tentativa de edição de evento protegido pelo sistema (Macro/Balanço).</response>
+    /// <response code="404">Evento não encontrado no banco de dados.</response>
     [HttpPut("{id}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> AtualizarEventoPeloGestor(int id, [FromBody] Evento eventoAtualizado)
     {
         var eventoExistente = await _context.Eventos.FindAsync(id);
@@ -122,7 +142,15 @@ public class CalendarioController : ControllerBase
         return Ok(eventoExistente);
     }
 
+    /// <summary>
+    /// Agenda um novo evento exclusivo (Live, Fechamento de Mercado, Reunião) pela equipe Caddie.
+    /// </summary>
+    /// <remarks>
+    /// Cria o evento, o classifica na categoria "Caddie" e dispara um alerta de "Novo Evento Agendado" em tempo real para os assinantes conectados.
+    /// </remarks>
+    /// <response code="200">Evento agendado com sucesso e clientes notificados.</response>
     [HttpPost("caddie")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> CriarEventoCaddie([FromBody] CriarEventoCaddieDto dto)
     {
         var novoEvento = new Evento
@@ -147,7 +175,18 @@ public class CalendarioController : ControllerBase
         return Ok(new { message = "Evento da Caddie criado com sucesso!", eventoId = novoEvento.Id });
     }
 
+    /// <summary>
+    /// Remove permanentemente um evento do calendário.
+    /// </summary>
+    /// <remarks>
+    /// Se o evento removido pertencer à Caddie Research (Ex: Cancelamento de Live), uma notificação automática de cancelamento será disparada para os clientes da base.
+    /// </remarks>
+    /// <param name="id">ID numérico do evento a ser excluído.</param>
+    /// <response code="200">Evento removido com sucesso.</response>
+    /// <response code="404">Evento não encontrado no banco de dados.</response>
     [HttpDelete("{id}")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
     public async Task<IActionResult> DeletarEvento(int id)
     {
         var evento = await _context.Eventos.FindAsync(id);
@@ -218,5 +257,38 @@ public class CalendarioController : ControllerBase
         {
             Console.WriteLine($"Erro ao disparar notificação de evento: {ex.Message}");
         }
+    }
+
+    public class CriarEventoCaddieDto
+    {
+        /// <summary>
+        /// Nome/título do evento.
+        /// </summary>
+        /// <example>Live Fechamento de Mercado</example>
+        public string Titulo { get; set; }
+
+        /// <summary>
+        /// Data e horário programado para o evento (UTC).
+        /// </summary>
+        /// <example>2026-10-30T18:00:00Z</example>
+        public DateTime DataHora { get; set; }
+
+        /// <summary>
+        /// Breve descrição ou pauta do que será abordado no evento.
+        /// </summary>
+        /// <example>Vamos discutir a taxa Selic e o impacto nos FIIs de papel.</example>
+        public string Descricao { get; set; }
+
+        /// <summary>
+        /// URL externa de transmissão (Ex: Link do Zoom, YouTube ou Teams).
+        /// </summary>
+        /// <example>https://youtube.com/live/exemplo</example>
+        public string LinkExterno { get; set; }
+
+        /// <summary>
+        /// Nível de impacto de 1 a 3 (3 é o maior, marcado com estrela).
+        /// </summary>
+        /// <example>3</example>
+        public int Impacto { get; set; }
     }
 }

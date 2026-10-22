@@ -15,7 +15,15 @@ namespace SeuProjeto.Controllers
             _taxasService = taxasService;
         }
 
+        /// <summary>
+        /// Retorna os principais indicadores macroeconômicos em tempo real.
+        /// </summary>
+        /// <remarks>
+        /// Consome APIs externas para obter as taxas mais recentes (Ex: Selic, IPCA, Dólar, Euro) necessárias para os comparativos do Dashboard.
+        /// </remarks>
+        /// <response code="200">Indicadores carregados.</response>
         [HttpGet("macro")]
+        [ProducesResponseType(200)]
         public async Task<IActionResult> ObterIndicadores()
         {
             var dados = await _taxasService.ObterTaxasAtuaisAsync();
