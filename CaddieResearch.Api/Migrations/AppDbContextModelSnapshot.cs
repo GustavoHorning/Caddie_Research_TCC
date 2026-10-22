@@ -233,6 +233,175 @@ namespace CaddieResearch.Api.Migrations
                     b.ToTable("Favoritos");
                 });
 
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumCurtida", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TopicoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TopicoId", "UsuarioId")
+                        .IsUnique();
+
+                    b.ToTable("ForumCurtidas");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumResposta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AudioUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("AutorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TopicoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutorId");
+
+                    b.HasIndex("TopicoId");
+
+                    b.ToTable("ForumRespostas");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumRespostaAnexo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NomeArquivo")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("RespostaId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("TamanhoBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RespostaId");
+
+                    b.ToTable("ForumRespostaAnexos");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumRespostaCurtida", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RespostaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RespostaId", "UsuarioId")
+                        .IsUnique();
+
+                    b.ToTable("ForumRespostaCurtidas");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumTopico", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AutorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DataCriacao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataModeracao")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoRecusa")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutorId");
+
+                    b.HasIndex("Status", "DataCriacao");
+
+                    b.ToTable("ForumTopicos");
+                });
+
             modelBuilder.Entity("CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira", b =>
                 {
                     b.Property<int>("Id")
@@ -880,6 +1049,69 @@ namespace CaddieResearch.Api.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumCurtida", b =>
+                {
+                    b.HasOne("CaddieResearch.Api.Models.ForumTopico", "Topico")
+                        .WithMany("Curtidas")
+                        .HasForeignKey("TopicoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Topico");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumResposta", b =>
+                {
+                    b.HasOne("CaddieResearch.Api.Models.Usuario", "Autor")
+                        .WithMany()
+                        .HasForeignKey("AutorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CaddieResearch.Api.Models.ForumTopico", "Topico")
+                        .WithMany("Respostas")
+                        .HasForeignKey("TopicoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Autor");
+
+                    b.Navigation("Topico");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumRespostaAnexo", b =>
+                {
+                    b.HasOne("CaddieResearch.Api.Models.ForumResposta", "Resposta")
+                        .WithMany("Anexos")
+                        .HasForeignKey("RespostaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Resposta");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumRespostaCurtida", b =>
+                {
+                    b.HasOne("CaddieResearch.Api.Models.ForumResposta", "Resposta")
+                        .WithMany("Curtidas")
+                        .HasForeignKey("RespostaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Resposta");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumTopico", b =>
+                {
+                    b.HasOne("CaddieResearch.Api.Models.Usuario", "Autor")
+                        .WithMany()
+                        .HasForeignKey("AutorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Autor");
+                });
+
             modelBuilder.Entity("CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira", b =>
                 {
                     b.HasOne("CaddieResearch.Models.Carteira", "Carteira")
@@ -1061,6 +1293,20 @@ namespace CaddieResearch.Api.Migrations
             modelBuilder.Entity("CaddieResearch.Api.Models.Conversa", b =>
                 {
                     b.Navigation("Mensagens");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumResposta", b =>
+                {
+                    b.Navigation("Anexos");
+
+                    b.Navigation("Curtidas");
+                });
+
+            modelBuilder.Entity("CaddieResearch.Api.Models.ForumTopico", b =>
+                {
+                    b.Navigation("Curtidas");
+
+                    b.Navigation("Respostas");
                 });
 
             modelBuilder.Entity("CaddieResearch.Api.Models.MorningCall", b =>

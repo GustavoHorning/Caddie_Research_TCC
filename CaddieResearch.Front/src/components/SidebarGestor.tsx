@@ -85,6 +85,16 @@ export default function SidebarGestor({ activePath, isOpen = false, onClose }: S
                         </li>
                         <li>
                             <Link
+                                to="/gestor/forum"
+                                onClick={onClose}
+                                className={`sidebar-link ${activePath === '/gestor/forum' ? 'active' : ''}`}
+                            >
+                                <span className="sidebar-link-icon">🗨️</span>
+                                <span className="sidebar-link-label">Fórum — Chamados</span>
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
                                 to="/gestor/atendimento"
                                 onClick={onClose}
                                 className={`sidebar-link ${activePath === '/gestor/atendimento' ? 'active' : ''}`}

@@ -30,10 +30,65 @@ public class AppDbContext : DbContext
     public DbSet<Notificacao> Notificacoes { get; set; }
     public DbSet<WatchlistAba> WatchlistAbas { get; set; }
     public DbSet<WatchlistAbaFavorito> WatchlistAbaFavoritos { get; set; }
+    public DbSet<ForumTopico> ForumTopicos { get; set; }
+    public DbSet<ForumResposta> ForumRespostas { get; set; }
+    public DbSet<ForumCurtida> ForumCurtidas { get; set; }
+    public DbSet<ForumRespostaCurtida> ForumRespostaCurtidas { get; set; }
+    public DbSet<ForumRespostaAnexo> ForumRespostaAnexos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Fórum: apagar um tópico apaga respostas e curtidas; apagar um usuário não apaga
+        // o histórico do fórum em cascata (Restrict), para evitar caminhos de exclusão em ciclo.
+        modelBuilder.Entity<ForumTopico>()
+            .HasOne(t => t.Autor)
+            .WithMany()
+            .HasForeignKey(t => t.AutorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ForumTopico>()
+            .HasIndex(t => new { t.Status, t.DataCriacao });
+
+        modelBuilder.Entity<ForumResposta>()
+            .HasOne(r => r.Topico)
+            .WithMany(t => t.Respostas)
+            .HasForeignKey(r => r.TopicoId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ForumResposta>()
+            .HasOne(r => r.Autor)
+            .WithMany()
+            .HasForeignKey(r => r.AutorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ForumCurtida>()
+            .HasOne(c => c.Topico)
+            .WithMany(t => t.Curtidas)
+            .HasForeignKey(c => c.TopicoId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Cada usuário curte um tópico no máximo uma vez
+        modelBuilder.Entity<ForumCurtida>()
+            .HasIndex(c => new { c.TopicoId, c.UsuarioId })
+            .IsUnique();
+
+        modelBuilder.Entity<ForumRespostaCurtida>()
+            .HasOne(c => c.Resposta)
+            .WithMany(r => r.Curtidas)
+            .HasForeignKey(c => c.RespostaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ForumRespostaCurtida>()
+            .HasIndex(c => new { c.RespostaId, c.UsuarioId })
+            .IsUnique();
+
+        modelBuilder.Entity<ForumRespostaAnexo>()
+            .HasOne(a => a.Resposta)
+            .WithMany(r => r.Anexos)
+            .HasForeignKey(a => a.RespostaId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Mensagem>()
             .HasOne(m => m.Remetente)

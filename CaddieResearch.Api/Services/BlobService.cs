@@ -67,10 +67,10 @@ public class BlobService
         }
     }
 
-    public async Task<string> UploadAudioAsync(IFormFile arquivo, string prefixo)
+    public async Task<string> UploadAudioAsync(IFormFile arquivo, string prefixo, string container = "morningcall-audios")
     {
         var blobServiceClient = new BlobServiceClient(_connectionString);
-        var containerClient = blobServiceClient.GetBlobContainerClient("morningcall-audios");
+        var containerClient = blobServiceClient.GetBlobContainerClient(container);
 
         await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
@@ -85,7 +85,7 @@ public class BlobService
         return blobClient.Uri.ToString();
     }
 
-    public async Task ExcluirAudioAsync(string urlAudio)
+    public async Task ExcluirAudioAsync(string urlAudio, string container = "morningcall-audios")
     {
         if (string.IsNullOrEmpty(urlAudio)) return;
 
@@ -94,13 +94,46 @@ public class BlobService
             var nomeArquivo = Path.GetFileName(new Uri(urlAudio).LocalPath);
 
             var blobServiceClient = new BlobServiceClient(_connectionString);
-            var containerClient = blobServiceClient.GetBlobContainerClient("morningcall-audios");
+            var containerClient = blobServiceClient.GetBlobContainerClient(container);
 
             await containerClient.GetBlobClient(nomeArquivo).DeleteIfExistsAsync();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERRO AZURE EXCLUIR AUDIO]: {ex.Message}");
+        }
+    }
+
+    // O nome no storage é um GUID: o nome original do arquivo fica só no banco
+    public async Task<string> UploadAnexoAsync(IFormFile arquivo, string contentType, string container)
+    {
+        var blobServiceClient = new BlobServiceClient(_connectionString);
+        var containerClient = blobServiceClient.GetBlobContainerClient(container);
+
+        await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+
+        var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+        var blobClient = containerClient.GetBlobClient($"{Guid.NewGuid()}{extensao}");
+
+        using var stream = arquivo.OpenReadStream();
+        await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = contentType });
+
+        return blobClient.Uri.ToString();
+    }
+
+    public async Task ExcluirAnexoAsync(string url, string container)
+    {
+        if (string.IsNullOrEmpty(url)) return;
+
+        try
+        {
+            var nomeArquivo = Path.GetFileName(new Uri(url).LocalPath);
+            var blobServiceClient = new BlobServiceClient(_connectionString);
+            await blobServiceClient.GetBlobContainerClient(container).GetBlobClient(nomeArquivo).DeleteIfExistsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERRO AZURE EXCLUIR ANEXO]: {ex.Message}");
         }
     }
 
