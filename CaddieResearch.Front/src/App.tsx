@@ -32,6 +32,10 @@ import ConfirmarEmail from "./pages/ConfirmarEmail.tsx";
 import Calendario from './pages/Dashboard/Calendario';
 import GestorAgenda from "./pages/Dashboard/GestorAgenda.tsx";
 import HistoricoAtivos from './pages/Dashboard/HistoricoAtivos';
+import Forum from './pages/Dashboard/Forum/Forum';
+import ForumTopico from './pages/Dashboard/Forum/ForumTopico';
+import ForumGestor from './pages/Dashboard/Forum/ForumGestor';
+import ForumTopicoGestor from './pages/Dashboard/Forum/ForumTopicoGestor';
 
 import { NotificationProvider } from './contexts/NotificationContext';
 
@@ -61,6 +65,8 @@ function App() {
                     <Route path="/auditoria" element={<ProtectedRoute><DashboardLayout><HistoricoAtivos /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/morning-call/noticia/:id" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCallNoticia /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/forum" element={<ProtectedRoute clientOnly><DashboardLayout><Forum /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/forum/topico/:id" element={<ProtectedRoute clientOnly><DashboardLayout><ForumTopico voltarPara="/forum" voltarRotulo="Fórum" /></DashboardLayout></ProtectedRoute>} />
 
                     <Route path="/gestor" element={<ProtectedRoute roleRequired="Gestor"><PainelGestor /></ProtectedRoute>} />
                     <Route path="/gestor/atendimento" element={<ProtectedRoute roleRequired="Gestor"><CaixaEntradaGestor /></ProtectedRoute>} />
@@ -69,6 +75,8 @@ function App() {
                     <Route path="/gestor/morning-call/gerenciar" element={<ProtectedRoute roleRequired="Gestor"><MorningCallGerenciar /></ProtectedRoute>} />
                     <Route path="/calendario" element={<ProtectedRoute clientOnly><DashboardLayout><Calendario /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/gestor/agenda" element={<ProtectedRoute roleRequired="Gestor"><GestorAgenda /></ProtectedRoute>} />
+                    <Route path="/gestor/forum" element={<ProtectedRoute roleRequired="Gestor"><ForumGestor /></ProtectedRoute>} />
+                    <Route path="/gestor/forum/topico/:id" element={<ProtectedRoute roleRequired="Gestor"><ForumTopicoGestor /></ProtectedRoute>} />
                 </Routes>
             </NotificationProvider>
         </BrowserRouter>
