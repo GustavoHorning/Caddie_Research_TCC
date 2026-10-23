@@ -27,8 +27,20 @@ namespace CaddieResearch.Controllers
             return int.TryParse(idClaim, out int id) ? id : 0;
         }
 
+        /// <summary>
+        /// Retorna as carteiras recomendadas disponíveis para o usuário.
+        /// </summary>
+        /// <remarks>
+        /// Consulta o plano ativo do usuário (Basic, Premium ou Black) e retorna apenas as carteiras cuja propriedade NivelAcesso seja igual ou inferior ao permitido pelo plano contratado.
+        /// </remarks>
+        /// <response code="200">Lista filtrada de carteiras retornada com sucesso.</response>
+        /// <response code="401">Usuário não possui credenciais válidas.</response>
+        /// <response code="404">Registro do usuário não encontrado na base de dados.</response>
         [HttpGet]
         [Authorize]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(404)]
         public async Task<IActionResult> GetCarteiras()
         {
             int usuarioId = ObterUsuarioLogadoId();
@@ -44,8 +56,23 @@ namespace CaddieResearch.Controllers
             return Ok(carteiras);
         }
 
+        /// <summary>
+        /// Retorna a composição detalhada de uma carteira específica.
+        /// </summary>
+        /// <remarks>
+        /// Valida se o cliente possui acesso premium suficiente e, caso afirmativo, carrega os metadados da carteira juntamente com todos os ativos (ações/FIIs) que a compõem.
+        /// </remarks>
+        /// <param name="id">O ID exclusivo da carteira. Ex: 1 para "Ações B3" ou 2 para "Renda Fixa".</param>
+        /// <response code="200">Composição da carteira retornada com sucesso.</response>
+        /// <response code="401">Usuário não possui credenciais válidas.</response>
+        /// <response code="403">O usuário logado possui um plano inferior ao necessário para acessar esta carteira (Paywall ativo).</response>
+        /// <response code="404">Carteira ou usuário não encontrados.</response>
         [HttpGet("{id}")]
-        [Authorize] 
+        [Authorize]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        [ProducesResponseType(404)]
         public async Task<ActionResult<Carteira>> GetCarteira(int id)
         {
             int usuarioId = ObterUsuarioLogadoId();
