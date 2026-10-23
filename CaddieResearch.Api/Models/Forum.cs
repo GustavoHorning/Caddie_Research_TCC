@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
+
 
 namespace CaddieResearch.Api.Models;
 
@@ -19,7 +19,7 @@ public class ForumTopico
     [Required]
     public int AutorId { get; set; }
 
-    [JsonIgnore]
+    
     [ForeignKey("AutorId")]
     public Usuario? Autor { get; set; }
 
@@ -34,7 +34,7 @@ public class ForumTopico
     [MaxLength(30)]
     public string Categoria { get; set; } = string.Empty;
 
-    // Pendente (aguardando o gestor), Publicado ou Recusado
+    
     [Required]
     [MaxLength(20)]
     public string Status { get; set; } = ForumStatus.Pendente;
@@ -59,21 +59,21 @@ public class ForumResposta
     [Required]
     public int TopicoId { get; set; }
 
-    [JsonIgnore]
+    
     [ForeignKey("TopicoId")]
     public ForumTopico? Topico { get; set; }
 
     [Required]
     public int AutorId { get; set; }
 
-    [JsonIgnore]
+    
     [ForeignKey("AutorId")]
     public Usuario? Autor { get; set; }
 
-    // Pode ficar vazio quando a resposta é só um áudio ou só anexos
+    
     public string Conteudo { get; set; } = string.Empty;
 
-    // Áudio da resposta (somente o gestor envia)
+    
     [MaxLength(500)]
     public string? AudioUrl { get; set; }
 
@@ -92,11 +92,9 @@ public class ForumRespostaAnexo
     [Required]
     public int RespostaId { get; set; }
 
-    [JsonIgnore]
     [ForeignKey("RespostaId")]
     public ForumResposta? Resposta { get; set; }
 
-    // Nome original, só para exibir. No storage o arquivo tem um nome aleatório.
     [Required]
     [MaxLength(255)]
     public string NomeArquivo { get; set; } = string.Empty;
@@ -120,7 +118,6 @@ public class ForumCurtida
     [Required]
     public int TopicoId { get; set; }
 
-    [JsonIgnore]
     [ForeignKey("TopicoId")]
     public ForumTopico? Topico { get; set; }
 
@@ -138,7 +135,6 @@ public class ForumRespostaCurtida
     [Required]
     public int RespostaId { get; set; }
 
-    [JsonIgnore]
     [ForeignKey("RespostaId")]
     public ForumResposta? Resposta { get; set; }
 
