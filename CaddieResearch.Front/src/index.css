@@ -1772,3 +1772,125 @@ html[data-theme="light"] body .requisitos-titulo {
 html[data-theme="light"] body .requisito:not(.ok) {
   color: #64748b !important;
 }
+
+html[data-theme="light"] body .fr-page,
+html[data-theme="light"] body .fr-detalhe-texto,
+html[data-theme="light"] body .fr-resposta-texto {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] body .fr-titulo,
+html[data-theme="light"] body .fr-card-titulo,
+html[data-theme="light"] body .fr-autor-nome,
+html[data-theme="light"] body .fr-modal h3,
+html[data-theme="light"] body .fr-detalhe-titulo,
+html[data-theme="light"] body .fr-secao-titulo {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] body .fr-subtitulo,
+html[data-theme="light"] body .fr-aba:not(.ativa),
+html[data-theme="light"] body .fr-card-resumo,
+html[data-theme="light"] body .fr-meta,
+html[data-theme="light"] body .fr-autor-sub,
+html[data-theme="light"] body .fr-curtir:not(.ativo),
+html[data-theme="light"] body .fr-modal-sub,
+html[data-theme="light"] body .fr-campo label,
+html[data-theme="light"] body .fr-chip:not(.ativo) {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] body .fr-btn-secundario {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+html[data-theme="light"] body .fr-btn-secundario:hover:not(:disabled) {
+  background: #e2e8f0 !important;
+}
+
+html[data-theme="light"] body .fr-abas {
+  border-bottom-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] body .fr-filtros,
+html[data-theme="light"] body .fr-card,
+html[data-theme="light"] body .fr-modal,
+html[data-theme="light"] body .fr-toast {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
+}
+
+html[data-theme="light"] body .fr-card-clicavel:hover {
+  border-color: #00B4D8 !important;
+  background: #f0f9ff !important;
+}
+
+html[data-theme="light"] body .fr-busca,
+html[data-theme="light"] body .fr-campo input,
+html[data-theme="light"] body .fr-campo select,
+html[data-theme="light"] body .fr-campo textarea,
+html[data-theme="light"] body .fr-campo-resposta {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] body .fr-busca input {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] body .fr-avatar {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] body .fr-chip:not(.ativo) {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] body .fr-chip:hover:not(.ativo) {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] body .fr-vazio {
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+  background: #ffffff !important;
+}
+
+html[data-theme="light"] body .fr-modal-overlay {
+  background: rgba(15, 23, 42, 0.6) !important;
+}
+
+html[data-theme="light"] body .fr-anexo-arquivo,
+html[data-theme="light"] body .fr-audio-escolhido-topo {
+  color: #0f172a !important;
+}
+
+html[data-theme="light"] body .fr-btn-anexar,
+html[data-theme="light"] body .fr-btn-link,
+html[data-theme="light"] body .fr-anexo-arquivo small,
+html[data-theme="light"] body .fr-anexo-chip,
+html[data-theme="light"] body .fr-anexo-chip button {
+  color: #475569 !important;
+}
+
+html[data-theme="light"] body .fr-anexo-arquivo,
+html[data-theme="light"] body .fr-anexo-chip {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme="light"] body .fr-anexo-arquivo:hover {
+  border-color: #00B4D8 !important;
+  color: #00B4D8 !important;
+}
+
+html[data-theme="light"] body .fr-btn-cheio {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}

@@ -31,6 +31,7 @@ builder.Services.AddScoped<IRecomendacoesService, RecomendacoesService>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IWatchlistAbasService, WatchlistAbasService>();
+builder.Services.AddScoped<IForumService, ForumService>();
 
 builder.Services.AddHttpClient<AbacatePayService>();
 builder.Services.AddMemoryCache();
