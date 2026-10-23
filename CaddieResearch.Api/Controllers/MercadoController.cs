@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using CaddieResearch.Api.Interfaces; 
 
 namespace CaddieResearch.Api.Controllers;
 
@@ -8,37 +9,26 @@ namespace CaddieResearch.Api.Controllers;
 [Authorize]
 public class MercadoController : ControllerBase
 {
-    private readonly HttpClient _http;
+    private readonly IMercadoService _mercadoService; 
 
-    public MercadoController(IHttpClientFactory factory)
+    public MercadoController(IMercadoService mercadoService)
     {
-        _http = factory.CreateClient("yahoo");
+        _mercadoService = mercadoService;
     }
 
-    /// <summary>
-    /// Retorna os dados para os Gráficos Históricos (Candlesticks).
-    /// </summary>
-    /// <remarks>
-    /// Comunica-se com a API do Yahoo Finance para extrair o array de preços, volumes e fechamentos no range solicitado.
-    /// </remarks>
     [HttpGet("historico")]
-    [ProducesResponseType(200)]
-    [ProducesResponseType(500)]
     public async Task<IActionResult> GetHistorico([FromQuery] string ticker, [FromQuery] string range = "1y", [FromQuery] string interval = "1d")
     {
-        if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
-
-        var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(ticker)}?interval={interval}&range={range}";
+        if (string.IsNullOrWhiteSpace(ticker)) return BadRequest(new { erro = "Ticker é obrigatório." });
 
         try
         {
-            var res = await _http.GetAsync(url);
-            var body = await res.Content.ReadAsStringAsync();
-
-            if (!res.IsSuccessStatusCode)
-                return StatusCode((int)res.StatusCode, body);
-
-            return Content(body, "application/json");
+            var json = await _mercadoService.ObterHistoricoYahooAsync(ticker, range, interval);
+            return Content(json, "application/json");
+        }
+        catch (HttpRequestException ex)
+        {
+            return BadRequest(new { erro = "Falha ao buscar dados no Yahoo Finance.", detalhe = ex.Message });
         }
         catch (Exception ex)
         {
@@ -46,31 +36,19 @@ public class MercadoController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Retorna as cotações de Contratos Futuros diretos da B3.
-    /// </summary>
     [HttpGet("futuro")]
-    [ProducesResponseType(200)]
     public async Task<IActionResult> GetCotacaoFuturo([FromQuery] string ticker)
     {
-        if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
-
-        var url = $"https://cotacao.b3.com.br/mds/api/v1/InstrumentQuotation/{ticker.ToUpper()}";
+        if (string.IsNullOrWhiteSpace(ticker)) return BadRequest(new { erro = "Ticker é obrigatório." });
 
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, url);
-            req.Headers.Add("Accept", "application/json");
-            req.Headers.Add("Origin", "https://www.b3.com.br");
-            req.Headers.Add("Referer", "https://www.b3.com.br/");
-
-            var res = await _http.SendAsync(req);
-            var body = await res.Content.ReadAsStringAsync();
-
-            if (!res.IsSuccessStatusCode)
-                return StatusCode((int)res.StatusCode, body);
-
-            return Content(body, "application/json");
+            var json = await _mercadoService.ObterCotacaoFuturoB3Async(ticker);
+            return Content(json, "application/json");
+        }
+        catch (HttpRequestException ex)
+        {
+            return BadRequest(new { erro = "Falha ao buscar dados na B3.", detalhe = ex.Message });
         }
         catch (Exception ex)
         {
@@ -78,29 +56,17 @@ public class MercadoController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Retorna a evolução da taxa do CDI.
-    /// </summary>
-    /// <remarks>
-    /// Faz integração direta com o Banco Central do Brasil (SGS) para puxar a rentabilidade histórica oficial do CDI.
-    /// </remarks>
     [HttpGet("cdi")]
-    [ProducesResponseType(200)]
     public async Task<IActionResult> GetCdi([FromQuery] string? dataInicial, [FromQuery] string? dataFinal)
     {
-        string url;
-        if (!string.IsNullOrWhiteSpace(dataInicial) && !string.IsNullOrWhiteSpace(dataFinal))
-            url = $"https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial={dataInicial}&dataFinal={dataFinal}";
-        else
-            url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json";
-
         try
         {
-            var res = await _http.GetAsync(url);
-            var body = await res.Content.ReadAsStringAsync();
-            if (!res.IsSuccessStatusCode)
-                return StatusCode((int)res.StatusCode, body);
-            return Content(body, "application/json");
+            var json = await _mercadoService.ObterCdiBcbAsync(dataInicial, dataFinal);
+            return Content(json, "application/json");
+        }
+        catch (HttpRequestException ex)
+        {
+            return BadRequest(new { erro = "Falha ao buscar dados no Banco Central.", detalhe = ex.Message });
         }
         catch (Exception ex)
         {

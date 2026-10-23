@@ -1,10 +1,11 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using CaddieResearch.Api.Interfaces;
+using CaddieResearch.Api.DTOs.Internacional; 
 
 namespace CaddieResearch.Api.Services;
 
-public class InternacionalService
+public class InternacionalService : IInternacionalService 
 {
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
@@ -81,35 +82,4 @@ public class InternacionalService
             return null;
         }
     }
-}
-
-public class FinnhubQuote
-{
-    public decimal? c { get; set; }  
-    public decimal? dp { get; set; } 
-}
-
-public class FinnhubProfile
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty; 
-
-    [JsonPropertyName("logo")]
-    public string Logo { get; set; } = string.Empty; 
-}
-
-public class AwesomeApiCurrency
-{
-    public string ask { get; set; } = string.Empty;
-}
-
-public class InternacionalResponse
-{
-    public string Symbol { get; set; } = string.Empty;
-    public string ShortName { get; set; } = string.Empty; 
-    public string LogoUrl { get; set; } = string.Empty;   
-    public decimal PriceUsd { get; set; }
-    public decimal ChangePercent { get; set; }
-    public decimal ExchangeRate { get; set; } 
-    public decimal PriceBrl { get; set; }  
 }

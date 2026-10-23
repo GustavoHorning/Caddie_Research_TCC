@@ -5,38 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using CaddieResearch.Api.Hubs;
+using CaddieResearch.Api.Interfaces;
 using CaddieResearch.Api.Workers;
-using SeuProjeto.Services;
-using System.Reflection;
-using Microsoft.OpenApi;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Caddie Research API",
-        Version = "v1",
-        Description = "API principal para o ecossistema Caddie Research. Gerencia assinaturas, portfólios, morning calls e relatórios.",
-        Contact = new OpenApiContact
-        {
-            Name = "Time Caddie Research",
-            Email = "suporte@caddieresearch.com.br"
-        }
-    });
-
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    
-    if (File.Exists(xmlPath))
-    {
-        c.IncludeXmlComments(xmlPath);
-    }
-});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -44,6 +20,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<BlobService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<IAssinaturaService, AssinaturaService>();
+builder.Services.AddScoped<INotificacaoService, NotificacaoService>();
+builder.Services.AddScoped<IBuscaService, BuscaService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IHistoricoService, HistoricoService>();
+builder.Services.AddScoped<IMercadoService, MercadoService>();
+builder.Services.AddScoped<IPortfolioService, PortfolioService>();
+builder.Services.AddScoped<IRecomendacoesService, RecomendacoesService>();
+builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IWatchlistAbasService, WatchlistAbasService>();
 
 builder.Services.AddHttpClient<AbacatePayService>();
 builder.Services.AddMemoryCache();
@@ -54,9 +41,10 @@ builder.Services.AddHttpClient("yahoo", c =>
     c.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
 });
 
-builder.Services.AddScoped<AcoesService>();
+
 builder.Services.AddHttpClient<InternacionalService>();
-builder.Services.AddScoped<InternacionalService>();
+builder.Services.AddHttpClient<ITaxasMacroeconomicasService, TaxasMacroeconomicasService>();
+builder.Services.AddHttpClient<IInternacionalService, InternacionalService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "chave-fallback-super-longa-para-desenvolvimento-local";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -102,18 +90,10 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddHostedService<MacroCalendarioWorker>();
+builder.Services.AddHostedService<CaddieResearch.Api.Workers.MacroCalendarioWorker>();
 builder.Services.AddHostedService<BalancoCalendarioWorker>();
 builder.Services.AddSignalR();
-
 var app = builder.Build();
-
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Caddie Research API v1");
-    c.RoutePrefix = "swagger"; 
-});
 
 app.UseHttpsRedirection();
 app.UseCors("CorsPolicy");

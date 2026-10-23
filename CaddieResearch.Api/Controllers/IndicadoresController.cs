@@ -1,16 +1,16 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SeuProjeto.Services;
+using CaddieResearch.Api.Interfaces; 
 using System.Threading.Tasks;
 
-namespace SeuProjeto.Controllers
+namespace CaddieResearch.Api.Controllers 
 {
     [ApiController]
     [Route("api/[controller]")]
     public class IndicadoresController : ControllerBase
     {
-        private readonly TaxasMacroeconomicasService _taxasService;
+        private readonly ITaxasMacroeconomicasService _taxasService; 
 
-        public IndicadoresController(TaxasMacroeconomicasService taxasService)
+        public IndicadoresController(ITaxasMacroeconomicasService taxasService)
         {
             _taxasService = taxasService;
         }

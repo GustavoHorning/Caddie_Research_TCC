@@ -1,12 +1,10 @@
-﻿using System;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CaddieResearch.Api.Data;
 using CaddieResearch.Models;
-using System.Linq;
-using System.Threading.Tasks;
+using CaddieResearch.Api.Interfaces; 
 
 namespace CaddieResearch.Controllers
 {
@@ -15,10 +13,18 @@ namespace CaddieResearch.Controllers
     public class CarteirasController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IAssinaturaService _assinaturaService; 
 
-        public CarteirasController(AppDbContext context)
+        public CarteirasController(AppDbContext context, IAssinaturaService assinaturaService)
         {
             _context = context;
+            _assinaturaService = assinaturaService;
+        }
+
+        private int ObterUsuarioLogadoId()
+        {
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(idClaim, out int id) ? id : 0;
         }
 
         /// <summary>
@@ -37,39 +43,10 @@ namespace CaddieResearch.Controllers
         [ProducesResponseType(404)]
         public async Task<IActionResult> GetCarteiras()
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int usuarioId = ObterUsuarioLogadoId();
+            if (usuarioId == 0) return Unauthorized(new { mensagem = "Usuário não autenticado." });
 
-            if (string.IsNullOrEmpty(userIdString))
-                return Unauthorized(new { mensagem = "Usuário não autenticado." });
-
-            var usuario = await _context.Usuarios.FindAsync(int.Parse(userIdString));
-            if (usuario == null)
-                return NotFound(new { mensagem = "Usuário não encontrado." });
-
-            bool isGestor = usuario.TipoPerfil == "Gestor" || usuario.TipoPerfil == "Admin";
-            int nivelPermitido = 0;
-
-            if (isGestor)
-            {
-                nivelPermitido = 99;
-            }
-            else
-            {
-                var assinaturaValida = await _context.Assinaturas
-                    .Where(a => a.UsuarioId == usuario.Id && a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
-                    .OrderByDescending(a => a.DataVencimento)
-                    .FirstOrDefaultAsync();
-
-                string planoReal = assinaturaValida?.PlanoNome;
-
-                nivelPermitido = planoReal switch
-                {
-                    "Basic" => 1,
-                    "Premium" => 2,
-                    "Black" => 3,
-                    _ => 0
-                };
-            }
+            int nivelPermitido = await _assinaturaService.ObterNivelAcessoAsync(usuarioId);
 
             var carteiras = await _context.Carteiras
                 .Include(c => c.Ativos)
@@ -98,39 +75,10 @@ namespace CaddieResearch.Controllers
         [ProducesResponseType(404)]
         public async Task<ActionResult<Carteira>> GetCarteira(int id)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int usuarioId = ObterUsuarioLogadoId();
+            if (usuarioId == 0) return Unauthorized(new { mensagem = "Usuário não autenticado." });
 
-            if (string.IsNullOrEmpty(userIdString))
-                return Unauthorized(new { mensagem = "Usuário não autenticado." });
-
-            var usuario = await _context.Usuarios.FindAsync(int.Parse(userIdString));
-            if (usuario == null)
-                return NotFound(new { mensagem = "Usuário não encontrado." });
-
-            bool isGestor = usuario.TipoPerfil == "Gestor" || usuario.TipoPerfil == "Admin";
-            int nivelPermitido = 0;
-
-            if (isGestor)
-            {
-                nivelPermitido = 99;
-            }
-            else
-            {
-                var assinaturaValida = await _context.Assinaturas
-                    .Where(a => a.UsuarioId == usuario.Id && a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
-                    .OrderByDescending(a => a.DataVencimento)
-                    .FirstOrDefaultAsync();
-
-                string planoReal = assinaturaValida?.PlanoNome;
-
-                nivelPermitido = planoReal switch
-                {
-                    "Basic" => 1,
-                    "Premium" => 2,
-                    "Black" => 3,
-                    _ => 0
-                };
-            }
+            int nivelPermitido = await _assinaturaService.ObterNivelAcessoAsync(usuarioId);
 
             var carteira = await _context.Carteiras
                 .Include(c => c.Ativos)
@@ -146,7 +94,7 @@ namespace CaddieResearch.Controllers
                 return StatusCode(403, new { mensagem = "Seu plano não permite acessar esta carteira." });
             }
 
-            return carteira;
+            return Ok(carteira);
         }
     }
 }
