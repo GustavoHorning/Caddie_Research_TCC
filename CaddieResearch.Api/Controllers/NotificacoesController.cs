@@ -1,93 +1,64 @@
-﻿using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Hubs;
-using CaddieResearch.Api.Models;
+﻿using CaddieResearch.Api.Interfaces;
+using CaddieResearch.Api.DTOs.Notificacoes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
+using System.Security.Claims;
 
 namespace CaddieResearch.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] 
     public class NotificacoesController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IHubContext<NotificationHub> _hubContext; 
+        private readonly INotificacaoService _notificacaoService;
 
-        public NotificacoesController(AppDbContext context, IHubContext<NotificationHub> hubContext)
+        public NotificacoesController(INotificacaoService notificacaoService)
         {
-            _context = context;
-            _hubContext = hubContext;
+            _notificacaoService = notificacaoService;
+        }
+
+        private int ObterUsuarioLogadoId()
+        {
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("id")?.Value;
+            return int.TryParse(userIdStr, out int id) ? id : 0;
         }
 
         [HttpGet]
-        [Authorize] 
-        public IActionResult GetMinhasNotificacoes()
+        public async Task<IActionResult> GetMinhasNotificacoes()
         {
-            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
-                            ?? User.FindFirst("id")?.Value;
-            
-            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
-            
-            int usuarioId = int.Parse(userIdStr);
+            int usuarioId = ObterUsuarioLogadoId();
+            if (usuarioId == 0) return Unauthorized();
 
-            var notifs = _context.Notificacoes
-                .Where(n => n.UsuarioId == usuarioId || n.UsuarioId == null)
-                .OrderByDescending(n => n.DataCriacao)
-                .Take(20)
-                .ToList();
-
+            var notifs = await _notificacaoService.ObterNotificacoesAsync(usuarioId);
             return Ok(notifs);
         }
 
         [HttpPost("disparar")]
-        [AllowAnonymous] 
-        public async Task<IActionResult> DispararNotificacaoTeste([FromBody] Notificacao novaNotificacao)
+        [Authorize(Roles = "Gestor,Admin")] 
+        public async Task<IActionResult> DispararNotificacaoTeste([FromBody] DispararNotificacaoDto dto)
         {
-            novaNotificacao.DataCriacao = DateTime.UtcNow;
-            
-            _context.Notificacoes.Add(novaNotificacao);
-            await _context.SaveChangesAsync();
-
-            await _hubContext.Clients.All.SendAsync("ReceberNotificacao", novaNotificacao);
-
+            await _notificacaoService.DispararNotificacaoTesteAsync(dto);
             return Ok(new { mensagem = "Notificação disparada com sucesso e salva no banco!" });
         }
 
         [HttpPut("{id}/marcar-lida")]
-        [AllowAnonymous] 
         public async Task<IActionResult> MarcarComoLida(int id)
         {
-            var notificacao = await _context.Notificacoes.FindAsync(id);
-            if (notificacao == null) return NotFound();
+            int usuarioId = ObterUsuarioLogadoId();
+            if (usuarioId == 0) return Unauthorized();
 
-            if (!notificacao.Lida)
-            {
-                notificacao.Lida = true;
-                await _context.SaveChangesAsync();
-            }
-
+            await _notificacaoService.MarcarComoLidaAsync(id, usuarioId);
             return Ok();
         }
 
         [HttpPut("marcar-todas-lidas")]
-        [AllowAnonymous] 
         public async Task<IActionResult> MarcarTodasComoLidas()
         {
-            var notificacoesNaoLidas = _context.Notificacoes.Where(n => !n.Lida).ToList();
-            
-            if (notificacoesNaoLidas.Any())
-            {
-                foreach (var notif in notificacoesNaoLidas)
-                {
-                    notif.Lida = true;
-                }
-                await _context.SaveChangesAsync();
-            }
+            int usuarioId = ObterUsuarioLogadoId();
+            if (usuarioId == 0) return Unauthorized();
 
+            await _notificacaoService.MarcarTodasComoLidasAsync(usuarioId);
             return Ok();
         }
     }

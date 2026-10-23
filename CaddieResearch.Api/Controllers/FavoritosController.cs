@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using CaddieResearch.Api.Data;
 using CaddieResearch.Api.Models;
-
+using CaddieResearch.Api.DTOs.Favoritos; 
 namespace CaddieResearch.Api.Controllers;
 
 [ApiController]
@@ -18,12 +19,17 @@ public class FavoritosController : ControllerBase
         _context = context;
     }
 
+    private int ObterUsuarioLogadoId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(userIdClaim, out int id) ? id : 0;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetFavoritos()
     {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out int usuarioId))
-            return Unauthorized();
+        int usuarioId = ObterUsuarioLogadoId();
+        if (usuarioId == 0) return Unauthorized();
 
         var favoritos = await _context.Favoritos
             .Where(f => f.UsuarioId == usuarioId)
@@ -36,9 +42,8 @@ public class FavoritosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddFavorito([FromBody] FavoritoDto dto)
     {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out int usuarioId))
-            return Unauthorized();
+        int usuarioId = ObterUsuarioLogadoId();
+        if (usuarioId == 0) return Unauthorized();
 
         var jaExiste = await _context.Favoritos
             .AnyAsync(f => f.UsuarioId == usuarioId && f.Ticker == dto.Ticker);
@@ -65,9 +70,8 @@ public class FavoritosController : ControllerBase
     [HttpPatch("{ticker}/anotacao")]
     public async Task<IActionResult> AtualizarAnotacao(string ticker, [FromBody] AnotacaoDto dto)
     {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out int usuarioId))
-            return Unauthorized();
+        int usuarioId = ObterUsuarioLogadoId();
+        if (usuarioId == 0) return Unauthorized();
 
         var favorito = await _context.Favoritos
             .FirstOrDefaultAsync(f => f.UsuarioId == usuarioId && f.Ticker == ticker);
@@ -84,9 +88,8 @@ public class FavoritosController : ControllerBase
     [HttpDelete("{ticker}")]
     public async Task<IActionResult> RemoveFavorito(string ticker)
     {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdClaim, out int usuarioId))
-            return Unauthorized();
+        int usuarioId = ObterUsuarioLogadoId();
+        if (usuarioId == 0) return Unauthorized();
 
         var favorito = await _context.Favoritos
             .FirstOrDefaultAsync(f => f.UsuarioId == usuarioId && f.Ticker == ticker);
@@ -94,12 +97,11 @@ public class FavoritosController : ControllerBase
         if (favorito == null)
             return NotFound();
 
-        // Como o favorito pode estar em uma ou mais abas personalizadas, remove
-        // esses vínculos primeiro (a FK não é mais em cascata para essa relação)
         var vinculos = await _context.WatchlistAbaFavoritos
             .Where(v => v.FavoritoId == favorito.Id)
             .ToListAsync();
-        if (vinculos.Count > 0)
+            
+        if (vinculos.Any())
             _context.WatchlistAbaFavoritos.RemoveRange(vinculos);
 
         _context.Favoritos.Remove(favorito);
@@ -107,18 +109,4 @@ public class FavoritosController : ControllerBase
 
         return Ok(new { mensagem = "Removido da watchlist!" });
     }
-}
-
-public class FavoritoDto
-{
-    public string Ticker { get; set; } = string.Empty;
-    public string? NomeEmpresa { get; set; }
-    public string? Categoria { get; set; }
-    public string? Rentabilidade { get; set; }
-    public string? NomeCarteira { get; set; }
-}
-
-public class AnotacaoDto
-{
-    public string? Anotacao { get; set; }
 }

@@ -1,10 +1,10 @@
 using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Hubs;
 using CaddieResearch.Api.Models;
 using CaddieResearch.Api.Services;
+using CaddieResearch.Api.Interfaces;
+using CaddieResearch.Api.DTOs.MorningCall;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
@@ -18,13 +18,13 @@ public class MorningCallController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly BlobService _blobService;
-    private readonly IHubContext<NotificationHub> _hubContext;
+    private readonly INotificacaoService _notificacaoService; 
 
-    public MorningCallController(AppDbContext context, BlobService blobService, IHubContext<NotificationHub> hubContext)
+    public MorningCallController(AppDbContext context, BlobService blobService, INotificacaoService notificacaoService)
     {
         _context = context;
         _blobService = blobService;
-        _hubContext = hubContext;
+        _notificacaoService = notificacaoService;
     }
 
     private int GetUsuarioId()
@@ -34,7 +34,8 @@ public class MorningCallController : ControllerBase
     }
 
     private static readonly string[] ExtensoesAudio = { ".mp4", ".m4a", ".mp3" };
-    private const long TamanhoMaximoAudio = 25 * 1024 * 1024;
+    
+    private const long TamanhoMaximoAudio = 25 * 1024 * 1024; 
 
     private static string? ValidarAudio(IFormFile audio)
     {
@@ -54,24 +55,24 @@ public class MorningCallController : ControllerBase
             .Include(m => m.Topicos)
             .OrderByDescending(m => m.Data)
             .ThenByDescending(m => m.DataCriacao)
-            .Select(m => new
+            .Select(m => new MorningCallResultDto 
             {
-                m.Id,
-                m.Titulo,
-                m.Data,
-                m.DataCriacao,
-                m.AudioUrl,
+                Id = m.Id,
+                Titulo = m.Titulo,
+                Data = m.Data,
+                DataCriacao = m.DataCriacao,
+                AudioUrl = m.AudioUrl,
                 NomeGestor = m.Gestor!.Nome,
                 Topicos = m.Topicos
                     .OrderBy(t => t.Ordem)
-                    .Select(t => new
+                    .Select(t => new TopicoResultDto
                     {
-                        t.Id,
-                        t.Titulo,
-                        t.Texto,
-                        t.Link,
-                        t.ImagemUrl
-                    })
+                        Id = t.Id,
+                        Titulo = t.Titulo,
+                        Texto = t.Texto,
+                        Link = t.Link,
+                        ImagemUrl = t.ImagemUrl
+                    }).ToList()
             })
             .ToListAsync();
 
@@ -89,23 +90,24 @@ public class MorningCallController : ControllerBase
             .Where(m => m.GestorId == gestorId)
             .OrderByDescending(m => m.Data)
             .ThenByDescending(m => m.DataCriacao)
-            .Select(m => new
+            .Select(m => new MorningCallResultDto 
             {
-                m.Id,
-                m.Titulo,
-                m.Data,
-                m.DataCriacao,
-                m.AudioUrl,
+                Id = m.Id,
+                Titulo = m.Titulo,
+                Data = m.Data,
+                DataCriacao = m.DataCriacao,
+                AudioUrl = m.AudioUrl,
+                NomeGestor = "Eu",
                 Topicos = m.Topicos
                     .OrderBy(t => t.Ordem)
-                    .Select(t => new
+                    .Select(t => new TopicoResultDto
                     {
-                        t.Id,
-                        t.Titulo,
-                        t.Texto,
-                        t.Link,
-                        t.ImagemUrl
-                    })
+                        Id = t.Id,
+                        Titulo = t.Titulo,
+                        Texto = t.Texto,
+                        Link = t.Link,
+                        ImagemUrl = t.ImagemUrl
+                    }).ToList()
             })
             .ToListAsync();
 
@@ -182,18 +184,7 @@ public class MorningCallController : ControllerBase
         _context.MorningCalls.Add(morningCall);
         await _context.SaveChangesAsync();
 
-        var notificacao = new Notificacao
-        {
-            UsuarioId = null, 
-            Titulo = "Novo Morning Call disponível",
-            Mensagem = titulo,
-            Tipo = "Info",
-            LinkDestino = "/morning-call",
-            DataCriacao = DateTime.UtcNow
-        };
-        _context.Notificacoes.Add(notificacao);
-        await _context.SaveChangesAsync();
-        await _hubContext.Clients.All.SendAsync("ReceberNotificacao", notificacao);
+        await _notificacaoService.DispararNotificacaoMorningCallAsync(titulo);
 
         return Ok(new { mensagem = "Morning Call publicado com sucesso!", id = morningCall.Id });
     }
@@ -361,15 +352,4 @@ public class MorningCallController : ControllerBase
 
         return Ok(new { mensagem = "Morning Call atualizado com sucesso!" });
     }
-}
-
-public class TopicoInputDto
-{
-    public int? Id { get; set; }
-
-    public string Titulo { get; set; } = string.Empty;
-    public string Texto { get; set; } = string.Empty;
-    public string? Link { get; set; }
-
-    public string? ImagemUrlExistente { get; set; }
 }

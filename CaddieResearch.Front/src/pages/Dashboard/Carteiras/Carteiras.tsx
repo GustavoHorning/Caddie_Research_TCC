@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
-import './Carteiras.css'
-import Sidebar from '../../../components/Sidebar'
-import TopBar from '../../../components/TopBar'
-import api from '../../../services/api';
-import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useCarteiras } from '../../../hooks/useCarteiras';
+import Sidebar from '../../../components/Sidebar';
+import TopBar from '../../../components/TopBar';
+import './Carteiras.css';
 
 const carteirasVitrine = [
     { id: 1, nome: 'Dividendos', iconeCor: '#4caf50', icone: '💸', teaser: 'Gere renda passiva recorrente com as melhores pagadoras.', planoMinimo: 'Basic' },
@@ -17,46 +17,9 @@ const carteirasVitrine = [
 ];
 
 export default function Carteiras() {
-    const [menuMobileAberto, setMenuMobileAberto] = useState(false)
-    const [carteirasAutorizadas, setCarteirasAutorizadas] = useState<any[]>([]);
-    const [carregando, setCarregando] = useState(true);
-    const location = useLocation();
+    const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
-    useEffect(() => {
-        const token = localStorage.getItem('caddie_token');
-        api.get('/api/carteiras', {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-            .then((response) => {
-                setCarteirasAutorizadas(response.data);
-                setCarregando(false);
-            })
-            .catch((error) => {
-                console.error("Erro ao buscar carteiras:", error);
-                setCarregando(false);
-            });
-    }, []);
-
-    useEffect(() => {
-        if (carregando) return;
-
-        const params = new URLSearchParams(location.search);
-        const highlightId = params.get('highlight'); // Ex: carteira_5
-        
-        if (highlightId) {
-            setTimeout(() => {
-                const element = document.getElementById(highlightId);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    element.classList.add('highlight-pulse');
-                    
-                    window.history.replaceState(null, '', location.pathname);
-                    
-                    setTimeout(() => element.classList.remove('highlight-pulse'), 2000);
-                }
-            }, 300);
-        }
-    }, [location.search, carregando]);
+    const { carteirasAutorizadas, carregando, calcularEstatisticas } = useCarteiras();
 
     return (
         <div className="dashboard-layout">
@@ -107,23 +70,8 @@ export default function Carteiras() {
                                 const carteiraAPI = carteirasAutorizadas.find(
                                     c => c.nome.toLowerCase() === vitrine.nome.toLowerCase()
                                 );
-                                const bloqueada = !carteiraAPI;
 
-                                let qtdComprar: string | number = bloqueada ? '?' : 0;
-                                let qtdAguardar: string | number = bloqueada ? '?' : 0;
-                                let totalAtivos: number = 0;
-                                let indiceConviccao = bloqueada ? '??%' : "0%";
-
-                                if (carteiraAPI && carteiraAPI.ativos) {
-                                    const ativos = carteiraAPI.ativos;
-                                    totalAtivos = ativos.length;
-                                    qtdComprar = ativos.filter((a: any) => a.vies === 'Comprar').length;
-                                    qtdAguardar = ativos.filter((a: any) => a.vies === 'Aguardar').length;
-
-                                    if (totalAtivos > 0) {
-                                        indiceConviccao = `${Math.round((Number(qtdComprar) / totalAtivos) * 100)}%`;
-                                    }
-                                }
+                                const { bloqueada, qtdComprar, qtdAguardar, indiceConviccao } = calcularEstatisticas(carteiraAPI);
 
                                 return (
                                     <Link
@@ -176,5 +124,5 @@ export default function Carteiras() {
                 </div>
             </main>
         </div>
-    )
+    );
 }

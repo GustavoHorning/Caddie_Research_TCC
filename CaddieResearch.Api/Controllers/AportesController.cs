@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using CaddieResearch.Api.DTOs.Portfolio;
 
 namespace CaddieResearch.Api.Controllers;
 
@@ -85,9 +86,4 @@ public class AportesController : ControllerBase
     }
 }
 
-public class AporteDto
-{
-    public decimal Valor { get; set; }
-    public string? Descricao { get; set; }
-    public DateTime? DataAporte { get; set; }
-}
+

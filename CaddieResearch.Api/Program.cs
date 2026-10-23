@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using CaddieResearch.Api.Hubs;
+using CaddieResearch.Api.Interfaces;
 using CaddieResearch.Api.Workers;
-using SeuProjeto.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<BlobService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<IAssinaturaService, AssinaturaService>();
+builder.Services.AddScoped<INotificacaoService, NotificacaoService>();
+builder.Services.AddScoped<IBuscaService, BuscaService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IHistoricoService, HistoricoService>();
+builder.Services.AddScoped<IMercadoService, MercadoService>();
+builder.Services.AddScoped<IPortfolioService, PortfolioService>();
+builder.Services.AddScoped<IRecomendacoesService, RecomendacoesService>();
+builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IWatchlistAbasService, WatchlistAbasService>();
 
 builder.Services.AddHttpClient<AbacatePayService>();
 builder.Services.AddMemoryCache();
@@ -30,9 +42,9 @@ builder.Services.AddHttpClient("yahoo", c =>
 });
 
 
-builder.Services.AddScoped<AcoesService>();
 builder.Services.AddHttpClient<InternacionalService>();
-builder.Services.AddScoped<InternacionalService>();
+builder.Services.AddHttpClient<ITaxasMacroeconomicasService, TaxasMacroeconomicasService>();
+builder.Services.AddHttpClient<IInternacionalService, InternacionalService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "chave-fallback-super-longa-para-desenvolvimento-local";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

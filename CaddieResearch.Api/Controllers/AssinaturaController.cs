@@ -1,13 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
 using CaddieResearch.Api.Services; 
+using CaddieResearch.Api.Interfaces; 
 using System.Security.Claims;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
 
 namespace CaddieResearch.Api.Controllers
 {
@@ -16,11 +11,11 @@ namespace CaddieResearch.Api.Controllers
     [Authorize]
     public class AssinaturaController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IAssinaturaService _assinaturaService;
 
-        public AssinaturaController(AppDbContext context)
+        public AssinaturaController(IAssinaturaService assinaturaService)
         {
-            _context = context;
+            _assinaturaService = assinaturaService;
         }
 
         private int ObterUsuarioLogadoId()
@@ -35,10 +30,8 @@ namespace CaddieResearch.Api.Controllers
             int usuarioId = ObterUsuarioLogadoId();
             if (usuarioId == 0) return Unauthorized();
 
-            var assinatura = await _context.Assinaturas
-                .Where(a => a.UsuarioId == usuarioId && a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
-                .OrderByDescending(a => a.DataVencimento)
-                .FirstOrDefaultAsync();
+            // Chamando o Serviço!
+            var assinatura = await _assinaturaService.ObterAssinaturaAtivaAsync(usuarioId);
 
             if (assinatura == null)
             {
@@ -58,24 +51,12 @@ namespace CaddieResearch.Api.Controllers
             int usuarioId = ObterUsuarioLogadoId();
             if (usuarioId == 0) return Unauthorized();
 
-            var assinaturasAtivas = await _context.Assinaturas
-                .Where(a => a.UsuarioId == usuarioId && a.Status == "Ativo")
-                .ToListAsync();
+            var usuarioAtualizado = await _assinaturaService.CancelarAssinaturaAsync(usuarioId);
 
-            foreach (var assinatura in assinaturasAtivas)
-            {
-                assinatura.Status = "Cancelado";
-            }
+            if (usuarioAtualizado == null)
+                return NotFound(new { mensagem = "Usuário não encontrado." });
 
-            var usuario = await _context.Usuarios.FindAsync(usuarioId);
-            if (usuario != null)
-            {
-                usuario.Plano = null; 
-            }
-
-            await _context.SaveChangesAsync();
-
-            var novoToken = _tokenService.GenerateToken(usuario);
+            var novoToken = _tokenService.GenerateToken(usuarioAtualizado);
 
             return Ok(new { mensagem = "Plano cancelado.", token = novoToken });
         }

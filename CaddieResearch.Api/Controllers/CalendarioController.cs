@@ -1,14 +1,10 @@
 ﻿using CaddieResearch.Api.Data;
 using CaddieResearch.Api.Models;
+using CaddieResearch.Api.DTOs.Calendario; 
+using CaddieResearch.Api.Interfaces;    
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.SignalR;
-using CaddieResearch.Api.Hubs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CaddieResearch.Api.Controllers;
 
@@ -18,12 +14,12 @@ namespace CaddieResearch.Api.Controllers;
 public class CalendarioController : ControllerBase
 {
     private readonly AppDbContext _context;
-    private readonly IHubContext<NotificationHub> _hubContext; 
+    private readonly INotificacaoService _notificacaoService; 
 
-    public CalendarioController(AppDbContext context, IHubContext<NotificationHub> hubContext)
+    public CalendarioController(AppDbContext context, INotificacaoService notificacaoService)
     {
         _context = context;
-        _hubContext = hubContext;
+        _notificacaoService = notificacaoService;
     }
 
     [HttpGet]
@@ -35,19 +31,19 @@ public class CalendarioController : ControllerBase
         var eventos = await _context.Eventos
             .Where(e => e.DataHora >= hoje) 
             .OrderBy(e => e.DataHora)
-            .Select(e => new 
+            .Select(e => new EventoResultDto 
             {
-                e.Id,
+                Id = e.Id,
                 DataStr = e.DataHora.ToString("yyyy-MM-dd"),
                 Hora = e.DataHora.ToString("HH:mm"),
-                e.Titulo,
-                e.Tipo,
-                e.Impacto,
-                e.Projecao,
-                e.Atual,
+                Titulo = e.Titulo,
+                Tipo = e.Tipo,
+                Impacto = e.Impacto,
+                Projecao = e.Projecao,
+                Atual = e.Atual,
                 Ticker = e.TickerRelacionado,
-                e.Pais,
-                e.Descricao,
+                Pais = e.Pais,
+                Descricao = e.Descricao,
                 Link = e.LinkExterno
             })
             .ToListAsync();
@@ -66,19 +62,19 @@ public class CalendarioController : ControllerBase
             .OrderByDescending(e => e.Impacto)
             .ThenBy(e => e.DataHora)
             .Take(3)
-            .Select(e => new 
+            .Select(e => new EventoResultDto 
             {
-                e.Id,
+                Id = e.Id,
                 DataStr = e.DataHora.ToString("yyyy-MM-dd"),
                 Hora = e.DataHora.ToString("HH:mm"),
-                e.Titulo,
-                e.Tipo,
-                e.Impacto,
-                e.Projecao,
-                e.Atual,
+                Titulo = e.Titulo,
+                Tipo = e.Tipo,
+                Impacto = e.Impacto,
+                Projecao = e.Projecao,
+                Atual = e.Atual,
                 Ticker = e.TickerRelacionado,
-                e.Pais,
-                e.Descricao,
+                Pais = e.Pais,
+                Descricao = e.Descricao,
                 Link = e.LinkExterno
             })
             .ToListAsync();
@@ -86,17 +82,8 @@ public class CalendarioController : ControllerBase
         return Ok(eventos);
     }
     
-    public class CriarEventoCaddieDto
-    {
-        public string Titulo { get; set; }
-        public DateTime DataHora { get; set; }
-        public string Descricao { get; set; }
-        public string LinkExterno { get; set; }
-        public int Impacto { get; set; }
-    }
-    
     [HttpPut("{id}")]
-    public async Task<IActionResult> AtualizarEventoPeloGestor(int id, [FromBody] Evento eventoAtualizado)
+    public async Task<IActionResult> AtualizarEventoPeloGestor(int id, [FromBody] AtualizarEventoDto dto) // <-- Usando DTO de Entrada
     {
         var eventoExistente = await _context.Eventos.FindAsync(id);
         if (eventoExistente == null) 
@@ -107,16 +94,16 @@ public class CalendarioController : ControllerBase
             return BadRequest(new { mensagem = "Operação negada: Apenas eventos da própria Caddie podem ser editados manualmente." });
         }
 
-        eventoExistente.Titulo = eventoAtualizado.Titulo;
-        eventoExistente.Descricao = eventoAtualizado.Descricao;
-        eventoExistente.DataHora = eventoAtualizado.DataHora; 
-        eventoExistente.LinkExterno = eventoAtualizado.LinkExterno;
+        eventoExistente.Titulo = dto.Titulo;
+        eventoExistente.Descricao = dto.Descricao;
+        eventoExistente.DataHora = dto.DataHora; 
+        eventoExistente.LinkExterno = dto.LinkExterno;
     
         await _context.SaveChangesAsync();
 
-        await DispararNotificacaoEventoCaddieAsync(
+        await _notificacaoService.DispararNotificacaoEventoCaddieAsync(
             "🔄 Evento Atualizado",
-            $"O Gestor atualizou as informações do evento '{eventoAtualizado.Titulo}'. Confira os detalhes na agenda."
+            $"O Gestor atualizou as informações do evento '{dto.Titulo}'. Confira os detalhes na agenda."
         );
 
         return Ok(eventoExistente);
@@ -139,7 +126,7 @@ public class CalendarioController : ControllerBase
         _context.Eventos.Add(novoEvento);
         await _context.SaveChangesAsync();
 
-        await DispararNotificacaoEventoCaddieAsync(
+        await _notificacaoService.DispararNotificacaoEventoCaddieAsync(
             "📅 Novo Evento Agendado",
             $"A Caddie Research agendou '{dto.Titulo}'. Acesse o calendário e não fique de fora!"
         );
@@ -161,62 +148,12 @@ public class CalendarioController : ControllerBase
 
         if (tipo == "Caddie")
         {
-            await DispararNotificacaoEventoCaddieAsync(
+            await _notificacaoService.DispararNotificacaoEventoCaddieAsync(
                 "🗑️ Evento Cancelado",
                 $"O evento '{titulo}' foi cancelado e retirado da agenda."
             );
         }
 
         return Ok(new { message = "Evento removido com sucesso!" });
-    }
-    
-    private async Task DispararNotificacaoEventoCaddieAsync(string titulo, string mensagem)
-    {
-        try
-        {
-            TimeZoneInfo fusoBrasilia;
-            try { fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time"); }
-            catch { fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo"); }
-            DateTime horaBrasilia = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, fusoBrasilia);
-
-            var usuariosAlvoIds = await _context.Usuarios
-                .Where(u => u.TipoPerfil == "Gestor" || 
-                            _context.Assinaturas.Any(a => a.UsuarioId == u.Id && a.Status == "Ativo"))
-                .Select(u => u.Id)
-                .Distinct()
-                .ToListAsync();
-
-            var novasNotificacoes = new List<Notificacao>();
-
-            foreach (var usuarioId in usuariosAlvoIds)
-            {
-                novasNotificacoes.Add(new Notificacao
-                {
-                    UsuarioId = usuarioId,
-                    Titulo = titulo,
-                    Mensagem = mensagem,
-                    Tipo = "Alerta", 
-                    LinkDestino = "/calendario", 
-                    Lida = false,
-                    DataCriacao = horaBrasilia
-                });
-            }
-
-            if (novasNotificacoes.Any())
-            {
-                _context.Notificacoes.AddRange(novasNotificacoes);
-                await _context.SaveChangesAsync();
-
-                foreach (var notif in novasNotificacoes)
-                {
-                    await _hubContext.Clients.Group($"User_{notif.UsuarioId}")
-                                     .SendAsync("ReceberNotificacao", notif);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Erro ao disparar notificação de evento: {ex.Message}");
-        }
     }
 }

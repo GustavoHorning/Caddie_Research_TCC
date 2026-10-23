@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using CaddieResearch.Api.Data;
 using CaddieResearch.Api.Models;
 using CaddieResearch.Api.Services;
+using CaddieResearch.Api.Interfaces; 
+using CaddieResearch.Api.DTOs.Chat; 
 using System.Security.Claims;
 
 namespace CaddieResearch.Api.Controllers;
@@ -14,11 +16,13 @@ public class ChatController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly EmailService _emailService;
+    private readonly IChatService _chatService; 
 
-    public ChatController(AppDbContext context, EmailService emailService)
+    public ChatController(AppDbContext context, EmailService emailService, IChatService chatService)
     {
         _context = context;
         _emailService = emailService;
+        _chatService = chatService;
     }
 
     private int GetUsuarioId()
@@ -34,52 +38,18 @@ public class ChatController : ControllerBase
     }
 
     [HttpPost("abrir")]
-    public async Task<IActionResult> AbrirConversa([FromBody] AbrirConversaDto dto)
+    public async Task<IActionResult> AbrirConversa([FromBody] AbrirConversaDto dto) 
     {
         var usuarioId = GetUsuarioId();
         if (usuarioId == 0) return Unauthorized();
 
-        var existente = await _context.Conversas
-            .FirstOrDefaultAsync(c => c.UsuarioId == usuarioId
-                                   && c.Assunto == dto.Assunto
-                                   && c.Status == "Aberta");
-
-        if (existente != null)
-            return Ok(new { conversaId = existente.Id });
-
-        var conversa = new Conversa
-        {
-            UsuarioId = usuarioId,
-            Assunto = dto.Assunto,
-            Status = "Aberta",
-            DataAbertura = DateTime.UtcNow
-        };
-
-        _context.Conversas.Add(conversa);
-        await _context.SaveChangesAsync();
-
-        var todasConversas = await _context.Conversas
-            .Where(c => c.UsuarioId == usuarioId)
-            .OrderByDescending(c => c.DataAbertura)
-            .ToListAsync();
-
-        if (todasConversas.Count > 6)
-        {
-            var parasRemover = todasConversas.Skip(6).ToList();
-            foreach (var antiga in parasRemover)
-            {
-                var mensagens = _context.Mensagens.Where(m => m.ConversaId == antiga.Id);
-                _context.Mensagens.RemoveRange(mensagens);
-                _context.Conversas.Remove(antiga);
-            }
-            await _context.SaveChangesAsync();
-        }
+        var conversa = await _chatService.AbrirConversaAsync(usuarioId, dto.Assunto);
 
         return Ok(new { conversaId = conversa.Id });
     }
 
     [HttpPost("{conversaId}/mensagem")]
-    public async Task<IActionResult> EnviarMensagem(int conversaId, [FromBody] EnviarMensagemDto dto)
+    public async Task<IActionResult> EnviarMensagem(int conversaId, [FromBody] EnviarMensagemDto dto) 
     {
         var usuarioId = GetUsuarioId();
         if (usuarioId == 0) return Unauthorized();
@@ -103,12 +73,13 @@ public class ChatController : ControllerBase
         _context.Mensagens.Add(mensagem);
         await _context.SaveChangesAsync();
 
-        return Ok(new
+        return Ok(new MensagemResultDto 
         {
-            mensagem.Id,
-            mensagem.Conteudo,
-            mensagem.EhGestor,
-            mensagem.DataEnvio
+            Id = mensagem.Id,
+            Conteudo = mensagem.Conteudo,
+            EhGestor = mensagem.EhGestor,
+            DataEnvio = mensagem.DataEnvio,
+            NomeRemetente = usuario?.Nome ?? "Usuário"
         });
     }
 
@@ -121,13 +92,13 @@ public class ChatController : ControllerBase
         var mensagens = await _context.Mensagens
             .Where(m => m.ConversaId == conversaId)
             .OrderBy(m => m.DataEnvio)
-            .Select(m => new
+            .Select(m => new MensagemResultDto 
             {
-                m.Id,
-                m.Conteudo,
-                m.EhGestor,
-                m.Lida,
-                m.DataEnvio,
+                Id = m.Id,
+                Conteudo = m.Conteudo,
+                EhGestor = m.EhGestor,
+                Lida = m.Lida,
+                DataEnvio = m.DataEnvio,
                 NomeRemetente = m.Remetente!.Nome
             })
             .ToListAsync();
@@ -169,7 +140,7 @@ public class ChatController : ControllerBase
         var conversas = await _context.Conversas
             .Include(c => c.Usuario)
             .Include(c => c.Mensagens)
-            .Where(c => c.Usuario!.TipoPerfil != "Gestor") // Ignora conversas abertas pelo próprio gestor
+            .Where(c => c.Usuario!.TipoPerfil != "Gestor") 
             .OrderByDescending(c => c.DataAbertura)
             .Select(c => new
             {
@@ -263,15 +234,4 @@ public class ChatController : ControllerBase
         if (conversa == null) return NotFound();
         return Ok(new { status = conversa.Status });
     }
-}
-
-
-public class AbrirConversaDto
-{
-    public string Assunto { get; set; } = string.Empty;
-}
-
-public class EnviarMensagemDto
-{
-    public string Conteudo { get; set; } = string.Empty;
 }
