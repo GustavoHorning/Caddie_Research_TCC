@@ -106,6 +106,7 @@ builder.Services.AddHostedService<MacroCalendarioWorker>();
 builder.Services.AddHostedService<BalancoCalendarioWorker>();
 builder.Services.AddSignalR();
 
+builder.Services.AddApplicationInsightsTelemetry();
 var app = builder.Build();
 
 app.MapOpenApi(); 
