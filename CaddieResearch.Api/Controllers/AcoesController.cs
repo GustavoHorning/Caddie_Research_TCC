@@ -1,82 +1,72 @@
+using CaddieResearch.Api.DTOs.Acoes;
+using CaddieResearch.Api.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Gerenciamento e consulta de ativos financeiros (B3 e Mercado Americano).
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class AcoesController : ControllerBase
 {
-    private readonly HttpClient _http;
-    private readonly IConfiguration _configuration;
+    private readonly IAcoesService _acoesService;
 
-    public AcoesController(IHttpClientFactory factory, IConfiguration configuration)
+    public AcoesController(IAcoesService acoesService)
     {
-        _http = factory.CreateClient("yahoo");
-        _configuration = configuration;
+        _acoesService = acoesService;
     }
 
     /// <summary>
-    /// Retorna a cotação em tempo real de uma ação (B3).
+    /// Busca a cotação em tempo real de uma ação (B3).
     /// </summary>
-    /// <remarks>
-    /// Consulta o provedor de dados de mercado para buscar o preço atual, a variação percentual do dia e o logotipo da empresa associada ao ticker informado.
-    /// </remarks>
-    /// <param name="ticker">O código de negociação da ação na bolsa. Ex: PETR4, VALE3</param>
-    /// <response code="200">Cotação retornada com sucesso.</response>
-    /// <response code="400">O parâmetro ticker é obrigatório.</response>
-    /// <response code="404">Ticker não encontrado no provedor de dados.</response>
-    /// <response code="500">Erro de comunicação com o serviço externo.</response>
     [AllowAnonymous]
     [HttpGet("cotacao/{ticker}")]
-    [ProducesResponseType(200)]
-    [ProducesResponseType(400)]
-    [ProducesResponseType(404)]
-    [ProducesResponseType(500)]
+    [ProducesResponseType(typeof(CotacaoResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetCotacao(string ticker)
     {
-        if (string.IsNullOrWhiteSpace(ticker)) return BadRequest("ticker obrigatório");
+        if (string.IsNullOrWhiteSpace(ticker)) 
+            return BadRequest(new { erro = "O parâmetro ticker é obrigatório." });
 
-        var symbol = ticker.ToUpper();
-        var brapiToken = _configuration["BrapiToken"];
-        
-        var url = $"https://brapi.dev/api/quote/{Uri.EscapeDataString(symbol)}?token={brapiToken}";
+        var (sucesso, mensagem, cotacao) = await _acoesService.ObterCotacaoAsync(ticker);
 
-        try
+        if (!sucesso)
         {
-            var res = await _http.GetAsync(url);
-            var body = await res.Content.ReadAsStringAsync();
-
-            if (!res.IsSuccessStatusCode)
-                return StatusCode((int)res.StatusCode, $"Erro Brapi: {body}");
-
-            using var doc = JsonDocument.Parse(body);
-            var root = doc.RootElement;
-
-            if (!root.TryGetProperty("results", out var results) || results.GetArrayLength() == 0)
-                return NotFound($"Ticker {symbol} não encontrado");
-
-            var q = results[0];
-
-            var symbolOut = q.TryGetProperty("symbol", out var sym) ? sym.GetString() ?? symbol : symbol;
-            var shortName = q.TryGetProperty("shortName", out var sn) ? sn.GetString() ?? symbol : symbol;
-            var regularMarketPrice = q.TryGetProperty("regularMarketPrice", out var rmp) ? rmp.GetDouble() : 0;
-            var changePercent = q.TryGetProperty("regularMarketChangePercent", out var cp) ? cp.GetDouble() : 0;
-            var logourl = q.TryGetProperty("logourl", out var lu) ? lu.GetString() ?? "" : "";
-
-            return Ok(new
-            {
-                symbol = symbolOut,
-                shortName,
-                logourl,
-                regularMarketPrice,
-                regularMarketChangePercent = changePercent
-            });
+            if (mensagem.Contains("não encontrado"))
+                return NotFound(new { erro = mensagem });
+                
+            return StatusCode(500, new { erro = mensagem });
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ex.Message);
-        }
+
+        return Ok(cotacao);
+    }
+
+    /// <summary>
+    /// Lista todos os tickers disponíveis na B3.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("disponiveis")] // <-- CORRIGIDO AQUI PARA MATCH COM O REACT
+    [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTickersDisponiveis()
+    {
+        var tickers = await _acoesService.ObterTickersDisponiveisAsync();
+        return Ok(tickers);
+    }
+
+    /// <summary>
+    /// Lista todos os tickers do mercado internacional (EUA).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("disponiveis/internacionais")] // <-- CORRIGIDO AQUI PARA MATCH COM O REACT
+    [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTickersInternacionais()
+    {
+        var tickers = await _acoesService.ObterTickersInternacionaisAsync();
+        return Ok(tickers);
     }
 }

@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
-using System.Text.Json.Serialization; 
+using System.Text.Json.Serialization;
+using CaddieResearch.Api.DTOs.Acoes;
+using CaddieResearch.Api.Interfaces;
 
 namespace CaddieResearch.Api.Services;
 
-public class AcoesService
+public class AcoesService : IAcoesService
 {
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
@@ -17,30 +19,40 @@ public class AcoesService
         _configuration = configuration;
     }
 
-    public async Task<BrapiResponse?> ObterCotacaoAsync(string ticker)
+    public async Task<(bool Sucesso, string Mensagem, CotacaoResultDto? Cotacao)> ObterCotacaoAsync(string ticker)
     {
-        if (_cache.TryGetValue($"Cotacao_{ticker}", out BrapiResponse? cotacaoEmCache))
+        if (_cache.TryGetValue($"Cotacao_{ticker}", out CotacaoResultDto? cotacaoEmCache))
         {
-            return cotacaoEmCache;
+            return (true, string.Empty, cotacaoEmCache);
         }
 
-        string token = _configuration["BrapiToken"];
+        string token = _configuration["BrapiToken"] ?? "";
         var response = await _httpClient.GetAsync($"https://brapi.dev/api/quote/{ticker}?token={token}");
 
-        if (!response.IsSuccessStatusCode) return null;
+        if (!response.IsSuccessStatusCode) 
+            return (false, "Falha ao consultar provedor de cotações.", null);
 
         var json = await response.Content.ReadAsStringAsync();
         var dadosBrapi = JsonSerializer.Deserialize<BrapiResult>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        var cotacao = dadosBrapi?.Results?.FirstOrDefault();
+        var cotacaoBrapi = dadosBrapi?.Results?.FirstOrDefault();
 
-        if (cotacao != null)
+        if (cotacaoBrapi == null)
+            return (false, $"Ticker {ticker} não encontrado.", null);
+
+        var cotacao = new CotacaoResultDto
         {
-            var opcoesCache = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
-            _cache.Set($"Cotacao_{ticker}", cotacao, opcoesCache);
-        }
+            Symbol = cotacaoBrapi.Symbol,
+            ShortName = cotacaoBrapi.ShortName,
+            LogoUrl = cotacaoBrapi.Logourl,
+            RegularMarketPrice = (double)cotacaoBrapi.RegularMarketPrice,
+            RegularMarketChangePercent = (double)cotacaoBrapi.RegularMarketChangePercent
+        };
 
-        return cotacao;
+        var opcoesCache = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+        _cache.Set($"Cotacao_{ticker}", cotacao, opcoesCache);
+
+        return (true, string.Empty, cotacao);
     }
     
     public async Task<List<string>> ObterTickersDisponiveisAsync()
@@ -50,13 +62,13 @@ public class AcoesService
             return tickersEmCache ?? new List<string>();
         }
 
-        string token = _configuration["BrapiToken"];
+        string token = _configuration["BrapiToken"] ?? "";
         var response = await _httpClient.GetAsync($"https://brapi.dev/api/available?token={token}");
 
         if (!response.IsSuccessStatusCode) return new List<string>();
 
         var json = await response.Content.ReadAsStringAsync();
-        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
     
         var stocks = doc.RootElement.GetProperty("stocks").EnumerateArray()
             .Select(x => x.GetString() ?? string.Empty)
@@ -74,17 +86,17 @@ public class AcoesService
             return tickersEmCache ?? new List<string>();
         }
 
-        string token = _configuration["FinnhubToken"];
+        string token = _configuration["FinnhubToken"] ?? "";
         var response = await _httpClient.GetAsync($"https://finnhub.io/api/v1/stock/symbol?exchange=US&token={token}");
 
         if (!response.IsSuccessStatusCode) return new List<string>();
 
         var json = await response.Content.ReadAsStringAsync();
-        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
     
         var stocks = doc.RootElement.EnumerateArray()
             .Select(x => x.GetProperty("symbol").GetString() ?? string.Empty)
-            .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Contains(".")) 
+            .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Contains('.')) 
             .ToList();
 
         _cache.Set("ListaTickersInt", stocks, TimeSpan.FromHours(24));
@@ -103,7 +115,6 @@ public class BrapiResponse
     public string Symbol { get; set; } = string.Empty;
     public string ShortName { get; set; } = string.Empty;
     public string LongName { get; set; } = string.Empty;
-
     [JsonPropertyName("name")]
     public string Name => !string.IsNullOrEmpty(LongName) ? LongName : ShortName;
     public string Logourl { get; set; } = string.Empty;

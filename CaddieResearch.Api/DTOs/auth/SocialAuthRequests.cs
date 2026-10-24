@@ -1,7 +1,11 @@
 ﻿namespace CaddieResearch.Api.DTOs.Auth;
 
+/// <summary>
+/// Requisição para autenticação via Google.
+/// </summary>
 public class LoginGoogleRequest
 {
+    /// <example>ya29.a0AfB_byC...</example>
     public string Token { get; set; } = string.Empty;
 }
 
@@ -12,8 +16,12 @@ public class GoogleUserInfo
     public bool email_verified { get; set; }
 }
 
+/// <summary>
+/// Requisição para autenticação via Microsoft.
+/// </summary>
 public class LoginMicrosoftRequest
 {
+    /// <example>EwBQA8l6BAAU...</example>
     public string Token { get; set; } = string.Empty;
 }
 

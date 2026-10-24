@@ -1,100 +1,83 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using CaddieResearch.Api.Data;
-using CaddieResearch.Models;
 using CaddieResearch.Api.Interfaces; 
+using CaddieResearch.Api.DTOs.Carteiras;
 
-namespace CaddieResearch.Controllers
+namespace CaddieResearch.Api.Controllers;
+
+/// <summary>
+/// Consulta e listagem das carteiras recomendadas da Caddie Research.
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+public class CarteirasController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CarteirasController : ControllerBase
+    private readonly ICarteirasService _carteirasService; 
+
+    public CarteirasController(ICarteirasService carteirasService)
     {
-        private readonly AppDbContext _context;
-        private readonly IAssinaturaService _assinaturaService; 
+        _carteirasService = carteirasService;
+    }
 
-        public CarteirasController(AppDbContext context, IAssinaturaService assinaturaService)
+    private int ObterUsuarioLogadoId()
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(idClaim, out int id) ? id : 0;
+    }
+
+    /// <summary>
+    /// Retorna as carteiras recomendadas disponíveis para o usuário.
+    /// </summary>
+    /// <remarks>
+    /// Consulta o plano ativo do usuário (Basic, Premium ou Black) e retorna apenas as carteiras cuja propriedade NivelAcesso seja igual ou inferior ao permitido pelo plano contratado.
+    /// </remarks>
+    /// <response code="200">Lista filtrada de carteiras retornada com sucesso.</response>
+    /// <response code="401">Usuário não possui credenciais válidas.</response>
+    [HttpGet]
+    [Authorize]
+    [ProducesResponseType(typeof(List<CarteiraResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetCarteiras()
+    {
+        int usuarioId = ObterUsuarioLogadoId();
+        if (usuarioId == 0) return Unauthorized(new { erro = "Usuário não autenticado." });
+
+        var (sucesso, mensagem, carteiras) = await _carteirasService.ObterCarteirasPermitidasAsync(usuarioId);
+
+        return Ok(carteiras);
+    }
+
+    /// <summary>
+    /// Retorna a composição detalhada de uma carteira específica.
+    /// </summary>
+    /// <remarks>
+    /// Valida se o cliente possui acesso premium suficiente e, caso afirmativo, carrega os metadados da carteira juntamente com todos os ativos (ações/FIIs) que a compõem.
+    /// </remarks>
+    /// <param name="id">O ID exclusivo da carteira. Ex: 1 para "Ações B3".</param>
+    /// <response code="200">Composição da carteira retornada com sucesso.</response>
+    /// <response code="401">Usuário não possui credenciais válidas.</response>
+    /// <response code="403">Plano inferior ao necessário para acessar esta carteira (Paywall ativo).</response>
+    /// <response code="404">Carteira não encontrada.</response>
+    [HttpGet("{id}")]
+    [Authorize]
+    [ProducesResponseType(typeof(CarteiraResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCarteira(int id)
+    {
+        int usuarioId = ObterUsuarioLogadoId();
+        if (usuarioId == 0) return Unauthorized(new { erro = "Usuário não autenticado." });
+
+        var (sucesso, mensagem, carteira) = await _carteirasService.ObterCarteiraDetalhadaAsync(id, usuarioId);
+
+        if (!sucesso)
         {
-            _context = context;
-            _assinaturaService = assinaturaService;
+            if (mensagem.Contains("não encontrada")) return NotFound(new { erro = mensagem });
+            return StatusCode(403, new { erro = mensagem });
         }
 
-        private int ObterUsuarioLogadoId()
-        {
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(idClaim, out int id) ? id : 0;
-        }
-
-        /// <summary>
-        /// Retorna as carteiras recomendadas disponíveis para o usuário.
-        /// </summary>
-        /// <remarks>
-        /// Consulta o plano ativo do usuário (Basic, Premium ou Black) e retorna apenas as carteiras cuja propriedade NivelAcesso seja igual ou inferior ao permitido pelo plano contratado.
-        /// </remarks>
-        /// <response code="200">Lista filtrada de carteiras retornada com sucesso.</response>
-        /// <response code="401">Usuário não possui credenciais válidas.</response>
-        /// <response code="404">Registro do usuário não encontrado na base de dados.</response>
-        [HttpGet]
-        [Authorize]
-        [ProducesResponseType(200)]
-        [ProducesResponseType(401)]
-        [ProducesResponseType(404)]
-        public async Task<IActionResult> GetCarteiras()
-        {
-            int usuarioId = ObterUsuarioLogadoId();
-            if (usuarioId == 0) return Unauthorized(new { mensagem = "Usuário não autenticado." });
-
-            int nivelPermitido = await _assinaturaService.ObterNivelAcessoAsync(usuarioId);
-
-            var carteiras = await _context.Carteiras
-                .Include(c => c.Ativos)
-                .Where(c => c.NivelAcesso <= nivelPermitido)
-                .ToListAsync();
-
-            return Ok(carteiras);
-        }
-
-        /// <summary>
-        /// Retorna a composição detalhada de uma carteira específica.
-        /// </summary>
-        /// <remarks>
-        /// Valida se o cliente possui acesso premium suficiente e, caso afirmativo, carrega os metadados da carteira juntamente com todos os ativos (ações/FIIs) que a compõem.
-        /// </remarks>
-        /// <param name="id">O ID exclusivo da carteira. Ex: 1 para "Ações B3" ou 2 para "Renda Fixa".</param>
-        /// <response code="200">Composição da carteira retornada com sucesso.</response>
-        /// <response code="401">Usuário não possui credenciais válidas.</response>
-        /// <response code="403">O usuário logado possui um plano inferior ao necessário para acessar esta carteira (Paywall ativo).</response>
-        /// <response code="404">Carteira ou usuário não encontrados.</response>
-        [HttpGet("{id}")]
-        [Authorize]
-        [ProducesResponseType(200)]
-        [ProducesResponseType(401)]
-        [ProducesResponseType(403)]
-        [ProducesResponseType(404)]
-        public async Task<ActionResult<Carteira>> GetCarteira(int id)
-        {
-            int usuarioId = ObterUsuarioLogadoId();
-            if (usuarioId == 0) return Unauthorized(new { mensagem = "Usuário não autenticado." });
-
-            int nivelPermitido = await _assinaturaService.ObterNivelAcessoAsync(usuarioId);
-
-            var carteira = await _context.Carteiras
-                .Include(c => c.Ativos)
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (carteira == null)
-            {
-                return NotFound();
-            }
-
-            if (carteira.NivelAcesso > nivelPermitido)
-            {
-                return StatusCode(403, new { mensagem = "Seu plano não permite acessar esta carteira." });
-            }
-
-            return Ok(carteira);
-        }
+        return Ok(carteira);
     }
 }

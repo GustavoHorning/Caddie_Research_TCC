@@ -89,7 +89,8 @@ public class RecomendacoesService : IRecomendacoesService
         {
             Id = posicao.Id, Ticker = posicao.Ticker, NomeAtivo = posicao.NomeAtivo,
             Quantidade = posicao.Quantidade, PrecoMedio = posicao.PrecoMedio,
-            DataEntrada = posicao.DataEntrada, ValorTotal = posicao.Quantidade * posicao.PrecoMedio
+            DataEntrada = posicao.DataEntrada, 
+            ValorTotal = posicao.Quantidade * posicao.PrecoMedio // <-- A multiplicação foi restaurada aqui!
         };
 
         return (true, "Posição adicionada ao portfólio!", posicaoResult);

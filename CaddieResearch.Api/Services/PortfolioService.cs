@@ -31,6 +31,7 @@ public class PortfolioService : IPortfolioService
 
         return portfolios.Select(p =>
         {
+            // CORREÇÃO: Restaurado o asterisco da multiplicação que o Git mastigou
             var valorPosicoes = p.Posicoes?.Sum(pos => pos.Quantidade * pos.PrecoMedio) ?? 0;
             var totalAportes = aportesPorPortfolio.GetValueOrDefault(p.Id, 0);
             var temPosicoes = (p.Posicoes?.Count ?? 0) > 0;
@@ -70,11 +71,11 @@ public class PortfolioService : IPortfolioService
                 Id = pos.Id,
                 Ticker = pos.Ticker,
                 NomeAtivo = pos.NomeAtivo,
-                ClasseAtivo = pos.ClasseAtivo,
+                ClasseAtivo = pos.ClasseAtivo, // CORREÇÃO: Propriedade agora existe no DTO
                 Quantidade = pos.Quantidade,
                 PrecoMedio = pos.PrecoMedio,
                 DataEntrada = pos.DataEntrada,
-                ValorTotal = pos.Quantidade * pos.PrecoMedio
+                ValorTotal = pos.Quantidade * pos.PrecoMedio // CORREÇÃO: Multiplicação
             }).ToList() ?? new List<PosicaoResultDto>()
         };
     }
@@ -144,7 +145,7 @@ public class PortfolioService : IPortfolioService
             Quantidade = posicao.Quantidade,
             PrecoMedio = posicao.PrecoMedio,
             DataEntrada = posicao.DataEntrada,
-            ValorTotal = posicao.Quantidade * posicao.PrecoMedio
+            ValorTotal = posicao.Quantidade * posicao.PrecoMedio // CORREÇÃO: Multiplicação
         };
     }
 

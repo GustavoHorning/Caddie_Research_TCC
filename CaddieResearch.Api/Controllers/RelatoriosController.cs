@@ -1,37 +1,23 @@
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
-using CaddieResearch.Api.Services;
 using CaddieResearch.Api.Interfaces; 
 using CaddieResearch.Api.DTOs.Relatorios; 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Gerencia as publicações e o Paywall dos relatórios semanais de análise de mercado.
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class RelatoriosController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly BlobService _blobService;
-    private readonly IPdfService _pdfService; 
-    private readonly INotificacaoService _notificacaoService; 
-    private readonly IAssinaturaService _assinaturaService; 
+    private readonly IRelatoriosService _relatoriosService;
 
-    public RelatoriosController(
-        AppDbContext context, 
-        BlobService blobService, 
-        IPdfService pdfService, 
-        INotificacaoService notificacaoService, 
-        IAssinaturaService assinaturaService)
+    public RelatoriosController(IRelatoriosService relatoriosService)
     {
-        _context = context;
-        _blobService = blobService;
-        _pdfService = pdfService;
-        _notificacaoService = notificacaoService;
-        _assinaturaService = assinaturaService;
+        _relatoriosService = relatoriosService;
     }
 
     private int ObterUsuarioLogadoId()
@@ -40,190 +26,121 @@ public class RelatoriosController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
+    /// <summary>
+    /// Lista todos os relatórios publicados na plataforma.
+    /// </summary>
     [HttpGet]
+    [ProducesResponseType(typeof(List<RelatorioResultDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Get()
     {
-        var relatorios = await _context.Relatorios
-            .Include(r => r.Carteira)
-            .OrderByDescending(r => r.DataPublicacao)
-            .Select(r => new RelatorioResultDto 
-            {
-                Id = r.Id,
-                Titulo = r.Titulo,
-                Assunto = r.Assunto,
-                ConteudoTexto = r.ConteudoTexto,
-                TagsAtivos = r.TagsAtivos,
-                ArquivoPdfUrl = r.ArquivoPdfUrl,
-                CarteiraId = r.CarteiraId,
-                NomeCarteira = r.Carteira != null ? r.Carteira.Nome : "Geral",
-                DataPublicacao = r.DataPublicacao
-            })
-            .ToListAsync();
-            
-        return Ok(relatorios);
+        return Ok(await _relatoriosService.ObterTodosAsync());
     }
 
+    /// <summary>
+    /// Publica um novo relatório, faz upload do PDF e dispara notificação (Push) para os assinantes.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = "Gestor")] 
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(RelatorioResultDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Post([FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] string? tagsAtivos, [FromForm] int carteiraId, IFormFile? arquivoPdf)
     {
-        string? pdfUrl = null;
-        string? pdfTextoExtraido = null;
-
-        if (arquivoPdf != null)
-        {
-            pdfTextoExtraido = _pdfService.ExtrairTextoDoPdf(arquivoPdf); 
-            pdfUrl = await _blobService.UploadPdfAsync(arquivoPdf);
-        }
-
-        var relatorio = new Relatorio
-        {
-            Titulo = titulo,
-            Assunto = assunto,
-            ConteudoTexto = conteudoTexto ?? "",
-            TagsAtivos = tagsAtivos ?? "",
-            CarteiraId = carteiraId,
-            ArquivoPdfUrl = pdfUrl,
-            ConteudoPdfTexto = pdfTextoExtraido 
-        };
-
-        _context.Relatorios.Add(relatorio);
-        await _context.SaveChangesAsync();
-
-        await _notificacaoService.DispararNotificacaoRelatorioAsync(
-            carteiraId, 
-            "📄 Novo Relatório Publicado", 
-            $"O relatório '{titulo}' acabou de sair. Acesse para conferir as análises!"
-        );
-
+        var relatorio = await _relatoriosService.CriarAsync(titulo, assunto, conteudoTexto, tagsAtivos, carteiraId, arquivoPdf);
         return Ok(relatorio);
     }
 
+    /// <summary>
+    /// Atualiza o conteúdo ou troca o PDF de um relatório existente.
+    /// </summary>
     [HttpPut("{id}")]
     [Authorize(Roles = "Gestor")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(RelatorioResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RelatorioResponseDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string assunto, [FromForm] string conteudoTexto, [FromForm] string? tagsAtivos, [FromForm] int carteiraId, IFormFile? arquivoPdf)
     {
-        var relatorio = await _context.Relatorios.FindAsync(id);
-        if (relatorio == null) return NotFound();
-
-        relatorio.Titulo = titulo;
-        relatorio.Assunto = assunto;
-        relatorio.ConteudoTexto = conteudoTexto ?? "";
-        relatorio.TagsAtivos = tagsAtivos ?? "";
-        relatorio.CarteiraId = carteiraId;
-
-        if (arquivoPdf != null)
-        {
-            if (!string.IsNullOrEmpty(relatorio.ArquivoPdfUrl))
-                await _blobService.ExcluirPdfAsync(relatorio.ArquivoPdfUrl);
-            
-            relatorio.ConteudoPdfTexto = _pdfService.ExtrairTextoDoPdf(arquivoPdf); 
-            relatorio.ArquivoPdfUrl = await _blobService.UploadPdfAsync(arquivoPdf);
-        }
-
-        await _context.SaveChangesAsync();
-
-        await _notificacaoService.DispararNotificacaoRelatorioAsync(
-            carteiraId, 
-            "🔄 Relatório Atualizado", 
-            $"O Gestor atualizou o conteúdo do relatório '{titulo}'."
-        );
-
+        var (sucesso, mensagem, relatorio) = await _relatoriosService.AtualizarAsync(id, titulo, assunto, conteudoTexto, tagsAtivos, carteiraId, arquivoPdf);
+        
+        if (!sucesso) return NotFound(new RelatorioResponseDto { Mensagem = mensagem });
         return Ok(relatorio);
     }
 
+    /// <summary>
+    /// Remove permanentemente um relatório e seu PDF do servidor (Azure).
+    /// </summary>
     [HttpDelete("{id}")]
     [Authorize(Roles = "Gestor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(RelatorioResponseDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)
     {
-        var relatorio = await _context.Relatorios.FindAsync(id);
-        if (relatorio == null) return NotFound();
-
-        int carteiraId = relatorio.CarteiraId;
-        string titulo = relatorio.Titulo;
-
-        if (!string.IsNullOrEmpty(relatorio.ArquivoPdfUrl))
-            await _blobService.ExcluirPdfAsync(relatorio.ArquivoPdfUrl);
-
-        _context.Relatorios.Remove(relatorio);
-        await _context.SaveChangesAsync();
-
-        await _notificacaoService.DispararNotificacaoRelatorioAsync(
-            carteiraId, 
-            "🗑️ Relatório Removido", 
-            $"O relatório '{titulo}' foi retirado do ar pelo Gestor."
-        );
-
+        var (sucesso, mensagem) = await _relatoriosService.DeletarAsync(id);
+        
+        if (!sucesso) return NotFound(new RelatorioResponseDto { Mensagem = mensagem });
         return NoContent();
     }
 
+    /// <summary>
+    /// Fornece o arquivo PDF para download. Valida estritamente se o usuário possui assinatura suficiente (Paywall).
+    /// </summary>
     [HttpGet("{id}/download")]
+    [Authorize]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(DownloadErrorDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(DownloadErrorDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(int id)
     {
-        var relatorio = await _context.Relatorios.Include(r => r.Carteira).FirstOrDefaultAsync(r => r.Id == id);
-        if (relatorio == null || string.IsNullOrEmpty(relatorio.ArquivoPdfUrl)) return NotFound("Relatório não encontrado ou sem anexo.");
-
         int usuarioId = ObterUsuarioLogadoId();
-        if (usuarioId == 0) return Unauthorized("Você precisa estar logado.");
+        if (usuarioId == 0) return Unauthorized();
 
-        int nivelAcessoUsuario = await _assinaturaService.ObterNivelAcessoAsync(usuarioId);
-        int nivelExigido = relatorio.Carteira?.NivelAcesso ?? 1;
+        var (sucesso, erro, stream, nomeArquivo) = await _relatoriosService.DownloadPdfAsync(id, usuarioId);
 
-        if (nivelAcessoUsuario < nivelExigido)
+        if (!sucesso)
         {
-            return StatusCode(403, new { erro = "Acesso Negado", mensagem = $"Seu plano atual não permite acessar os relatórios da carteira {relatorio.Carteira?.Nome}." });
+            if (erro!.Erro == "Acesso Negado") return StatusCode(403, erro);
+            if (erro.Erro == "Erro interno") return StatusCode(500, erro);
+            return NotFound(erro);
         }
 
-        try
-        {
-            var stream = await _blobService.DownloadPdfAsync(relatorio.ArquivoPdfUrl);
-            return File(stream, "application/pdf", $"{relatorio.Titulo}.pdf");
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Erro ao processar o arquivo no servidor: {ex.Message}");
-        }
+        return File(stream!, "application/pdf", nomeArquivo!);
     }
 
+    /// <summary>
+    /// Marca um relatório como "lido" (revisado) para o usuário logado.
+    /// </summary>
     [HttpPost("{id}/revisado")]
     [Authorize]
+    [ProducesResponseType(typeof(RelatorioRevisadoDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> MarcarRevisado(int id)
     {
         int usuarioId = ObterUsuarioLogadoId();
-        if (usuarioId == 0) return Unauthorized();
-
-        var jaRevisado = await _context.RelatoriosRevisados.AnyAsync(r => r.UsuarioId == usuarioId && r.RelatorioId == id);
-        if (jaRevisado) return Ok(new { revisado = true });
-
-        _context.RelatoriosRevisados.Add(new RelatorioRevisado { UsuarioId = usuarioId, RelatorioId = id, DataRevisado = DateTime.UtcNow });
-        await _context.SaveChangesAsync();
-        return Ok(new { revisado = true });
+        var status = await _relatoriosService.MarcarRevisadoAsync(id, usuarioId);
+        return Ok(new RelatorioRevisadoDto { Revisado = status });
     }
 
+    /// <summary>
+    /// Desmarca o status de leitura de um relatório para o usuário logado.
+    /// </summary>
     [HttpDelete("{id}/revisado")]
     [Authorize]
+    [ProducesResponseType(typeof(RelatorioRevisadoDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> DesmarcarRevisado(int id)
     {
         int usuarioId = ObterUsuarioLogadoId();
-        if (usuarioId == 0) return Unauthorized();
-
-        var revisado = await _context.RelatoriosRevisados.FirstOrDefaultAsync(r => r.UsuarioId == usuarioId && r.RelatorioId == id);
-        if (revisado != null)
-        {
-            _context.RelatoriosRevisados.Remove(revisado);
-            await _context.SaveChangesAsync();
-        }
-        return Ok(new { revisado = false });
+        var status = await _relatoriosService.DesmarcarRevisadoAsync(id, usuarioId);
+        return Ok(new RelatorioRevisadoDto { Revisado = status });
     }
 
+    /// <summary>
+    /// Retorna a lista de IDs de todos os relatórios que o usuário logado já leu.
+    /// </summary>
     [HttpGet("revisados")]
     [Authorize]
+    [ProducesResponseType(typeof(List<int>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRevisados()
     {
         int usuarioId = ObterUsuarioLogadoId();
-        if (usuarioId == 0) return Unauthorized();
-
-        var ids = await _context.RelatoriosRevisados.Where(r => r.UsuarioId == usuarioId).Select(r => r.RelatorioId).ToListAsync();
+        var ids = await _relatoriosService.ObterRevisadosAsync(usuarioId);
         return Ok(ids);
     }
 }

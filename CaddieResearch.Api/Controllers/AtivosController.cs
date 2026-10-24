@@ -1,184 +1,88 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CaddieResearch.Api.Data;
 using System.Security.Claims;
-using CaddieResearch.Api.Services; 
-using Microsoft.EntityFrameworkCore;
-using CaddieResearch.Api.Models;
 using CaddieResearch.Api.DTOs.Ativos;
 using CaddieResearch.Api.Interfaces;
-using CaddieResearch.Models; 
 
-namespace CaddieResearch.Controllers
+namespace CaddieResearch.Api.Controllers;
+
+/// <summary>
+/// Gerencia os ativos que compõem as carteiras recomendadas da plataforma.
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+public class AtivosController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AtivosController : ControllerBase
+    private readonly IAtivosService _ativosService;
+
+    public AtivosController(IAtivosService ativosService)
     {
-        private readonly AppDbContext _context;
-        private readonly AcoesService _acoesService;
-        private readonly INotificacaoService _notificacaoService; 
+        _ativosService = ativosService;
+    }
 
-        public AtivosController(AppDbContext context, AcoesService acoesService, INotificacaoService notificacaoService)
-        {
-            _context = context;
-            _acoesService = acoesService;
-            _notificacaoService = notificacaoService; 
-        }
+    private int ObterGestorId()
+    {
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(claim, out int id) ? id : 0;
+    }
 
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Gestor")]
-        public async Task<IActionResult> DeletarAtivo(int id)
-        {
-            var ativo = await _context.Ativos.FindAsync(id);
+    /// <summary>
+    /// Adiciona um novo ativo a uma carteira.
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = "Gestor")] 
+    [ProducesResponseType(typeof(AtivoResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CriarAtivo([FromBody] AtivoRequestDto dto) 
+    {
+        int gestorId = ObterGestorId();
+        var (sucesso, mensagem, ativo) = await _ativosService.CriarAtivoAsync(gestorId, dto);
+
+        if (!sucesso) return BadRequest(new { erro = mensagem });
+
+        // Retorna apenas o objeto do Ativo para o Swagger desenhar corretamente
+        return Ok(ativo); 
+    }
     
-            if (ativo == null)
-                return NotFound(new { mensagem = "Ativo não encontrado." });
+    /// <summary>
+    /// Atualiza os parâmetros de um ativo existente.
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Gestor")] 
+    [ProducesResponseType(typeof(AtivoResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AtualizarAtivo(int id, [FromBody] AtivoRequestDto dto) 
+    {
+        int gestorId = ObterGestorId();
+        var (sucesso, mensagem, ativo) = await _ativosService.AtualizarAtivoAsync(id, gestorId, dto);
 
-            int carteiraId = ativo.CarteiraId;
-            string ticker = ativo.Ticker;
-
-            var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(gestorIdStr, out int gestorId))
-            {
-                var log = new HistoricoRecomendacaoCarteira
-                {
-                    CarteiraId = ativo.CarteiraId,
-                    GestorId = gestorId,
-                    Ticker = ativo.Ticker,
-                    NomeAtivo = ativo.NomeEmpresa ?? ativo.Ticker,
-                    Acao = "Excluiu",
-                    Vies = ativo.Vies,
-                    PrecoAlvo = ativo.PrecoTeto ?? 0,
-                    Justificativa = "Ativo removido da carteira pelo gestor.",
-                    DataRecomendacao = DateTime.UtcNow
-                };
-                _context.HistoricoRecomendacoesCarteiras.Add(log);
-            }
-
-            _context.Ativos.Remove(ativo);
-            await _context.SaveChangesAsync();
-
-            await _notificacaoService.DispararNotificacaoCarteiraAsync(
-                carteiraId, 
-                "⚠️ Ativo Removido da Carteira", 
-                $"O ativo {ticker} encerrou sua tese e foi removido da carteira pelo Gestor."
-            );
-
-            return Ok(new { mensagem = "Ativo removido com sucesso!" });
-        }
-
-        [HttpPost]
-        [Authorize(Roles = "Gestor")] 
-        public async Task<IActionResult> CriarAtivo([FromBody] AtivoRequestDto dto) 
+        if (!sucesso)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            
-            var jaExiste = await _context.Ativos.AnyAsync(a => a.Ticker == dto.Ticker && a.CarteiraId == dto.CarteiraId);
-            if (jaExiste) return BadRequest(new { mensagem = $"O ativo {dto.Ticker} já existe nesta carteira." });
-
-            var novoAtivo = new Ativo
-            {
-                CarteiraId = dto.CarteiraId,
-                Ticker = dto.Ticker,
-                NomeEmpresa = dto.NomeEmpresa,
-                PrecoTeto = dto.PrecoTeto,
-                Vies = dto.Vies,
-                Rentabilidade = dto.Rentabilidade,
-                Vencimento = dto.Vencimento,
-                Liquidez = dto.Liquidez,
-                DataEntrada = dto.DataEntrada ?? DateTime.UtcNow,
-                Categoria = dto.Categoria
-            };
-
-            if (string.IsNullOrWhiteSpace(novoAtivo.NomeEmpresa))
-            {
-                var dadosAtivo = await _acoesService.ObterCotacaoAsync(novoAtivo.Ticker);
-                novoAtivo.NomeEmpresa = (dadosAtivo != null && !string.IsNullOrWhiteSpace(dadosAtivo.Name)) 
-                                        ? dadosAtivo.Name : novoAtivo.Ticker;
-            }
-            
-            _context.Ativos.Add(novoAtivo);
-
-            var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(gestorIdStr, out int gestorId))
-            {
-                var log = new HistoricoRecomendacaoCarteira
-                {
-                    CarteiraId = novoAtivo.CarteiraId,
-                    GestorId = gestorId,
-                    Ticker = novoAtivo.Ticker,
-                    NomeAtivo = novoAtivo.NomeEmpresa ?? novoAtivo.Ticker,
-                    Acao = "Adicionou",
-                    Vies = novoAtivo.Vies,
-                    PrecoAlvo = novoAtivo.PrecoTeto ?? 0,
-                    Justificativa = "Inclusão inicial na carteira.",
-                    DataRecomendacao = DateTime.UtcNow
-                };
-                _context.HistoricoRecomendacoesCarteiras.Add(log);
-            }
-
-            await _context.SaveChangesAsync();
-
-            await _notificacaoService.DispararNotificacaoCarteiraAsync(
-                novoAtivo.CarteiraId, 
-                "🚨 Novo Ativo Adicionado", 
-                $"O Gestor adicionou {novoAtivo.Ticker} na carteira. Confira a tese de investimentos!"
-            );
-
-            return Ok(new { mensagem = "Recomendação publicada com sucesso!", ativo = novoAtivo });
+            if (mensagem.Contains("não encontrado")) return NotFound(new { erro = mensagem });
+            return BadRequest(new { erro = mensagem });
         }
-        
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Gestor")] 
-        public async Task<IActionResult> AtualizarAtivo(int id, [FromBody] AtivoRequestDto dto) 
-        {
-            var conflito = await _context.Ativos.AnyAsync(a => a.Ticker == dto.Ticker && a.CarteiraId == dto.CarteiraId && a.Id != id);
-            if (conflito) return BadRequest(new { mensagem = "Já existe outro ativo com este ticker nesta carteira." });
 
-            var ativoBanco = await _context.Ativos.FindAsync(id);
-            if (ativoBanco == null) return NotFound();
+        return Ok(ativo);
+    }
 
-            if (ativoBanco.Vies != dto.Vies || ativoBanco.PrecoTeto != dto.PrecoTeto)
-            {
-                var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (int.TryParse(gestorIdStr, out int gestorId))
-                {
-                    var log = new HistoricoRecomendacaoCarteira
-                    {
-                        CarteiraId = dto.CarteiraId,
-                        GestorId = gestorId,
-                        Ticker = dto.Ticker,
-                        NomeAtivo = dto.NomeEmpresa ?? dto.Ticker,
-                        Acao = "Atualizou",
-                        Vies = dto.Vies,
-                        PrecoAlvo = dto.PrecoTeto ?? 0,
-                        Justificativa = "Atualização estratégica de viés ou preço teto.",
-                        DataRecomendacao = DateTime.UtcNow
-                    };
-                    _context.HistoricoRecomendacoesCarteiras.Add(log);
-                }
-            }
+    /// <summary>
+    /// Remove um ativo de uma carteira recomendada.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Gestor")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletarAtivo(int id)
+    {
+        int gestorId = ObterGestorId();
+        var (sucesso, mensagem) = await _ativosService.DeletarAtivoAsync(id, gestorId);
 
-            ativoBanco.Ticker = dto.Ticker;
-            ativoBanco.PrecoTeto = dto.PrecoTeto;
-            ativoBanco.Vies = dto.Vies;
-            ativoBanco.NomeEmpresa = dto.NomeEmpresa; 
-            ativoBanco.Rentabilidade = dto.Rentabilidade;
-            ativoBanco.Vencimento = dto.Vencimento;
-            ativoBanco.Liquidez = dto.Liquidez;
-            ativoBanco.DataEntrada = dto.DataEntrada;
-            ativoBanco.Categoria = dto.Categoria;
+        if (!sucesso) return NotFound(new { erro = mensagem });
 
-            await _context.SaveChangesAsync();
-
-            await _notificacaoService.DispararNotificacaoCarteiraAsync(
-                dto.CarteiraId, 
-                "🔄 Recomendação Atualizada", 
-                $"O Gestor alterou os parâmetros e o racional do ativo {dto.Ticker}. Confira as mudanças."
-            );
-
-            return Ok(ativoBanco);
-        }
+        return Ok(new { mensagem });
     }
 }
