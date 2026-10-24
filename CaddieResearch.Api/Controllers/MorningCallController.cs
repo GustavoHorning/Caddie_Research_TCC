@@ -1,30 +1,24 @@
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
-using CaddieResearch.Api.Services;
 using CaddieResearch.Api.Interfaces;
 using CaddieResearch.Api.DTOs.MorningCall;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Text.Json;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Gerencia as edições diárias do Morning Call (Áudios e Notícias).
+/// </summary>
 [Route("api/morningcall")]
 [ApiController]
 [Authorize]
 public class MorningCallController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly BlobService _blobService;
-    private readonly INotificacaoService _notificacaoService; 
+    private readonly IMorningCallService _morningCallService;
 
-    public MorningCallController(AppDbContext context, BlobService blobService, INotificacaoService notificacaoService)
+    public MorningCallController(IMorningCallService morningCallService)
     {
-        _context = context;
-        _blobService = blobService;
-        _notificacaoService = notificacaoService;
+        _morningCallService = morningCallService;
     }
 
     private int GetUsuarioId()
@@ -33,323 +27,111 @@ public class MorningCallController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
-    private static readonly string[] ExtensoesAudio = { ".mp4", ".m4a", ".mp3" };
-    
-    private const long TamanhoMaximoAudio = 25 * 1024 * 1024; 
-
-    private static string? ValidarAudio(IFormFile audio)
-    {
-        var extensao = Path.GetExtension(audio.FileName).ToLowerInvariant();
-        if (!ExtensoesAudio.Contains(extensao))
-            return "Formato de áudio inválido. Envie um arquivo .mp4, .m4a ou .mp3.";
-        if (audio.Length > TamanhoMaximoAudio)
-            return "O áudio deve ter no máximo 25 MB.";
-        return null;
-    }
-
+    /// <summary>
+    /// Lista todos os Morning Calls publicados.
+    /// </summary>
     [HttpGet]
+    [ProducesResponseType(typeof(List<MorningCallResultDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Get()
     {
-        var morningCalls = await _context.MorningCalls
-            .Include(m => m.Gestor)
-            .Include(m => m.Topicos)
-            .OrderByDescending(m => m.Data)
-            .ThenByDescending(m => m.DataCriacao)
-            .Select(m => new MorningCallResultDto 
-            {
-                Id = m.Id,
-                Titulo = m.Titulo,
-                Data = m.Data,
-                DataCriacao = m.DataCriacao,
-                AudioUrl = m.AudioUrl,
-                NomeGestor = m.Gestor!.Nome,
-                Topicos = m.Topicos
-                    .OrderBy(t => t.Ordem)
-                    .Select(t => new TopicoResultDto
-                    {
-                        Id = t.Id,
-                        Titulo = t.Titulo,
-                        Texto = t.Texto,
-                        Link = t.Link,
-                        ImagemUrl = t.ImagemUrl
-                    }).ToList()
-            })
-            .ToListAsync();
-
-        return Ok(morningCalls);
+        return Ok(await _morningCallService.ObterTodosAsync());
     }
 
+    /// <summary>
+    /// Lista os Morning Calls criados pelo gestor logado.
+    /// </summary>
     [HttpGet("meus")]
+    [Authorize(Roles = "Gestor")]
+    [ProducesResponseType(typeof(List<MorningCallResultDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMeus()
     {
         var gestorId = GetUsuarioId();
         if (gestorId == 0) return Unauthorized();
 
-        var morningCalls = await _context.MorningCalls
-            .Include(m => m.Topicos)
-            .Where(m => m.GestorId == gestorId)
-            .OrderByDescending(m => m.Data)
-            .ThenByDescending(m => m.DataCriacao)
-            .Select(m => new MorningCallResultDto 
-            {
-                Id = m.Id,
-                Titulo = m.Titulo,
-                Data = m.Data,
-                DataCriacao = m.DataCriacao,
-                AudioUrl = m.AudioUrl,
-                NomeGestor = "Eu",
-                Topicos = m.Topicos
-                    .OrderBy(t => t.Ordem)
-                    .Select(t => new TopicoResultDto
-                    {
-                        Id = t.Id,
-                        Titulo = t.Titulo,
-                        Texto = t.Texto,
-                        Link = t.Link,
-                        ImagemUrl = t.ImagemUrl
-                    }).ToList()
-            })
-            .ToListAsync();
-
-        return Ok(morningCalls);
+        return Ok(await _morningCallService.ObterMeusAsync(gestorId));
     }
 
+    /// <summary>
+    /// Publica uma nova edição do Morning Call com áudio e imagens.
+    /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Gestor")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(MorningCallResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Post([FromForm] string titulo, [FromForm] string data, [FromForm] string topicosJson)
     {
         var gestorId = GetUsuarioId();
         if (gestorId == 0) return Unauthorized();
 
-        if (string.IsNullOrWhiteSpace(titulo))
-            return BadRequest(new { erro = "O título é obrigatório." });
-
-        if (!DateTime.TryParse(data, out var dataConvertida))
-            return BadRequest(new { erro = "Data inválida." });
-
-        List<TopicoInputDto>? topicosInput;
-        try
-        {
-            topicosInput = JsonSerializer.Deserialize<List<TopicoInputDto>>(topicosJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-        }
-        catch
-        {
-            return BadRequest(new { erro = "Formato inválido para os tópicos." });
-        }
-
-        if (topicosInput == null || topicosInput.Count == 0)
-            return BadRequest(new { erro = "É necessário pelo menos um tópico." });
+        if (string.IsNullOrWhiteSpace(titulo)) return BadRequest(new MorningCallResponseDto { Mensagem = "O título é obrigatório." });
 
         var audio = Request.Form.Files.GetFile("audio");
-        if (audio != null && audio.Length > 0)
-        {
-            var erroAudio = ValidarAudio(audio);
-            if (erroAudio != null) return BadRequest(new { erro = erroAudio });
-        }
+        var arquivosExtras = Request.Form.Files;
 
-        var morningCall = new MorningCall
-        {
-            GestorId = gestorId,
-            Titulo = titulo,
-            Data = dataConvertida,
-            DataCriacao = DateTime.UtcNow
-        };
-
-        if (audio != null && audio.Length > 0)
-            morningCall.AudioUrl = await _blobService.UploadAudioAsync(audio, $"morningcall_{gestorId}");
-
-        for (int i = 0; i < topicosInput.Count; i++)
-        {
-            var topicoInput = topicosInput[i];
-            string? imagemUrl = topicoInput.ImagemUrlExistente;
-
-            var arquivo = Request.Form.Files.GetFile($"imagem_{i}");
-            if (arquivo != null && arquivo.Length > 0)
-            {
-                imagemUrl = await _blobService.UploadImagemAsync(arquivo, $"morningcall_{gestorId}");
-            }
-
-            morningCall.Topicos.Add(new MorningCallTopico
-            {
-                Titulo = topicoInput.Titulo,
-                Texto = topicoInput.Texto,
-                Link = topicoInput.Link,
-                ImagemUrl = imagemUrl,
-                Ordem = i
-            });
-        }
-
-        _context.MorningCalls.Add(morningCall);
-        await _context.SaveChangesAsync();
-
-        await _notificacaoService.DispararNotificacaoMorningCallAsync(titulo);
-
-        return Ok(new { mensagem = "Morning Call publicado com sucesso!", id = morningCall.Id });
+        var (sucesso, mensagem, id) = await _morningCallService.CriarAsync(gestorId, titulo, data, topicosJson, audio, arquivosExtras);
+        
+        if (!sucesso) return BadRequest(new MorningCallResponseDto { Mensagem = mensagem });
+        return Ok(new MorningCallResponseDto { Mensagem = mensagem, Id = id });
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var gestorId = GetUsuarioId();
-        if (gestorId == 0) return Unauthorized();
-
-        var morningCall = await _context.MorningCalls
-            .Include(m => m.Topicos)
-            .FirstOrDefaultAsync(m => m.Id == id && m.GestorId == gestorId);
-
-        if (morningCall == null) return NotFound();
-
-        foreach (var topico in morningCall.Topicos)
-        {
-            if (!string.IsNullOrEmpty(topico.ImagemUrl))
-                await _blobService.ExcluirImagemAsync(topico.ImagemUrl);
-        }
-
-        if (!string.IsNullOrEmpty(morningCall.AudioUrl))
-            await _blobService.ExcluirAudioAsync(morningCall.AudioUrl);
-
-        _context.MorningCalls.Remove(morningCall);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Morning Call excluído." });
-    }
-
-    [HttpDelete("{morningCallId}/topicos/{topicoId}")]
-    public async Task<IActionResult> DeleteTopico(int morningCallId, int topicoId)
-    {
-        var gestorId = GetUsuarioId();
-        if (gestorId == 0) return Unauthorized();
-
-        var morningCall = await _context.MorningCalls
-            .Include(m => m.Topicos)
-            .FirstOrDefaultAsync(m => m.Id == morningCallId && m.GestorId == gestorId);
-
-        if (morningCall == null) return NotFound(new { erro = "Morning Call não encontrado." });
-
-        var topico = morningCall.Topicos.FirstOrDefault(t => t.Id == topicoId);
-        if (topico == null) return NotFound(new { erro = "Tópico não encontrado." });
-
-        if (!string.IsNullOrEmpty(topico.ImagemUrl))
-            await _blobService.ExcluirImagemAsync(topico.ImagemUrl);
-
-        _context.MorningCallTopicos.Remove(topico);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Notícia removida." });
-    }
-
+    /// <summary>
+    /// Atualiza uma edição existente do Morning Call.
+    /// </summary>
     [HttpPut("{id}")]
+    [Authorize(Roles = "Gestor")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(MorningCallResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Put(int id, [FromForm] string titulo, [FromForm] string data, [FromForm] string topicosJson, [FromForm] string? removerAudio = null)
     {
         var gestorId = GetUsuarioId();
         if (gestorId == 0) return Unauthorized();
 
-        var morningCall = await _context.MorningCalls
-            .Include(m => m.Topicos)
-            .FirstOrDefaultAsync(m => m.Id == id && m.GestorId == gestorId);
-
-        if (morningCall == null) return NotFound(new { erro = "Morning Call não encontrado." });
-
-        if (string.IsNullOrWhiteSpace(titulo))
-            return BadRequest(new { erro = "O título é obrigatório." });
-
-        if (!DateTime.TryParse(data, out var dataConvertida))
-            return BadRequest(new { erro = "Data inválida." });
-
-        List<TopicoInputDto>? topicosInput;
-        try
-        {
-            topicosInput = JsonSerializer.Deserialize<List<TopicoInputDto>>(topicosJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-        }
-        catch
-        {
-            return BadRequest(new { erro = "Formato inválido para os tópicos." });
-        }
-
-        if (topicosInput == null || topicosInput.Count == 0)
-            return BadRequest(new { erro = "É necessário pelo menos um tópico." });
+        if (string.IsNullOrWhiteSpace(titulo)) return BadRequest(new MorningCallResponseDto { Mensagem = "O título é obrigatório." });
 
         var audio = Request.Form.Files.GetFile("audio");
-        if (audio != null && audio.Length > 0)
-        {
-            var erroAudio = ValidarAudio(audio);
-            if (erroAudio != null) return BadRequest(new { erro = erroAudio });
+        var arquivosExtras = Request.Form.Files;
 
-            if (!string.IsNullOrEmpty(morningCall.AudioUrl))
-                await _blobService.ExcluirAudioAsync(morningCall.AudioUrl);
-            morningCall.AudioUrl = await _blobService.UploadAudioAsync(audio, $"morningcall_{gestorId}");
-        }
-        else if (removerAudio == "true" && !string.IsNullOrEmpty(morningCall.AudioUrl))
-        {
-            await _blobService.ExcluirAudioAsync(morningCall.AudioUrl);
-            morningCall.AudioUrl = null;
-        }
+        var (sucesso, mensagem) = await _morningCallService.AtualizarAsync(id, gestorId, titulo, data, topicosJson, removerAudio, audio, arquivosExtras);
+        
+        if (!sucesso) return BadRequest(new MorningCallResponseDto { Mensagem = mensagem });
+        return Ok(new MorningCallResponseDto { Mensagem = mensagem });
+    }
 
-        morningCall.Titulo = titulo;
-        morningCall.Data = dataConvertida;
+    /// <summary>
+    /// Exclui permanentemente um Morning Call e todos os seus arquivos do Storage.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Gestor")]
+    [ProducesResponseType(typeof(MorningCallResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var gestorId = GetUsuarioId();
+        if (gestorId == 0) return Unauthorized();
 
-        var idsEnviados = topicosInput.Where(t => t.Id.HasValue).Select(t => t.Id!.Value).ToHashSet();
-        var topicosParaRemover = morningCall.Topicos.Where(t => !idsEnviados.Contains(t.Id)).ToList();
-        foreach (var topicoRemovido in topicosParaRemover)
-        {
-            if (!string.IsNullOrEmpty(topicoRemovido.ImagemUrl))
-                await _blobService.ExcluirImagemAsync(topicoRemovido.ImagemUrl);
-            _context.MorningCallTopicos.Remove(topicoRemovido);
-        }
+        var (sucesso, mensagem) = await _morningCallService.DeletarAsync(id, gestorId);
+        
+        if (!sucesso) return NotFound(new MorningCallResponseDto { Mensagem = mensagem });
+        return Ok(new MorningCallResponseDto { Mensagem = mensagem });
+    }
 
-        for (int i = 0; i < topicosInput.Count; i++)
-        {
-            var topicoInput = topicosInput[i];
-            string? imagemUrl = topicoInput.ImagemUrlExistente;
+    /// <summary>
+    /// Remove um tópico/notícia específico de um Morning Call.
+    /// </summary>
+    [HttpDelete("{morningCallId}/topicos/{topicoId}")]
+    [Authorize(Roles = "Gestor")]
+    [ProducesResponseType(typeof(MorningCallResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteTopico(int morningCallId, int topicoId)
+    {
+        var gestorId = GetUsuarioId();
+        if (gestorId == 0) return Unauthorized();
 
-            var arquivo = Request.Form.Files.GetFile($"imagem_{i}");
-            if (arquivo != null && arquivo.Length > 0)
-            {
-                imagemUrl = await _blobService.UploadImagemAsync(arquivo, $"morningcall_{gestorId}");
-            }
-
-            if (topicoInput.Id.HasValue)
-            {
-                var topicoExistente = morningCall.Topicos.FirstOrDefault(t => t.Id == topicoInput.Id.Value);
-                if (topicoExistente != null)
-                {
-                    topicoExistente.Titulo = topicoInput.Titulo;
-                    topicoExistente.Texto = topicoInput.Texto;
-                    topicoExistente.Link = topicoInput.Link;
-                    topicoExistente.Ordem = i;
-
-                    if (arquivo != null && arquivo.Length > 0)
-                    {
-                        if (!string.IsNullOrEmpty(topicoExistente.ImagemUrl))
-                            await _blobService.ExcluirImagemAsync(topicoExistente.ImagemUrl);
-                        topicoExistente.ImagemUrl = imagemUrl;
-                    }
-                    else if (!string.IsNullOrEmpty(topicoInput.ImagemUrlExistente))
-                    {
-                        topicoExistente.ImagemUrl = topicoInput.ImagemUrlExistente;
-                    }
-                }
-            }
-            else
-            {
-                morningCall.Topicos.Add(new MorningCallTopico
-                {
-                    Titulo = topicoInput.Titulo,
-                    Texto = topicoInput.Texto,
-                    Link = topicoInput.Link,
-                    ImagemUrl = imagemUrl,
-                    Ordem = i
-                });
-            }
-        }
-
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Morning Call atualizado com sucesso!" });
+        var (sucesso, mensagem) = await _morningCallService.DeletarTopicoAsync(morningCallId, topicoId, gestorId);
+        
+        if (!sucesso) return NotFound(new MorningCallResponseDto { Mensagem = mensagem });
+        return Ok(new MorningCallResponseDto { Mensagem = mensagem });
     }
 }

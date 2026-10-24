@@ -4,11 +4,12 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using CaddieResearch.Api.Interfaces;
 using Microsoft.Extensions.Configuration;
 
 namespace CaddieResearch.Api.Services
 {
-    public class AbacatePayService
+    public class AbacatePayService : IAbacatePayService
     {
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;

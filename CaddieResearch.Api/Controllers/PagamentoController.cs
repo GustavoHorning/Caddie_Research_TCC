@@ -9,12 +9,15 @@ using CaddieResearch.Api.Services;
 
 namespace CaddieResearch.Api.Controllers
 {
+    /// <summary>
+    /// Gerencia o fluxo de assinaturas, checkouts e webhooks integrados com a AbacatePay.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class PagamentoController : ControllerBase
     {
         private readonly IAssinaturaService _assinaturaService; 
-        private readonly AbacatePayService _abacatePayService;
+        private readonly IAbacatePayService _abacatePayService;
         private readonly TokenService _tokenService;
 
         private static readonly ConcurrentDictionary<string, bool> _processedWebhooks = new();
@@ -22,7 +25,7 @@ namespace CaddieResearch.Api.Controllers
 
         public PagamentoController(
             IAssinaturaService assinaturaService, 
-            AbacatePayService abacatePayService, 
+            IAbacatePayService abacatePayService, 
             TokenService tokenService)
         {
             _assinaturaService = assinaturaService;
@@ -30,21 +33,35 @@ namespace CaddieResearch.Api.Controllers
             _tokenService = tokenService;
         }
 
+        /// <summary>
+        /// Gera uma URL de checkout para o plano e método escolhidos.
+        /// </summary>
         [HttpPost("checkout")]
-        public async Task<IActionResult> CriarCheckout([FromBody] CheckoutDto request)
+        [ProducesResponseType(typeof(CheckoutResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagamentoErrorDto), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CriarCheckout([FromBody] PagamentoDtos request)
         {
             try
             {
                 var url = await _abacatePayService.GerarCheckoutAsync(request.Plano, request.Metodo, request.UsuarioId);
-                return Ok(new { url });
+                return Ok(new CheckoutResponseDto { Url = url });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { erro = "Falha no gateway", detalhe = ex.Message });
+                return BadRequest(new PagamentoErrorDto { Erro = "Falha no gateway", Detalhe = ex.Message });
             }
         }
 
+        /// <summary>
+        /// Recebe e processa eventos (Webhooks) enviados pelo gateway de pagamento.
+        /// </summary>
+        /// <remarks>
+        /// Contém controle de concorrência nativo (Semaphore/Dictionary) para evitar a aprovação duplicada do mesmo checkout.
+        /// </remarks>
         [HttpPost("webhook")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Webhook()
         {
             using var reader = new StreamReader(Request.Body);
@@ -79,7 +96,7 @@ namespace CaddieResearch.Api.Controllers
                 if (!int.TryParse(usuarioIdStr, out var usuarioId))
                 {
                     _processedWebhooks.TryRemove(checkoutId, out _);
-                    return BadRequest(new { erro = "Usuário inválido no metadata." });
+                    return BadRequest(new PagamentoErrorDto { Erro = "Usuário inválido no metadata." });
                 }
 
                 await _semaphore.WaitAsync();
@@ -91,7 +108,7 @@ namespace CaddieResearch.Api.Controllers
                 catch (Exception ex)
                 {
                     _processedWebhooks.TryRemove(checkoutId, out _);
-                    return NotFound(new { erro = ex.Message });
+                    return NotFound(new PagamentoErrorDto { Erro = ex.Message });
                 }
                 finally
                 {
@@ -101,18 +118,23 @@ namespace CaddieResearch.Api.Controllers
             catch (Exception ex)
             {
                 _processedWebhooks.TryRemove(checkoutId, out _);
-                return StatusCode(500, new 
+                return StatusCode(500, new PagamentoErrorDto 
                 { 
-                    erro = "Erro interno ao processar o webhook.", 
-                    excecaoPrincipal = ex.Message
+                    Erro = "Erro interno ao processar o webhook.", 
+                    Detalhe = ex.Message
                 });
             }
 
             return Ok();
         }
 
+        /// <summary>
+        /// Verifica periodicamente se um pagamento via PIX foi aprovado e renova o Token JWT.
+        /// </summary>
         [HttpGet("verificar-status")]
         [Authorize]
+        [ProducesResponseType(typeof(VerificarStatusResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> VerificarStatus([FromQuery] string planoDesejado)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -123,10 +145,10 @@ namespace CaddieResearch.Api.Controllers
             if (usuarioPago != null)
             {
                 var novoToken = _tokenService.GenerateToken(usuarioPago);
-                return Ok(new { status = "pago", token = novoToken });
+                return Ok(new VerificarStatusResponseDto { Status = "pago", Token = novoToken });
             }
 
-            return Ok(new { status = "pendente" });
+            return Ok(new VerificarStatusResponseDto { Status = "pendente", Token = null });
         }
     }
 }

@@ -1,27 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
-using CaddieResearch.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using CaddieResearch.Api.Interfaces; 
 using CaddieResearch.Api.DTOs.Chat; 
 using System.Security.Claims;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Gerencia os chats e o suporte direto entre clientes e analistas/gestores.
+/// </summary>
 [ApiController]
 [Route("api/chat")]
-[Microsoft.AspNetCore.Authorization.Authorize]
+[Authorize]
 public class ChatController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly EmailService _emailService;
     private readonly IChatService _chatService; 
 
-    public ChatController(AppDbContext context, EmailService emailService, IChatService chatService)
+    public ChatController(IChatService chatService)
     {
-        _context = context;
-        _emailService = emailService;
         _chatService = chatService;
     }
 
@@ -31,207 +27,133 @@ public class ChatController : ControllerBase
         return int.TryParse(claim, out var id) ? id : 0;
     }
 
-    private static string PrimeiroNome(string? nomeCompleto)
-    {
-        if (string.IsNullOrWhiteSpace(nomeCompleto)) return "Caddie";
-        return nomeCompleto.Trim().Split(' ')[0];
-    }
-
+    /// <summary>
+    /// Inicia uma nova conversa de suporte.
+    /// </summary>
+    /// <response code="200">Conversa criada. Retorna o ID para envio de mensagens.</response>
     [HttpPost("abrir")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> AbrirConversa([FromBody] AbrirConversaDto dto) 
     {
         var usuarioId = GetUsuarioId();
-        if (usuarioId == 0) return Unauthorized();
-
-        var conversa = await _chatService.AbrirConversaAsync(usuarioId, dto.Assunto);
-
-        return Ok(new { conversaId = conversa.Id });
+        var (sucesso, mensagem, conversaId) = await _chatService.AbrirConversaAsync(usuarioId, dto.Assunto);
+        return Ok(new { conversaId });
     }
 
+    /// <summary>
+    /// Envia uma mensagem em um chat existente.
+    /// </summary>
+    /// <response code="200">Mensagem salva e retornada formatada.</response>
+    /// <response code="404">A conversa informada não existe.</response>
     [HttpPost("{conversaId}/mensagem")]
+    [ProducesResponseType(typeof(MensagemResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EnviarMensagem(int conversaId, [FromBody] EnviarMensagemDto dto) 
     {
         var usuarioId = GetUsuarioId();
-        if (usuarioId == 0) return Unauthorized();
+        var (sucesso, mensagem, novaMensagem) = await _chatService.EnviarMensagemAsync(conversaId, usuarioId, dto.Conteudo);
 
-        var conversa = await _context.Conversas.FindAsync(conversaId);
-        if (conversa == null) return NotFound("Conversa não encontrada.");
-
-        var usuario = await _context.Usuarios.FindAsync(usuarioId);
-        var ehGestor = usuario?.TipoPerfil == "Gestor";
-
-        var mensagem = new Mensagem
-        {
-            ConversaId = conversaId,
-            RemetenteId = usuarioId,
-            Conteudo = dto.Conteudo,
-            EhGestor = ehGestor,
-            Lida = false,
-            DataEnvio = DateTime.UtcNow
-        };
-
-        _context.Mensagens.Add(mensagem);
-        await _context.SaveChangesAsync();
-
-        return Ok(new MensagemResultDto 
-        {
-            Id = mensagem.Id,
-            Conteudo = mensagem.Conteudo,
-            EhGestor = mensagem.EhGestor,
-            DataEnvio = mensagem.DataEnvio,
-            NomeRemetente = usuario?.Nome ?? "Usuário"
-        });
+        if (!sucesso) return NotFound(new { erro = mensagem });
+        return Ok(novaMensagem);
     }
 
+    /// <summary>
+    /// Lista o histórico de mensagens de uma conversa.
+    /// </summary>
     [HttpGet("{conversaId}/mensagens")]
+    [ProducesResponseType(typeof(List<MensagemResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> BuscarMensagens(int conversaId)
     {
         var usuarioId = GetUsuarioId();
-        if (usuarioId == 0) return Unauthorized();
+        var (sucesso, mensagem, mensagens) = await _chatService.BuscarMensagensAsync(conversaId, usuarioId);
 
-        var mensagens = await _context.Mensagens
-            .Where(m => m.ConversaId == conversaId)
-            .OrderBy(m => m.DataEnvio)
-            .Select(m => new MensagemResultDto 
-            {
-                Id = m.Id,
-                Conteudo = m.Conteudo,
-                EhGestor = m.EhGestor,
-                Lida = m.Lida,
-                DataEnvio = m.DataEnvio,
-                NomeRemetente = m.Remetente!.Nome
-            })
-            .ToListAsync();
-
+        if (!sucesso) return NotFound(new { erro = mensagem });
         return Ok(mensagens);
     }
 
+    /// <summary>
+    /// Lista os chats iniciados pelo usuário logado.
+    /// </summary>
     [HttpGet("minhas-conversas")]
+    [ProducesResponseType(typeof(List<ConversaResultDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> MinhasConversas()
     {
         var usuarioId = GetUsuarioId();
-        if (usuarioId == 0) return Unauthorized();
-
-        var conversas = await _context.Conversas
-            .Where(c => c.UsuarioId == usuarioId)
-            .OrderByDescending(c => c.DataAbertura)
-            .Select(c => new
-            {
-                c.Id,
-                c.Assunto,
-                c.Status,
-                c.DataAbertura,
-                TotalMensagens = c.Mensagens.Count
-            })
-            .ToListAsync();
-
+        var conversas = await _chatService.MinhasConversasAsync(usuarioId);
         return Ok(conversas);
     }
 
+    /// <summary>
+    /// Lista todos os chats abertos pelos clientes (Acesso restrito: Gestor).
+    /// </summary>
     [HttpGet("gestor/todas")]
+    [ProducesResponseType(typeof(List<ConversaGestorResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> TodasConversas()
     {
         var usuarioId = GetUsuarioId();
-        if (usuarioId == 0) return Unauthorized();
+        var (sucesso, mensagem, conversas) = await _chatService.TodasConversasGestorAsync(usuarioId);
 
-        var usuario = await _context.Usuarios.FindAsync(usuarioId);
-        if (usuario?.TipoPerfil != "Gestor") return Forbid();
-
-        var conversas = await _context.Conversas
-            .Include(c => c.Usuario)
-            .Include(c => c.Mensagens)
-            .Where(c => c.Usuario!.TipoPerfil != "Gestor") 
-            .OrderByDescending(c => c.DataAbertura)
-            .Select(c => new
-            {
-                c.Id,
-                c.Assunto,
-                c.Status,
-                c.DataAbertura,
-                NomeCliente = c.Usuario!.Nome,
-                EmailCliente = c.Usuario.Email,
-                TotalMensagens = c.Mensagens.Count,
-                NaoLidas = c.Mensagens.Count(m => !m.Lida && !m.EhGestor)
-            })
-            .ToListAsync();
-
+        if (!sucesso) return Forbid();
         return Ok(conversas);
     }
 
+    /// <summary>
+    /// Encerra um chat e envia o histórico por e-mail (Acesso restrito: Gestor).
+    /// </summary>
     [HttpPut("{conversaId}/encerrar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> EncerrarConversa(int conversaId)
     {
         var usuarioId = GetUsuarioId();
-        if (usuarioId == 0) return Unauthorized();
+        var (sucesso, mensagem) = await _chatService.EncerrarConversaAsync(conversaId, usuarioId);
 
-        var usuario = await _context.Usuarios.FindAsync(usuarioId);
-        if (usuario?.TipoPerfil != "Gestor") return Forbid();
-
-        var conversa = await _context.Conversas
-            .Include(c => c.Usuario)
-            .Include(c => c.Mensagens)
-                .ThenInclude(m => m.Remetente)
-            .FirstOrDefaultAsync(c => c.Id == conversaId);
-
-        if (conversa == null) return NotFound("Conversa não encontrada.");
-
-        conversa.Status = "Fechada";
-        await _context.SaveChangesAsync();
-
-        try
+        if (!sucesso)
         {
-            var historico = conversa.Mensagens
-                .OrderBy(m => m.DataEnvio)
-                .Select(m => (
-                    Remetente: m.EhGestor ? $"Analista {PrimeiroNome(m.Remetente!.Nome)}" : conversa.Usuario!.Nome,
-                    EhGestor: m.EhGestor,
-                    Conteudo: m.Conteudo,
-                    DataEnvio: m.DataEnvio
-                )).ToList();
-
-            await _emailService.EnviarHistoricoChatAsync(
-                emailDestino: conversa.Usuario!.Email,
-                nomeDestino:  conversa.Usuario.Nome,
-                assunto:      conversa.Assunto,
-                mensagens:    historico
-            );
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Chat] Erro ao enviar e-mail de histórico: {ex.Message}");
+            if (mensagem.Contains("Acesso negado")) return Forbid();
+            return NotFound(new { erro = mensagem });
         }
 
-        return Ok(new { mensagem = "Conversa encerrada com sucesso." });
+        return Ok(new { mensagem });
     }
 
+    /// <summary>
+    /// Deleta um chat permanentemente. O chat precisa estar fechado (Acesso restrito: Gestor).
+    /// </summary>
     [HttpDelete("{conversaId}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeletarConversa(int conversaId)
     {
         var usuarioId = GetUsuarioId();
-        if (usuarioId == 0) return Unauthorized();
+        var (sucesso, mensagem) = await _chatService.DeletarConversaAsync(conversaId, usuarioId);
 
-        var usuario = await _context.Usuarios.FindAsync(usuarioId);
-        if (usuario?.TipoPerfil != "Gestor") return Forbid();
+        if (!sucesso)
+        {
+            if (mensagem.Contains("Acesso negado")) return Forbid();
+            if (mensagem.Contains("não encontrada")) return NotFound(new { erro = mensagem });
+            return BadRequest(new { erro = mensagem });
+        }
 
-        var conversa = await _context.Conversas
-            .Include(c => c.Mensagens)
-            .FirstOrDefaultAsync(c => c.Id == conversaId);
-
-        if (conversa == null) return NotFound();
-        if (conversa.Status != "Fechada") return BadRequest("Só é possível deletar conversas encerradas.");
-
-        _context.Mensagens.RemoveRange(conversa.Mensagens);
-        _context.Conversas.Remove(conversa);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Conversa removida com sucesso." });
+        return Ok(new { mensagem });
     }
 
+    /// <summary>
+    /// Consulta se um chat está 'Aberto' ou 'Fechado'.
+    /// </summary>
     [HttpGet("{conversaId}/status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> VerificarStatus(int conversaId)
     {
-        var conversa = await _context.Conversas.FindAsync(conversaId);
-        if (conversa == null) return NotFound();
-        return Ok(new { status = conversa.Status });
+        var (sucesso, mensagem, status) = await _chatService.VerificarStatusAsync(conversaId);
+        
+        if (!sucesso) return NotFound(new { erro = mensagem });
+        return Ok(new { status });
     }
 }
