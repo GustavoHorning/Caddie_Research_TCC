@@ -1,5 +1,8 @@
 ﻿param location string = resourceGroup().location
 
+// ==========================================
+// 1. App Service Plan (O Servidor Base)
+// ==========================================
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: 'ASP-rgcaddieresearch-92b0'
   location: 'Brazil South'
@@ -11,31 +14,9 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   properties: { reserved: true }
 }
 
-resource apiApp 'Microsoft.Web/sites@2024-11-01' = {
-  name: 'caddieresearch-api'
-  location: 'Brazil South'
-  kind: 'app,linux'
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    siteConfig: {
-      linuxFxVersion: 'DOTNETCORE|8.0'
-      alwaysOn: false
-    }
-  }
-}
-
-
-resource staticWebApp 'Microsoft.Web/staticSites@2024-11-01' = {
-  name: 'caddieresearch-web'
-  location: 'centralus'
-  sku: {
-    name: 'Free'
-    tier: 'Free'
-  }
-  properties: { provider: 'GitHub' }
-}
-
+// ==========================================
+// 2. Base de Dados (SQL Server)
+// ==========================================
 resource sqlServer 'Microsoft.Sql/servers@2026-08-01-preview' = {
   name: 'srv-caddie-horning'
   location: location
@@ -60,6 +41,9 @@ resource sqlDb 'Microsoft.Sql/servers/databases@2026-08-01-preview' = {
   }
 }
 
+// ==========================================
+// 3. Azure Blob Storage (Armazenamento)
+// ==========================================
 resource storageAccount 'Microsoft.Storage/storageAccounts@2026-06-01' = {
   name: 'caddiestorage2026'
   location: location
@@ -73,6 +57,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2026-06-01' = {
   }
 }
 
+// Sub-recurso: Contentores (Containers) do Storage
 resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2026-06-01' = {
   parent: storageAccount
   name: 'default'
@@ -90,6 +75,9 @@ resource containerRelatorios 'Microsoft.Storage/storageAccounts/blobServices/con
   properties: { publicAccess: 'None' }
 }
 
+// ==========================================
+// 4. Application Insights (Monitorização)
+// ==========================================
 resource appInsights 'microsoft.insights/components@2020-02-02' = {
   name: 'caddie-research-insights'
   location: 'mexicocentral' 
