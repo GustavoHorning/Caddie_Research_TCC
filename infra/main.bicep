@@ -1,9 +1,8 @@
 ﻿param location string = resourceGroup().location
 
-
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: 'ASP-rgcaddieresearch-92b0'
-  location: location
+  location: 'Brazil South'
   sku: {
     name: 'B1'
     tier: 'Basic'
@@ -14,7 +13,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
 
 resource apiApp 'Microsoft.Web/sites@2024-11-01' = {
   name: 'caddieresearch-api'
-  location: location
+  location: 'Brazil South'
   kind: 'app,linux'
   properties: {
     serverFarmId: appServicePlan.id
