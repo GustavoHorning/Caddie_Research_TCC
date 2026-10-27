@@ -29,7 +29,7 @@ resource apiApp 'Microsoft.Web/sites@2024-11-01' = {
 
 resource staticWebApp 'Microsoft.Web/staticSites@2024-11-01' = {
   name: 'caddieresearch-web'
-  location: location
+  location: 'centralus'
   sku: {
     name: 'Free'
     tier: 'Free'
