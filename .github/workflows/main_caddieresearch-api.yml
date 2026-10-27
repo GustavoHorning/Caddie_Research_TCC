@@ -81,7 +81,7 @@ jobs:
       - name: Deploy Infraestrutura (IaC Bicep)
         uses: azure/arm-deploy@v1
         with:
-          resourceGroupName: 'caddieresearch-api_group' # Nome do seu grupo de recursos
+          resourceGroupName: 'rg-caddieresearch' # Nome do seu grupo de recursos
           template: ./infra/main.bicep
           deploymentMode: 'Incremental'
       
