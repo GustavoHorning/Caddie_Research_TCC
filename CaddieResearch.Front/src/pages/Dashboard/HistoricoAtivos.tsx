@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../services/api';
-import './HistoricoAtivos.css';
+import Sidebar from '../../components/Sidebar';
+import SidebarGestor from '../../components/SidebarGestor';
+import TopBar from '../../components/TopBar';
 
 interface LogAcao {
     id: number;
@@ -36,46 +38,59 @@ interface HistoricoAtivo {
     relatoriosRelacionados: Relatorio[];
 }
 
-export default function HistoricoAtivos() {
+export default function Auditoria() {
     const [historicoAgrupado, setHistoricoAgrupado] = useState<HistoricoAtivo[]>([]);
     const [carregando, setCarregando] = useState(true);
     const navigate = useNavigate();
     const location = useLocation();
-    
+
+    // Controle do Layout
+    const [menuMobileAberto, setMenuMobileAberto] = useState(false);
+
     // Filtros
     const [busca, setBusca] = useState('');
     const [filtroCarteira, setFiltroCarteira] = useState('Todas');
     const [filtroAcao, setFiltroAcao] = useState('Todas');
     const [filtroPeriodo, setFiltroPeriodo] = useState('Todos');
 
-    // Estado do Modal de Dossiê do Ativo
+    // Modais
     const [ativoModal, setAtivoModal] = useState<HistoricoAtivo | null>(null);
-
-    // Estado do Modal de Upgrade
     const [modalUpgradeAberto, setModalUpgradeAberto] = useState(false);
     const [infoUpgrade, setInfoUpgrade] = useState<{ carteira: string; plano: string }>({ carteira: '', plano: '' });
+
+    // Lógica Inteligente: Deteta se quem abriu a página foi o Gestor ou o Cliente
+    const isGestor = useMemo(() => {
+        try {
+            const token = localStorage.getItem('caddie_token');
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const role = payload.role || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || '';
+                if (String(role).toLowerCase().includes('gestor') || String(role).toLowerCase().includes('admin')) {
+                    return true;
+                }
+            }
+            const userStr = localStorage.getItem('caddie_user') || localStorage.getItem('user');
+            if (userStr && userStr.toLowerCase().includes('gestor')) return true;
+        } catch {}
+        return false;
+    }, []);
 
     useEffect(() => {
         carregarHistoricoGlobal();
     }, []);
 
-    // Lê os parâmetros vindos da Busca Global ou de Relatórios (?busca=PETR4&foco=PETR4)
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const termoUrl = params.get('busca');
         const focoUrl = params.get('foco');
 
-        if (termoUrl) {
-            setBusca(termoUrl);
-        }
+        if (termoUrl) setBusca(termoUrl);
 
         if (focoUrl && historicoAgrupado.length > 0) {
             const ativoEncontrado = historicoAgrupado.find(
                 a => a.ticker.toLowerCase() === focoUrl.toLowerCase()
             );
-            if (ativoEncontrado) {
-                setAtivoModal(ativoEncontrado);
-            }
+            if (ativoEncontrado) setAtivoModal(ativoEncontrado);
         }
     }, [location.search, historicoAgrupado]);
 
@@ -125,7 +140,7 @@ export default function HistoricoAtivos() {
     );
 
     const filtrarLogsDoAtivo = (logs: LogAcao[]) => {
-        return logs.filter(log => 
+        return logs.filter(log =>
             (filtroCarteira === 'Todas' || log.nomeCarteira === filtroCarteira) &&
             (filtroAcao === 'Todas' || log.acao === filtroAcao) &&
             dentroDoPeriodo(log.dataRecomendacao)
@@ -133,253 +148,245 @@ export default function HistoricoAtivos() {
     };
 
     const historicoFiltrado = historicoAgrupado.filter(ativo => {
-        const matchBusca = ativo.ticker.toLowerCase().includes(busca.toLowerCase()) || 
-                           ativo.nomeAtivo.toLowerCase().includes(busca.toLowerCase());
-        
+        const matchBusca = ativo.ticker.toLowerCase().includes(busca.toLowerCase()) ||
+            ativo.nomeAtivo.toLowerCase().includes(busca.toLowerCase());
         const logsValidos = filtrarLogsDoAtivo(ativo.logs);
         const temRelatorioValido = filtroAcao === 'Todas' && ativo.relatoriosRelacionados.some(
             r => (filtroCarteira === 'Todas' || r.nomeCarteira === filtroCarteira) && dentroDoPeriodo(r.dataPublicacao)
         );
-
         return matchBusca && (logsValidos.length > 0 || temRelatorioValido);
     });
 
     return (
-        <div className="historico-page">
-            <div className="historico-header">
-                <h2>Auditoria de Recomendações e Relatórios</h2>
-                <p>Acompanhe o log imutável de movimentações nas carteiras e o histórico de relatórios vinculados a cada ativo.</p>
-            </div>
-
-            <div className="historico-filtros">
-                <input 
-                    type="text" 
-                    placeholder="Buscar por Ticker ou Nome..." 
-                    value={busca} 
-                    onChange={e => setBusca(e.target.value)} 
-                    className="historico-input"
-                />
-                <select value={filtroCarteira} onChange={e => setFiltroCarteira(e.target.value)} className="historico-select">
-                    <option value="Todas">Todas as Carteiras</option>
-                    {carteirasDisponiveis.map(cart => (
-                        <option key={cart} value={cart}>{cart}</option>
-                    ))}
-                </select>
-                <select value={filtroAcao} onChange={e => setFiltroAcao(e.target.value)} className="historico-select">
-                    <option value="Todas">Todas as Ações</option>
-                    <option value="Adicionou">Apenas Adições</option>
-                    <option value="Atualizou">Apenas Atualizações</option>
-                    <option value="Excluiu">Apenas Exclusões</option>
-                </select>
-                <select value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} className="historico-select">
-                    <option value="Todos">Todo o Período</option>
-                    <option value="7">Últimos 7 dias</option>
-                    <option value="30">Últimos 30 dias</option>
-                    <option value="90">Últimos 90 dias</option>
-                </select>
-            </div>
-
-            {carregando ? (
-                <div className="historico-mensagem">Carregando base de auditoria...</div>
-            ) : historicoFiltrado.length === 0 ? (
-                <div className="historico-mensagem">Nenhum registro encontrado para os filtros atuais.</div>
+        <div className="dashboard-layout">
+            {/* O SEGREDO ESTÁ AQUI: Renderiza a Sidebar correta dependendo do perfil logado */}
+            {isGestor ? (
+                <SidebarGestor activePath="/auditoria" isOpen={menuMobileAberto} onClose={() => setMenuMobileAberto(false)} />
             ) : (
-                <div className="historico-lista">
-                    {historicoFiltrado.map(ativo => {
-                        const logsExibidos = filtrarLogsDoAtivo(ativo.logs);
-                        const nomeCarteiraPrincipal = logsExibidos[0]?.nomeCarteira || ativo.relatoriosRelacionados[0]?.nomeCarteira || 'Geral';
+                <Sidebar activePath="/auditoria" isOpen={menuMobileAberto} onClose={() => setMenuMobileAberto(false)} />
+            )}
 
-                        return (
-                            <div key={ativo.ticker} className={`historico-card ${ativo.bloqueado ? 'locked' : ''}`}>
-                                <div className="historico-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-                                    <h3 style={{ margin: 0 }} onClick={() => setAtivoModal(ativo)}>
-                                        <span style={{ cursor: 'pointer', color: '#00B4D8' }}>{ativo.ticker}</span> 
-                                        <span style={{ marginLeft: '10px' }}>{ativo.nomeAtivo}</span>
-                                    </h3>
+            {menuMobileAberto && <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>}
 
-                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                        {ativo.bloqueado && (
-                                            <button 
-                                                className="btn-relatorio-bloqueado"
-                                                style={{ width: 'auto', padding: '8px 14px', fontSize: '0.8rem' }}
-                                                onClick={() => abrirModalUpgrade(nomeCarteiraPrincipal, ativo.planoMinimo || 'Premium')}
-                                            >
-                                                🔒 Recomendação Restrita (Plano {ativo.planoMinimo})
-                                            </button>
-                                        )}
-                                        <button 
-                                            className="historico-btn-detalhes"
-                                            onClick={() => setAtivoModal(ativo)}
-                                        >
-                                            🔍 Dossiê & Histórico de Relatórios ({ativo.relatoriosRelacionados.length})
-                                        </button>
-                                    </div>
+            <TopBar userName={isGestor ? "Gestor" : "Investidor"} onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} />
+
+            <main className="dashboard-main">
+                <div className="gestor-page">
+                    <header className="gestor-hero">
+                        <div className="gestor-hero-left">
+                            <div className="gestor-kicker-row">
+                                <span className="gestor-kicker-badge">Compliance & Tracking</span>
+                            </div>
+                            <h1 className="gestor-title">Trilha de Auditoria</h1>
+                            <p className="gestor-subtitle">Acompanhe o log imutável de movimentações nas carteiras e o histórico de relatórios vinculados a cada ativo.</p>
+                        </div>
+                    </header>
+
+                    <div className="gestor-panel">
+                        <div className="gestor-toolbar">
+                            <div className="gestor-toolbar-left" style={{ width: '100%' }}>
+                                <div className="gestor-search-box" style={{ flex: 1 }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                    <input type="text" placeholder="Buscar por Ticker ou Nome..." value={busca} onChange={e => setBusca(e.target.value)} />
                                 </div>
+                                <select className="gestor-select-premium" value={filtroCarteira} onChange={e => setFiltroCarteira(e.target.value)} style={{ minWidth: '180px' }}>
+                                    <option value="Todas">Todas as Carteiras</option>
+                                    {carteirasDisponiveis.map(cart => <option key={cart} value={cart}>{cart}</option>)}
+                                </select>
+                                <select className="gestor-select-premium" value={filtroAcao} onChange={e => setFiltroAcao(e.target.value)} style={{ minWidth: '180px' }}>
+                                    <option value="Todas">Todas as Ações</option>
+                                    <option value="Adicionou">Apenas Adições</option>
+                                    <option value="Atualizou">Apenas Atualizações</option>
+                                    <option value="Excluiu">Apenas Exclusões</option>
+                                </select>
+                                <select className="gestor-select-premium" value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} style={{ minWidth: '180px' }}>
+                                    <option value="Todos">Todo o Período</option>
+                                    <option value="7">Últimos 7 dias</option>
+                                    <option value="30">Últimos 30 dias</option>
+                                    <option value="90">Últimos 90 dias</option>
+                                </select>
+                            </div>
+                        </div>
 
-                                {logsExibidos.length > 0 ? (
-                                    <table className="historico-table">
-                                        <thead>
+                        {carregando ? (
+                            <div className="gestor-empty-row">Sincronizando log de auditoria...</div>
+                        ) : historicoFiltrado.length === 0 ? (
+                            <div className="gestor-empty-row">
+                                <div className="gestor-empty-box">
+                                    <strong>Nenhum registro encontrado.</strong>
+                                    <span>Tente ajustar os filtros ou pesquisar por outro ativo.</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
+                                {historicoFiltrado.map(ativo => {
+                                    const logsExibidos = filtrarLogsDoAtivo(ativo.logs);
+                                    const nomeCarteiraPrincipal = logsExibidos[0]?.nomeCarteira || ativo.relatoriosRelacionados[0]?.nomeCarteira || 'Geral';
+
+                                    return (
+                                        <div key={ativo.ticker} className="gestor-card" style={{ padding: '0', border: '1px solid var(--g-border-strong)' }}>
+                                            <div className="gestor-ativos-header" style={{ padding: '16px 24px', margin: 0, background: 'var(--g-bg-elevated)', borderBottom: '1px solid var(--g-border)' }}>
+                                                <div className="gestor-ticker-line" onClick={() => setAtivoModal(ativo)} style={{ cursor: 'pointer' }}>
+                                                    <div className="gestor-asset-avatar">{ativo.ticker.slice(0, 4)}</div>
+                                                    <div>
+                                                        <strong className="gestor-ticker-name text-cyan">{ativo.ticker}</strong>
+                                                        <span className="gestor-entry-date">{ativo.nomeAtivo}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                    {ativo.bloqueado && (
+                                                        <button className="gestor-btn gestor-btn-outline" onClick={() => abrirModalUpgrade(nomeCarteiraPrincipal, ativo.planoMinimo || 'Premium')}>
+                                                            🔒 Bloqueado ({ativo.planoMinimo})
+                                                        </button>
+                                                    )}
+                                                    <button className="gestor-btn gestor-btn-primary" onClick={() => setAtivoModal(ativo)}>
+                                                        Dossiê & Relatórios ({ativo.relatoriosRelacionados.length})
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {logsExibidos.length > 0 ? (
+                                                <div className="gestor-table-container">
+                                                    <table className="gestor-table">
+                                                        <thead>
+                                                        <tr>
+                                                            <th>Data / Hora</th>
+                                                            <th>Carteira</th>
+                                                            <th className="align-center">Ação</th>
+                                                            <th className="align-center">Viés</th>
+                                                            <th className="align-right">Alvo / Taxa</th>
+                                                            <th>Gestor Responsável</th>
+                                                        </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        {logsExibidos.map(log => (
+                                                            <tr key={log.id} onClick={() => log.bloqueado && abrirModalUpgrade(log.nomeCarteira, log.planoMinimo || 'Premium')} style={{ cursor: log.bloqueado ? 'pointer' : 'default' }}>
+                                                                <td style={{ whiteSpace: 'nowrap' }}>{formatarDataHora(log.dataRecomendacao)}</td>
+                                                                <td><span className="gestor-cat-tag">{log.nomeCarteira}</span></td>
+                                                                <td className="align-center"><span className="gestor-var-tag pos">{log.acao}</span></td>
+                                                                <td className="align-center">
+                                                                    {log.bloqueado ? (
+                                                                        <span className="gestor-muted">Bloqueado</span>
+                                                                    ) : (
+                                                                        <span className={`gestor-vies-badge vies-${log.vies.toLowerCase()}`}>{log.vies}</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="align-right tabular-nums">
+                                                                    <strong>
+                                                                        {log.bloqueado ? 'R$ --,--' : `R$ ${log.precoAlvo.toFixed(2).replace('.', ',')}`}
+                                                                    </strong>
+                                                                </td>
+                                                                <td>{log.nomeGestor}</td>
+                                                            </tr>
+                                                        ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <div className="gestor-empty-row" style={{ padding: '20px' }}>Ativo citado em relatórios, mas sem movimentação direta de carteira nos filtros atuais.</div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </main>
+
+            {/* MODAL DE DOSSIÊ DO ATIVO */}
+            {ativoModal && (
+                <div className="gestor-modal-backdrop" onClick={() => setAtivoModal(null)}>
+                    <div className="gestor-modal-dialog" style={{ maxWidth: '1000px' }} onClick={e => e.stopPropagation()}>
+                        <div className="gestor-modal-header">
+                            <div>
+                                <span className="gestor-modal-kicker">Dossiê Completo de Auditoria</span>
+                                <h3>{ativoModal.ticker} — {ativoModal.nomeAtivo}</h3>
+                            </div>
+                            <button className="gestor-modal-close" onClick={() => setAtivoModal(null)}>✕</button>
+                        </div>
+
+                        <div className="gestor-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '24px 32px' }}>
+                            <div>
+                                <h4 style={{ color: 'var(--g-text-main)', marginBottom: '16px', fontSize: '1.1rem' }}>Linha do Tempo de Movimentações</h4>
+                                {ativoModal.logs.length === 0 ? (
+                                    <p className="gestor-muted">Nenhuma movimentação direta de carteira registrada.</p>
+                                ) : (
+                                    <div className="gestor-table-container" style={{ border: '1px solid var(--g-border)', borderRadius: '12px' }}>
+                                        <table className="gestor-table">
+                                            <thead>
                                             <tr>
                                                 <th>Data / Hora</th>
                                                 <th>Carteira</th>
-                                                <th>Ação</th>
-                                                <th>Viés</th>
-                                                <th>Alvo</th>
-                                                <th>Gestor</th>
+                                                <th className="align-center">Ação</th>
+                                                <th className="align-center">Viés</th>
+                                                <th className="align-right">Alvo</th>
+                                                <th>Justificativa / Fato Relevante</th>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {logsExibidos.map(log => (
-                                                <tr key={log.id} onClick={() => log.bloqueado && abrirModalUpgrade(log.nomeCarteira, log.planoMinimo || 'Premium')} style={{ cursor: log.bloqueado ? 'pointer' : 'default' }}>
+                                            </thead>
+                                            <tbody>
+                                            {ativoModal.logs.map(log => (
+                                                <tr key={log.id}>
                                                     <td style={{ whiteSpace: 'nowrap' }}>{formatarDataHora(log.dataRecomendacao)}</td>
-                                                    <td><span className="h-badge-carteira">{log.nomeCarteira}</span></td>
-                                                    <td><span className={`h-badge-acao h-acao-${log.acao}`}>{log.acao}</span></td>
-                                                    <td>
-                                                        {log.bloqueado ? (
-                                                            <span className="texto-borrado-auditoria">Comprar</span>
-                                                        ) : (
-                                                            <span className={`h-badge-vies h-vies-${log.vies}`}>{log.vies}</span>
-                                                        )}
+                                                    <td><span className="gestor-cat-tag">{log.nomeCarteira}</span></td>
+                                                    <td className="align-center"><strong>{log.acao}</strong></td>
+                                                    <td className="align-center">
+                                                        {log.bloqueado ? <span className="gestor-muted">🔒</span> : <span className={`gestor-vies-badge vies-${log.vies.toLowerCase()}`}>{log.vies}</span>}
                                                     </td>
-                                                    <td style={{ whiteSpace: 'nowrap' }}>
-                                                        {log.bloqueado ? (
-                                                            <span className="texto-borrado-auditoria">R$ 99,90</span>
-                                                        ) : (
-                                                            `R$ ${log.precoAlvo.toFixed(2).replace('.', ',')}`
-                                                        )}
+                                                    <td className="align-right tabular-nums">
+                                                        <strong>{log.bloqueado ? '🔒' : `R$ ${log.precoAlvo.toFixed(2)}`}</strong>
                                                     </td>
-                                                    <td>{log.nomeGestor}</td>
+                                                    <td style={{ fontSize: '0.8rem', color: 'var(--g-text-secondary)' }}>
+                                                        {log.bloqueado ? `Bloqueado (Plano ${log.planoMinimo})` : (log.justificativa || '---')}
+                                                    </td>
                                                 </tr>
                                             ))}
-                                        </tbody>
-                                    </table>
-                                ) : (
-                                    <div style={{ color: '#8b949e', fontSize: '0.85rem', padding: '8px 0' }}>
-                                        Ativo citado em relatórios de cobertura (sem movimentação direta de carteira neste filtro).
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
                             </div>
-                        );
-                    })}
-                </div>
-            )}
 
-            {/* MODAL DE DOSSIÊ DO ATIVO (MOSTRA LOGS + HISTÓRICO DE RELATÓRIOS) */}
-            {ativoModal && (
-                <div className="modal-hc-overlay" onClick={() => setAtivoModal(null)}>
-                    <div className="modal-hc-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-hc-header">
                             <div>
-                                <h3 style={{ margin: 0, color: '#00B4D8' }}>Dossiê do Ativo: {ativoModal.ticker}</h3>
-                                <span style={{ fontSize: '0.85rem', color: '#8b949e' }}>{ativoModal.nomeAtivo} — Histórico Completo de Recomendações e Relatórios</span>
-                            </div>
-                            <button className="modal-hc-fechar" onClick={() => setAtivoModal(null)}>✕</button>
-                        </div>
-                        <div className="modal-hc-body">
-                            <h4 style={{ color: '#e6edf3', marginTop: 0, marginBottom: '12px' }}>
-                                Linha do Tempo de Recomendações ({ativoModal.logs.length})
-                            </h4>
-                            {ativoModal.logs.length === 0 ? (
-                                <p style={{ color: '#8b949e', fontSize: '0.85rem', marginBottom: '24px' }}>
-                                    Nenhuma recomendação direta em carteira para {ativoModal.ticker}. Confira abaixo os relatórios onde este ativo foi analisado.
-                                </p>
-                            ) : (
-                                <table className="historico-table" style={{ marginBottom: '28px' }}>
-                                    <thead>
-                                        <tr>
-                                            <th>Data / Hora</th>
-                                            <th>Carteira</th>
-                                            <th>Ação</th>
-                                            <th>Viés</th>
-                                            <th>Alvo</th>
-                                            <th>Justificativa</th>
-                                            <th>Gestor</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {ativoModal.logs.map(log => (
-                                            <tr 
-                                                key={log.id}
-                                                onClick={() => log.bloqueado && abrirModalUpgrade(log.nomeCarteira, log.planoMinimo || 'Premium')}
-                                                style={{ cursor: log.bloqueado ? 'pointer' : 'default' }}
-                                            >
-                                                <td style={{ whiteSpace: 'nowrap' }}>{formatarDataHora(log.dataRecomendacao)}</td>
-                                                <td><span className="h-badge-carteira">{log.nomeCarteira}</span></td>
-                                                <td><span className={`h-badge-acao h-acao-${log.acao}`}>{log.acao}</span></td>
-                                                <td>
-                                                    {log.bloqueado ? (
-                                                        <span className="texto-borrado-auditoria">Comprar</span>
-                                                    ) : (
-                                                        <span className={`h-badge-vies h-vies-${log.vies}`}>{log.vies}</span>
-                                                    )}
-                                                </td>
-                                                <td style={{ whiteSpace: 'nowrap' }}>
-                                                    {log.bloqueado ? (
-                                                        <span className="texto-borrado-auditoria">R$ 99,90</span>
-                                                    ) : (
-                                                        `R$ ${log.precoAlvo.toFixed(2).replace('.', ',')}`
-                                                    )}
-                                                </td>
-                                                <td style={{ color: log.bloqueado ? '#ffc107' : '#8b949e', fontSize: '0.8rem' }}>
-                                                    {log.bloqueado ? `🔒 Exclusivo Plano ${log.planoMinimo} (Clique para liberar)` : (log.justificativa || '-')}
-                                                </td>
-                                                <td style={{ whiteSpace: 'nowrap' }}>{log.nomeGestor}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
-
-                            <div className="historico-relatorios" style={{ marginTop: 0 }}>
-                                <strong>Histórico de Relatórios de Cobertura Vinculados a {ativoModal.ticker} ({ativoModal.relatoriosRelacionados.length}):</strong>
+                                <h4 style={{ color: 'var(--g-text-main)', marginBottom: '16px', fontSize: '1.1rem' }}>Relatórios de Research Vinculados</h4>
                                 {ativoModal.relatoriosRelacionados.length === 0 ? (
-                                    <p style={{ color: '#8b949e', fontSize: '0.85rem', margin: 0 }}>
-                                        Nenhum relatório em PDF vinculado diretamente a {ativoModal.ticker} até o momento.
-                                    </p>
+                                    <p className="gestor-muted">Nenhum relatório em PDF publicado para este ativo.</p>
                                 ) : (
-                                    <table className="historico-table" style={{ marginTop: '8px' }}>
-                                        <thead>
+                                    <div className="gestor-table-container" style={{ border: '1px solid var(--g-border)', borderRadius: '12px' }}>
+                                        <table className="gestor-table">
+                                            <thead>
                                             <tr>
-                                                <th>Publicação</th>
-                                                <th>Carteira</th>
+                                                <th>Data da Publicação</th>
+                                                <th>Carteira Vinculada</th>
                                                 <th>Assunto</th>
                                                 <th>Título do Relatório</th>
-                                                <th>Acesso</th>
+                                                <th className="align-center">Acesso</th>
                                             </tr>
-                                        </thead>
-                                        <tbody>
+                                            </thead>
+                                            <tbody>
                                             {ativoModal.relatoriosRelacionados.map(rel => (
                                                 <tr key={rel.id}>
                                                     <td style={{ whiteSpace: 'nowrap' }}>{formatarDataHora(rel.dataPublicacao)}</td>
-                                                    <td><span className="h-badge-carteira">{rel.nomeCarteira || 'Geral'}</span></td>
-                                                    <td style={{ color: '#8b949e' }}>{rel.assunto || 'Análise'}</td>
-                                                    <td style={{ color: '#fff', fontWeight: 600 }}>{rel.titulo}</td>
-                                                    <td style={{ whiteSpace: 'nowrap' }}>
+                                                    <td><span className="gestor-cat-tag">{rel.nomeCarteira || 'Geral'}</span></td>
+                                                    <td style={{ color: 'var(--g-text-secondary)' }}>{rel.assunto || 'Análise'}</td>
+                                                    <td><strong>{rel.titulo}</strong></td>
+                                                    <td className="align-center">
                                                         {rel.bloqueado ? (
-                                                            <button
-                                                                className="btn-relatorio-bloqueado"
-                                                                style={{ padding: '6px 12px', fontSize: '0.75rem', width: 'auto' }}
-                                                                onClick={() => abrirModalUpgrade(rel.nomeCarteira || 'Carteira', rel.planoMinimo || 'Premium')}
-                                                            >
+                                                            <button className="gestor-btn gestor-btn-outline" onClick={() => abrirModalUpgrade(rel.nomeCarteira || 'Carteira', rel.planoMinimo || 'Premium')}>
                                                                 🔒 Plano {rel.planoMinimo}
                                                             </button>
                                                         ) : (
-                                                            <button
-                                                                className="historico-btn-detalhes"
-                                                                style={{ padding: '6px 12px', fontSize: '0.75rem' }}
-                                                                onClick={() => {
-                                                                    setAtivoModal(null);
-                                                                    navigate(`/relatorios?highlight=${rel.id}`);
-                                                                }}
-                                                            >
-                                                                📄 Abrir Relatório
+                                                            <button className="gestor-btn gestor-btn-primary" onClick={() => { setAtivoModal(null); navigate(`/relatorios?highlight=${rel.id}`); }}>
+                                                                Ler PDF
                                                             </button>
                                                         )}
                                                     </td>
                                                 </tr>
                                             ))}
-                                        </tbody>
-                                    </table>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -389,25 +396,16 @@ export default function HistoricoAtivos() {
 
             {/* MODAL DE UPGRADE */}
             {modalUpgradeAberto && (
-                <div className="upgrade-modal-overlay" onClick={() => setModalUpgradeAberto(false)}>
-                    <div className="upgrade-modal-box" onClick={e => e.stopPropagation()}>
-                        <div className="upgrade-modal-icone">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
+                <div className="gestor-modal-backdrop" onClick={() => setModalUpgradeAberto(false)}>
+                    <div className="gestor-confirm-box" onClick={e => e.stopPropagation()}>
+                        <div className="gestor-confirm-icon" style={{ background: 'var(--g-cyan-soft)', color: 'var(--g-cyan)' }}>
+                            🔒
                         </div>
                         <h3>Conteúdo Exclusivo</h3>
-                        <p>
-                            Este conteúdo pertence à estratégia de <strong>{infoUpgrade.carteira}</strong> (Exclusivo Plano <strong>{infoUpgrade.plano}</strong>). Deseja conhecer nossos planos para liberar o acesso completo?
-                        </p>
-                        <div className="upgrade-modal-acoes">
-                            <button className="btn-modal-upgrade-confirmar" onClick={() => navigate('/gerenciar-plano')}>
-                                Ver Planos de Assinatura
-                            </button>
-                            <button className="btn-modal-upgrade-cancelar" onClick={() => setModalUpgradeAberto(false)}>
-                                Continuar na Auditoria
-                            </button>
+                        <p>Este conteúdo pertence à estratégia de <strong>{infoUpgrade.carteira}</strong> (Exclusivo Plano <strong>{infoUpgrade.plano}</strong>). Deseja conhecer nossos planos?</p>
+                        <div className="gestor-confirm-actions">
+                            <button className="gestor-btn gestor-btn-outline" onClick={() => setModalUpgradeAberto(false)}>Voltar</button>
+                            <button className="gestor-btn gestor-btn-primary" onClick={() => navigate('/gerenciar-plano')}>Ver Planos</button>
                         </div>
                     </div>
                 </div>
