@@ -118,6 +118,28 @@ public class AuthController : ControllerBase
         if (!sucesso) return BadRequest(new AuthResultDto { Mensagem = mensagem });
         return Ok(dadosLogin);
     }
+
+    /// <summary>
+    /// Realiza a autenticação corporativa via Single Sign-On (Microsoft Entra ID) exclusiva para Gestores.
+    /// </summary>
+    /// <response code="200">Autenticação corporativa realizada com sucesso.</response>
+    /// <response code="403">Acesso negado para contas sem permissão de Gestor.</response>
+    [HttpPost("login-sso-corporativo")]
+    [ProducesResponseType(typeof(LoginResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> LoginSsoCorporativo([FromBody] LoginMicrosoftRequest request)
+    {
+        var (sucesso, mensagem, dadosLogin) = await _authService.LoginSsoCorporativoAsync(request.Token);
+        if (!sucesso)
+        {
+            if (mensagem.StartsWith("Acesso"))
+                return StatusCode(StatusCodes.Status403Forbidden, new AuthResultDto { Mensagem = mensagem });
+
+            return BadRequest(new AuthResultDto { Mensagem = mensagem });
+        }
+        return Ok(dadosLogin);
+    }
     
     /// <summary>
     /// Solicita a recuperação de senha.

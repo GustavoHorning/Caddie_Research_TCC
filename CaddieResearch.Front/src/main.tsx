@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { GoogleOAuthProvider } from '@react-oauth/google'
-import { PublicClientApplication } from '@azure/msal-browser'
+import { PublicClientApplication, EventType } from '@azure/msal-browser'
 import { MsalProvider } from '@azure/msal-react'
 
 const msalConfig = {
@@ -15,6 +15,15 @@ const msalConfig = {
 };
 
 const msalInstance = new PublicClientApplication(msalConfig);
+
+msalInstance.addEventCallback((event) => {
+    if (event.eventType === EventType.LOGIN_SUCCESS && event.payload) {
+        const payload = event.payload as any;
+        if (payload.account) {
+            msalInstance.setActiveAccount(payload.account);
+        }
+    }
+});
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

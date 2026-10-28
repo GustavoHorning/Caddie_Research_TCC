@@ -1,14 +1,11 @@
-import React, { useEffect } from 'react'
-import { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import './Login.css'
 import EsqueciSenha from './EsqueciSenha'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useMsal } from '@azure/msal-react'
-import { EventType } from '@azure/msal-browser'
-import { useNavigate } from 'react-router-dom';
-import Navbar from "../components/Navbar";
-import api from '../services/api';
-
+import { useNavigate } from 'react-router-dom'
+import Navbar from "../components/Navbar"
+import api from '../services/api'
 
 function isUsuarioGestor(token: string) {
   try {
@@ -29,9 +26,8 @@ function isUsuarioGestor(token: string) {
   }
 }
 
-
 export default function Login() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const [tela, setTela] = useState<'login' | 'esqueci'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -39,58 +35,44 @@ export default function Login() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const [carregando, setCarregando] = useState(false)
 
+  const { instance, accounts, inProgress } = useMsal()
+
   function redirecionarAposLogin(token: string) {
+    if (isUsuarioGestor(token)) {
+      sessionStorage.removeItem('plano_selecionado')
+      navigate('/gestor')
+      return
+    }
+
     const planoSalvo = sessionStorage.getItem('plano_selecionado')
-
     if (planoSalvo) {
-      const planoObj = JSON.parse(planoSalvo);
-
-      sessionStorage.removeItem('plano_selecionado');
-
-      navigate('/pagamento', { state: { plano: planoObj } });
+      const planoObj = JSON.parse(planoSalvo)
+      sessionStorage.removeItem('plano_selecionado')
+      navigate('/pagamento', { state: { plano: planoObj } })
     } else {
-      if (isUsuarioGestor(token)) {
-        navigate('/gestor');
-      } else {
-        navigate('/carteiras');
-      }
+      navigate('/carteiras')
     }
   }
 
-
-
-  const loginGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setCarregando(true)
-      try {
-        const response = await api.post('/api/auth/login-google', {
-          Token: tokenResponse.access_token
-        })
-        localStorage.setItem('caddie_token', response.data.token)
-        redirecionarAposLogin(response.data.token)
-      } catch (error: any) {
-        console.error(error)
-        setErrors({ email: 'Erro ao autenticar com o servidor do Caddie.' })
-      } finally {
-        setCarregando(false)
-      }
-    },
-    onError: () => {
-      setErrors({ email: 'O login com Google foi cancelado ou falhou.' })
-    }
-  })
-
-  const { instance, accounts, inProgress } = useMsal()
-
   useEffect(() => {
-    if (inProgress === 'none' && accounts.length > 0) {
+    const tipoFluxoMs = sessionStorage.getItem('caddie_ms_flow')
+
+    if (inProgress === 'none' && accounts.length > 0 && tipoFluxoMs) {
+      sessionStorage.removeItem('caddie_ms_flow')
       setCarregando(true)
+
+      const contaAtiva = instance.getActiveAccount() || accounts[accounts.length - 1]
+
       instance.acquireTokenSilent({
         scopes: ['user.read', 'email'],
-        account: accounts[0]
-      }).then((response) => {
-        enviarTokenMicrosoftParaOCSharp(response.accessToken)
-      }).catch(error => {
+        account: contaAtiva
+      }).then(async (response) => {
+        if (tipoFluxoMs === 'sso_corporativo') {
+          await enviarTokenSsoCorporativoParaOCSharp(response.accessToken)
+        } else {
+          await enviarTokenMicrosoftParaOCSharp(response.accessToken)
+        }
+      }).catch((error) => {
         console.error(error)
         setCarregando(false)
       })
@@ -106,15 +88,73 @@ export default function Login() {
       redirecionarAposLogin(response.data.token)
     } catch (error: any) {
       console.error(error)
-      setErrors({ email: 'Erro ao autenticar com o servidor do Caddie.' })
+      setErrors({
+        email: error.response?.data?.mensagem || 'Erro ao autenticar com o servidor do Caddie.'
+      })
       setCarregando(false)
-      instance.logoutRedirect({ account: accounts[0] })
     }
   }
 
+  const enviarTokenSsoCorporativoParaOCSharp = async (token: string) => {
+    try {
+      const response = await api.post('/api/auth/login-sso-corporativo', {
+        Token: token
+      })
+      localStorage.setItem('caddie_token', response.data.token)
+      navigate('/gestor')
+    } catch (error: any) {
+      console.error(error)
+      setErrors({
+        email: error.response?.data?.mensagem || 'Acesso negado no SSO Corporativo. Verifique se sua conta possui permissão de Gestor.'
+      })
+      setCarregando(false)
+    }
+  }
+
+  const loginGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setErrors({})
+      setCarregando(true)
+      try {
+        const response = await api.post('/api/auth/login-google', {
+          Token: tokenResponse.access_token
+        })
+        localStorage.setItem('caddie_token', response.data.token)
+        redirecionarAposLogin(response.data.token)
+      } catch (error: any) {
+        console.error(error)
+        setErrors({
+          email: error.response?.data?.mensagem || 'Erro ao autenticar com o Google no Caddie.'
+        })
+      } finally {
+        setCarregando(false)
+      }
+    },
+    onError: () => {
+      setErrors({ email: 'O login com Google foi cancelado ou falhou.' })
+    }
+  })
+
   const loginMicrosoft = () => {
+    setErrors({})
     setCarregando(true)
-    instance.loginRedirect({ scopes: ['user.read', 'email'] })
+    sessionStorage.setItem('caddie_ms_flow', 'cliente')
+    instance.loginRedirect({
+      scopes: ['user.read', 'email'],
+      prompt: 'select_account',
+      redirectStartPage: window.location.origin + '/login'
+    })
+  }
+
+  const loginSsoCorporativo = () => {
+    setErrors({})
+    setCarregando(true)
+    sessionStorage.setItem('caddie_ms_flow', 'sso_corporativo')
+    instance.loginRedirect({
+      scopes: ['user.read', 'email'],
+      prompt: 'select_account',
+      redirectStartPage: window.location.origin + '/login'
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -145,21 +185,15 @@ export default function Login() {
     }
   }
 
-  function handleSocialLogin(provider: string) {
-    alert(`Login com ${provider} ainda não implementado.`)
-  }
-
   if (tela === 'esqueci') {
     return <EsqueciSenha onVoltar={() => setTela('login')} />
   }
 
   return (
-      
     <div className="wrapper">
       <Navbar />
       <div className="card">
         <div className="logo">Caddie <span>Research</span></div>
-        
 
         <h1 className="title">Entrar</h1>
         <p className="subtitle">
@@ -226,7 +260,7 @@ export default function Login() {
         <div className="divider"><span>ou acessar com</span></div>
 
         <div className="social-grid">
-          <button type="button" className="social-btn" onClick={() => loginGoogle()} aria-label="Google">
+          <button type="button" className="social-btn" onClick={() => loginGoogle()} disabled={carregando} aria-label="Google">
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -234,7 +268,7 @@ export default function Login() {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
           </button>
-          <button type="button" className="social-btn" onClick={() => loginMicrosoft()} aria-label="Microsoft">
+          <button type="button" className="social-btn" onClick={loginMicrosoft} disabled={carregando} aria-label="Microsoft">
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#F25022" d="M1 1h10v10H1z" />
               <path fill="#7FBA00" d="M13 1h10v10H13z" />
@@ -242,7 +276,12 @@ export default function Login() {
               <path fill="#FFB900" d="M13 13h10v10H13z" />
             </svg>
           </button>
-          <button className="social-btn social-btn-wide" onClick={() => handleSocialLogin('SSO Corporativo')}>
+          <button
+            type="button"
+            className="social-btn social-btn-wide"
+            onClick={loginSsoCorporativo}
+            disabled={carregando}
+          >
             SSO Corporativo
           </button>
         </div>

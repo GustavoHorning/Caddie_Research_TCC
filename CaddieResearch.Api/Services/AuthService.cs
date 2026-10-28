@@ -25,15 +25,16 @@ public class AuthService : IAuthService
 
     public async Task<(bool Sucesso, string Mensagem)> CadastrarAsync(CadastrarUsuarioRequest request)
     {
-        var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email == request.Email);
+        var emailNormalizado = request.Email.Trim().ToLower();
+        var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == emailNormalizado);
         if (emailExiste) return (false, "Este e-mail já está em uso no Caddie Research.");
 
         string tokenGerado = Guid.NewGuid().ToString();
 
         var novoUsuario = new Usuario
         {
-            Nome = request.Nome,
-            Email = request.Email,
+            Nome = request.Nome.Trim(),
+            Email = emailNormalizado,
             SenhaHash = _tokenService.HashPassword(request.Senha),
             TokenConfirmacaoEmail = tokenGerado
         };
@@ -41,13 +42,7 @@ public class AuthService : IAuthService
         _context.Usuarios.Add(novoUsuario);
         await _context.SaveChangesAsync();
 
-        _context.Portfolios.Add(new Portfolio
-        {
-            UsuarioId = novoUsuario.Id,
-            Nome = "Portfólio Inicial",
-            DataInicio = DateTime.UtcNow
-        });
-        await _context.SaveChangesAsync();
+        await GarantirPortfolioInicialAsync(novoUsuario.Id);
 
         var emailCodificado = Uri.EscapeDataString(novoUsuario.Email);
         var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
@@ -59,7 +54,8 @@ public class AuthService : IAuthService
 
     public async Task<(bool Sucesso, string Mensagem)> ConfirmarEmailAsync(string email, string token)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+        var emailNormalizado = email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
         if (usuario == null) return (false, "Usuário não encontrado.");
         if (usuario.EmailConfirmado) return (false, "Este e-mail já foi confirmado anteriormente.");
         if (usuario.TokenConfirmacaoEmail != token) return (false, "Token de verificação inválido ou expirado.");
@@ -73,7 +69,8 @@ public class AuthService : IAuthService
 
     public async Task<(bool Sucesso, string Mensagem, LoginResultDto? DadosLogin)> LoginAsync(LoginRequest request)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var emailNormalizado = request.Email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
         if (usuario == null) return (false, "E-mail ou senha incorretos.", null);
         
         var senhaValida = _tokenService.VerifyPassword(request.Senha, usuario.SenhaHash);
@@ -103,7 +100,10 @@ public class AuthService : IAuthService
         var googleUser = await response.Content.ReadFromJsonAsync<GoogleUserInfo>();
         if (googleUser == null || string.IsNullOrEmpty(googleUser.email)) return (false, "Dados do Google inválidos.", null);
 
-        var usuario = await ProcessarLoginSocial(googleUser.email, googleUser.name);
+        var emailNormalizado = googleUser.email.Trim().ToLower();
+        var nome = string.IsNullOrWhiteSpace(googleUser.name) ? emailNormalizado.Split('@')[0] : googleUser.name;
+
+        var usuario = await ProcessarLoginSocial(emailNormalizado, nome);
         return (true, string.Empty, GerarDadosLogin("Login com Google realizado com sucesso!", usuario));
     }
 
@@ -115,17 +115,83 @@ public class AuthService : IAuthService
         if (!response.IsSuccessStatusCode) return (false, "Não foi possível validar sua conta com a Microsoft.", null);
 
         var msUser = await response.Content.ReadFromJsonAsync<MicrosoftUserInfo>();
-        var email = !string.IsNullOrEmpty(msUser?.mail) ? msUser.mail : msUser?.userPrincipalName;
+        var email = ExtrairEmailMicrosoft(msUser);
 
         if (string.IsNullOrEmpty(email)) return (false, "Não conseguimos ler o e-mail da sua conta Microsoft.", null);
 
-        var usuario = await ProcessarLoginSocial(email, msUser!.displayName);
+        var nome = !string.IsNullOrWhiteSpace(msUser?.displayName) ? msUser.displayName : email.Split('@')[0];
+        var usuario = await ProcessarLoginSocial(email, nome);
         return (true, string.Empty, GerarDadosLogin("Login com Microsoft realizado com sucesso!", usuario));
+    }
+
+    public async Task<(bool Sucesso, string Mensagem, LoginResultDto? DadosLogin)> LoginSsoCorporativoAsync(string token)
+    {
+        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var response = await _httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
+
+        if (!response.IsSuccessStatusCode)
+            return (false, "Não foi possível validar a credencial corporativa no Microsoft Entra ID.", null);
+
+        var msUser = await response.Content.ReadFromJsonAsync<MicrosoftUserInfo>();
+        var emailCorporativo = ExtrairEmailMicrosoft(msUser);
+
+        if (string.IsNullOrEmpty(emailCorporativo))
+            return (false, "Não foi possível identificar o e-mail corporativo no diretório da Azure.", null);
+
+        var emailsGestoresConfig = _configuration.GetSection("SsoCorporativo:EmailsAutorizados").Get<string[]>() ?? Array.Empty<string>();
+        var dominiosCorporativos = _configuration.GetSection("SsoCorporativo:DominiosAutorizados").Get<string[]>() ?? Array.Empty<string>();
+
+        bool autorizadoPorConfig = emailsGestoresConfig.Any(e => e.Equals(emailCorporativo, StringComparison.OrdinalIgnoreCase)) ||
+                                   dominiosCorporativos.Any(d => emailCorporativo.EndsWith($"@{d.TrimStart('@')}", StringComparison.OrdinalIgnoreCase));
+
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u =>
+            u.Email.ToLower() == emailCorporativo ||
+            (!string.IsNullOrEmpty(msUser!.userPrincipalName) && u.Email.ToLower() == msUser.userPrincipalName.ToLower()));
+
+        if (usuario == null)
+        {
+            if (!autorizadoPorConfig)
+            {
+                return (false, $"Acesso negado: A conta '{emailCorporativo}' não pertence ao grupo de Gestores no Microsoft Entra ID.", null);
+            }
+
+            usuario = new Usuario
+            {
+                Nome = !string.IsNullOrWhiteSpace(msUser?.displayName) ? msUser.displayName : "Gestor Caddie",
+                Email = emailCorporativo,
+                EmailConfirmado = true,
+                TipoPerfil = "Gestor",
+                Plano = "Gestor",
+                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieSSO@2026!"),
+                EhSocial = true
+            };
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            bool ehGestorNoBanco = string.Equals(usuario.TipoPerfil, "Gestor", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(usuario.Plano, "Gestor", StringComparison.OrdinalIgnoreCase);
+
+            if (!ehGestorNoBanco && !autorizadoPorConfig)
+            {
+                return (false, "Acesso restrito: Este canal de Single Sign-On (SSO) é exclusivo para Gestores autorizados.", null);
+            }
+
+            usuario.TipoPerfil = "Gestor";
+            usuario.EmailConfirmado = true;
+            usuario.TokenConfirmacaoEmail = null;
+            await _context.SaveChangesAsync();
+        }
+
+        return (true, string.Empty, GerarDadosLogin("Autenticação via SSO Corporativo realizada com sucesso!", usuario));
     }
 
     public async Task<(bool Sucesso, string Mensagem)> EsqueciSenhaAsync(string email)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+        var emailNormalizado = email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
         if (usuario == null) return (true, "Se o e-mail estiver correto, você receberá o código em instantes.");
 
         string codigo = new Random().Next(100000, 999999).ToString();
@@ -139,7 +205,8 @@ public class AuthService : IAuthService
 
     public async Task<(bool Sucesso, string Mensagem)> RedefinirSenhaAsync(RedefinirSenhaRequest request)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var emailNormalizado = request.Email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
         if (usuario == null) return (false, "Usuário não encontrado.");
         if (usuario.CodigoRecuperacao != request.Token) return (false, "Código inválido. Verifique se digitou corretamente.");
         if (usuario.DataExpiracaoCodigo < DateTime.UtcNow) return (false, "O código expirou. Por favor, solicite um novo.");
@@ -157,13 +224,14 @@ public class AuthService : IAuthService
 
     private async Task<Usuario> ProcessarLoginSocial(string email, string nome)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+        var emailNormalizado = email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
         if (usuario == null)
         {
             usuario = new Usuario
             {
                 Nome = nome,
-                Email = email,
+                Email = emailNormalizado,
                 EmailConfirmado = true, 
                 SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieSocial@2026!"), 
                 EhSocial = true
@@ -171,7 +239,59 @@ public class AuthService : IAuthService
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
         }
+        else if (!usuario.EmailConfirmado)
+        {
+            usuario.EmailConfirmado = true;
+            usuario.TokenConfirmacaoEmail = null;
+            await _context.SaveChangesAsync();
+        }
+
+        await GarantirPortfolioInicialAsync(usuario.Id);
         return usuario;
+    }
+
+    private async Task GarantirPortfolioInicialAsync(int usuarioId)
+    {
+        var possuiPortfolio = await _context.Portfolios.AnyAsync(p => p.UsuarioId == usuarioId);
+        if (!possuiPortfolio)
+        {
+            _context.Portfolios.Add(new Portfolio
+            {
+                UsuarioId = usuarioId,
+                Nome = "Portfólio Inicial",
+                DataInicio = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    private static string? ExtrairEmailMicrosoft(MicrosoftUserInfo? msUser)
+    {
+        if (msUser == null) return null;
+
+        if (!string.IsNullOrWhiteSpace(msUser.mail))
+        {
+            return msUser.mail.Trim().ToLower();
+        }
+
+        if (!string.IsNullOrWhiteSpace(msUser.userPrincipalName))
+        {
+            var upn = msUser.userPrincipalName.Trim();
+            var extIndex = upn.IndexOf("#EXT#@", StringComparison.OrdinalIgnoreCase);
+            if (extIndex > 0)
+            {
+                var prefixo = upn.Substring(0, extIndex);
+                var lastUnderscore = prefixo.LastIndexOf('_');
+                if (lastUnderscore > 0)
+                {
+                    return (prefixo.Substring(0, lastUnderscore) + "@" + prefixo.Substring(lastUnderscore + 1)).ToLower();
+                }
+            }
+
+            return upn.ToLower();
+        }
+
+        return null;
     }
 
     private LoginResultDto GerarDadosLogin(string mensagem, Usuario usuario)
