@@ -27,7 +27,8 @@ public class AuthController : ControllerBase
     [HttpPost("cadastrar")]
     public async Task<IActionResult> Cadastrar([FromBody] CadastrarUsuarioRequest request)
     {
-        var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email == request.Email);
+        var emailNormalizado = request.Email.Trim().ToLower();
+        var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == emailNormalizado);
         if (emailExiste)
         {
             return BadRequest(new { mensagem = "Este e-mail já está em uso no Caddie Research." });
@@ -37,8 +38,8 @@ public class AuthController : ControllerBase
 
         var novoUsuario = new Usuario
         {
-            Nome = request.Nome,
-            Email = request.Email,
+            Nome = request.Nome.Trim(),
+            Email = emailNormalizado,
             SenhaHash = _tokenService.HashPassword(request.Senha),
             TokenConfirmacaoEmail = tokenGerado
         };
@@ -46,13 +47,7 @@ public class AuthController : ControllerBase
         _context.Usuarios.Add(novoUsuario);
         await _context.SaveChangesAsync();
 
-        _context.Portfolios.Add(new Portfolio
-        {
-            UsuarioId = novoUsuario.Id,
-            Nome = "Portfólio Inicial",
-            DataInicio = DateTime.UtcNow
-        });
-        await _context.SaveChangesAsync();
+        await GarantirPortfolioInicialAsync(novoUsuario.Id);
 
         var emailCodificado = Uri.EscapeDataString(novoUsuario.Email);
         var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
@@ -65,7 +60,8 @@ public class AuthController : ControllerBase
     [HttpGet("confirmar-email")]
     public async Task<IActionResult> ConfirmarEmail([FromQuery] string email, [FromQuery] string token)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+        var emailNormalizado = email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
 
         if (usuario == null)
         {
@@ -92,15 +88,13 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var emailNormalizado = request.Email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
 
-       
         if (usuario == null)
         {
             return Unauthorized(new { mensagem = "E-mail ou senha incorretos." }); 
         }
-        
-        
 
         var senhaValida = _tokenService.VerifyPassword(request.Senha, usuario.SenhaHash);
         if (!senhaValida)
@@ -123,7 +117,8 @@ public class AuthController : ControllerBase
             { 
                 id = usuario.Id, 
                 nome = usuario.Nome, 
-                email = usuario.Email 
+                email = usuario.Email,
+                tipoPerfil = usuario.TipoPerfil
             }
         });
     }
@@ -148,14 +143,15 @@ public class AuthController : ControllerBase
             return BadRequest(new { mensagem = "Dados do Google inválidos." });
         }
 
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == googleUser.email);
+        var emailNormalizado = googleUser.email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
 
         if (usuario == null)
         {
             usuario = new Usuario
             {
-                Nome = googleUser.name,
-                Email = googleUser.email,
+                Nome = string.IsNullOrWhiteSpace(googleUser.name) ? emailNormalizado.Split('@')[0] : googleUser.name,
+                Email = emailNormalizado,
                 EmailConfirmado = true, 
                 SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "Caddie@2026!"), 
                 EhSocial = true
@@ -164,6 +160,15 @@ public class AuthController : ControllerBase
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
         }
+        else if (!usuario.EmailConfirmado)
+        {
+            // Account Linking: utilizador tinha criado conta por e-mail/senha mas ainda não tinha confirmado o e-mail
+            usuario.EmailConfirmado = true;
+            usuario.TokenConfirmacaoEmail = null;
+            await _context.SaveChangesAsync();
+        }
+
+        await GarantirPortfolioInicialAsync(usuario.Id);
 
         var tokenCaddie = _tokenService.GenerateToken(usuario);
 
@@ -175,7 +180,8 @@ public class AuthController : ControllerBase
             { 
                 id = usuario.Id, 
                 nome = usuario.Nome, 
-                email = usuario.Email 
+                email = usuario.Email,
+                tipoPerfil = usuario.TipoPerfil
             }
         });
     }
@@ -194,21 +200,20 @@ public class AuthController : ControllerBase
         }
 
         var msUser = await response.Content.ReadFromJsonAsync<MicrosoftUserInfo>();
-        
-        var emailDaMicrosoft = !string.IsNullOrEmpty(msUser?.mail) ? msUser.mail : msUser?.userPrincipalName;
+        var emailDaMicrosoft = ExtrairEmailMicrosoft(msUser);
 
         if (string.IsNullOrEmpty(emailDaMicrosoft))
         {
             return BadRequest(new { mensagem = "Não conseguimos ler o e-mail da sua conta Microsoft." });
         }
 
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == emailDaMicrosoft);
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailDaMicrosoft);
 
         if (usuario == null)
         {
             usuario = new Usuario
             {
-                Nome = msUser!.displayName,
+                Nome = !string.IsNullOrWhiteSpace(msUser?.displayName) ? msUser.displayName : emailDaMicrosoft.Split('@')[0],
                 Email = emailDaMicrosoft,
                 EmailConfirmado = true,
                 SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieMS@2026!"),
@@ -218,6 +223,14 @@ public class AuthController : ControllerBase
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
         }
+        else if (!usuario.EmailConfirmado)
+        {
+            usuario.EmailConfirmado = true;
+            usuario.TokenConfirmacaoEmail = null;
+            await _context.SaveChangesAsync();
+        }
+
+        await GarantirPortfolioInicialAsync(usuario.Id);
 
         var tokenCaddie = _tokenService.GenerateToken(usuario);
 
@@ -229,17 +242,104 @@ public class AuthController : ControllerBase
             { 
                 id = usuario.Id, 
                 nome = usuario.Nome, 
-                email = usuario.Email 
+                email = usuario.Email,
+                tipoPerfil = usuario.TipoPerfil
             }
         });
     }
 
-    
-    
+    [HttpPost("login-sso-corporativo")]
+    public async Task<IActionResult> LoginSsoCorporativo([FromBody] LoginMicrosoftRequest request)
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", request.Token);
+        
+        var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return BadRequest(new { mensagem = "Não foi possível validar a credencial corporativa no Microsoft Entra ID." });
+        }
+
+        var msUser = await response.Content.ReadFromJsonAsync<MicrosoftUserInfo>();
+        var emailCorporativo = ExtrairEmailMicrosoft(msUser);
+
+        if (string.IsNullOrEmpty(emailCorporativo))
+        {
+            return BadRequest(new { mensagem = "Não foi possível identificar o e-mail corporativo no diretório da Azure." });
+        }
+
+        // Lista opcional de e-mails ou domínios autorizados no appsettings.json para auto-provisionamento de Gestor
+        var emailsGestoresConfig = _configuration.GetSection("SsoCorporativo:EmailsAutorizados").Get<string[]>() ?? Array.Empty<string>();
+        var dominiosCorporativos = _configuration.GetSection("SsoCorporativo:DominiosAutorizados").Get<string[]>() ?? Array.Empty<string>();
+
+        bool autorizadoPorConfig = emailsGestoresConfig.Any(e => e.Equals(emailCorporativo, StringComparison.OrdinalIgnoreCase)) ||
+                                   dominiosCorporativos.Any(d => emailCorporativo.EndsWith($"@{d.TrimStart('@')}", StringComparison.OrdinalIgnoreCase));
+
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => 
+            u.Email.ToLower() == emailCorporativo || 
+            (!string.IsNullOrEmpty(msUser!.userPrincipalName) && u.Email.ToLower() == msUser.userPrincipalName.ToLower()));
+
+        if (usuario == null)
+        {
+            if (!autorizadoPorConfig)
+            {
+                return StatusCode(403, new { mensagem = $"Acesso negado: A conta '{emailCorporativo}' não pertence ao grupo de Gestores no Microsoft Entra ID." });
+            }
+
+            // Provisionamento automático (Just-In-Time) se estiver autorizado na configuração corporativa
+            usuario = new Usuario
+            {
+                Nome = !string.IsNullOrWhiteSpace(msUser?.displayName) ? msUser.displayName : "Gestor Caddie",
+                Email = emailCorporativo,
+                EmailConfirmado = true,
+                TipoPerfil = "Gestor",
+                Plano = "Gestor",
+                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieSSO@2026!"),
+                EhSocial = true
+            };
+
+            _context.Usuarios.Add(usuario);
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            bool ehGestorNoBanco = string.Equals(usuario.TipoPerfil, "Gestor", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(usuario.Plano, "Gestor", StringComparison.OrdinalIgnoreCase);
+
+            if (!ehGestorNoBanco && !autorizadoPorConfig)
+            {
+                return StatusCode(403, new { mensagem = "Acesso restrito: Este canal de Single Sign-On (SSO) é exclusivo para Gestores autorizados." });
+            }
+
+            // Garante que o perfil e a confirmação estejam atualizados para o Gestor
+            usuario.TipoPerfil = "Gestor";
+            usuario.EmailConfirmado = true;
+            usuario.TokenConfirmacaoEmail = null;
+            await _context.SaveChangesAsync();
+        }
+
+        var tokenCaddie = _tokenService.GenerateToken(usuario);
+
+        return Ok(new 
+        { 
+            mensagem = "Autenticação via SSO Corporativo realizada com sucesso!",
+            token = tokenCaddie,
+            usuario = new 
+            { 
+                id = usuario.Id, 
+                nome = usuario.Nome, 
+                email = usuario.Email,
+                tipoPerfil = usuario.TipoPerfil
+            }
+        });
+    }
+
     [HttpPost("esqueci-senha")]
     public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaRequest request)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var emailNormalizado = request.Email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
         
         if (usuario == null)
         {
@@ -261,7 +361,8 @@ public class AuthController : ControllerBase
     [HttpPost("redefinir-senha")]
     public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaRequest request)
     {
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var emailNormalizado = request.Email.Trim().ToLower();
+        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
         
         if (usuario == null) 
             return BadRequest(new { mensagem = "Usuário não encontrado." });
@@ -279,15 +380,60 @@ public class AuthController : ControllerBase
         }
 
         usuario.SenhaHash = _tokenService.HashPassword(request.NovaSenha); 
-        
         usuario.CodigoRecuperacao = null;
         usuario.DataExpiracaoCodigo = null;
 
         await _context.SaveChangesAsync();
 
         return Ok(new { mensagem = "Senha redefinida com sucesso!" });
+    }
+
+    private async Task GarantirPortfolioInicialAsync(int usuarioId)
+    {
+        var possuiPortfolio = await _context.Portfolios.AnyAsync(p => p.UsuarioId == usuarioId);
+        if (!possuiPortfolio)
+        {
+            _context.Portfolios.Add(new Portfolio
+            {
+                UsuarioId = usuarioId,
+                Nome = "Portfólio Inicial",
+                DataInicio = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
         }
     }
+
+    private static string? ExtrairEmailMicrosoft(MicrosoftUserInfo? msUser)
+    {
+        if (msUser == null) return null;
+
+        if (!string.IsNullOrWhiteSpace(msUser.mail))
+        {
+            return msUser.mail.Trim().ToLower();
+        }
+
+        if (!string.IsNullOrWhiteSpace(msUser.userPrincipalName))
+        {
+            var upn = msUser.userPrincipalName.Trim();
+
+            // Trata contas Microsoft Entra ID no formato nome_dominio.com#EXT#@tenant.onmicrosoft.com
+            var extIndex = upn.IndexOf("#EXT#@", StringComparison.OrdinalIgnoreCase);
+            if (extIndex > 0)
+            {
+                var prefixo = upn.Substring(0, extIndex);
+                var lastUnderscore = prefixo.LastIndexOf('_');
+                if (lastUnderscore > 0)
+                {
+                    return (prefixo.Substring(0, lastUnderscore) + "@" + prefixo.Substring(lastUnderscore + 1)).ToLower();
+                }
+            }
+
+            return upn.ToLower();
+        }
+
+        return null;
+    }
+}
 
 public class CadastrarUsuarioRequest
 {
