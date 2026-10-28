@@ -1,243 +1,88 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CaddieResearch.Models;
-using CaddieResearch.Api.Data;
-using System.Threading.Tasks;
-using System;
-using System.Linq;
 using System.Security.Claims;
-using CaddieResearch.Api.Services; 
-using Microsoft.AspNetCore.SignalR;
-using CaddieResearch.Api.Hubs;
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using CaddieResearch.Api.Models;
+using CaddieResearch.Api.DTOs.Ativos;
+using CaddieResearch.Api.Interfaces;
 
-namespace CaddieResearch.Controllers
+namespace CaddieResearch.Api.Controllers;
+
+/// <summary>
+/// Gerencia os ativos que compõem as carteiras recomendadas da plataforma.
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+public class AtivosController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AtivosController : ControllerBase
+    private readonly IAtivosService _ativosService;
+
+    public AtivosController(IAtivosService ativosService)
     {
-        private readonly AppDbContext _context;
-        private readonly AcoesService _acoesService;
-        private readonly IHubContext<NotificationHub> _hubContext; 
+        _ativosService = ativosService;
+    }
 
-        public AtivosController(AppDbContext context, AcoesService acoesService, IHubContext<NotificationHub> hubContext)
-        {
-            _context = context;
-            _acoesService = acoesService;
-            _hubContext = hubContext; 
-        }
+    private int ObterGestorId()
+    {
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(claim, out int id) ? id : 0;
+    }
 
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Gestor")]
-        public async Task<IActionResult> DeletarAtivo(int id)
-        {
-            var ativo = await _context.Ativos.FindAsync(id);
+    /// <summary>
+    /// Adiciona um novo ativo a uma carteira.
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = "Gestor")] 
+    [ProducesResponseType(typeof(AtivoResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CriarAtivo([FromBody] AtivoRequestDto dto) 
+    {
+        int gestorId = ObterGestorId();
+        var (sucesso, mensagem, ativo) = await _ativosService.CriarAtivoAsync(gestorId, dto);
+
+        if (!sucesso) return BadRequest(new { erro = mensagem });
+
+        // Retorna apenas o objeto do Ativo para o Swagger desenhar corretamente
+        return Ok(ativo); 
+    }
     
-            if (ativo == null)
-            {
-                return NotFound(new { mensagem = "Ativo não encontrado." });
-            }
+    /// <summary>
+    /// Atualiza os parâmetros de um ativo existente.
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Gestor")] 
+    [ProducesResponseType(typeof(AtivoResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AtualizarAtivo(int id, [FromBody] AtivoRequestDto dto) 
+    {
+        int gestorId = ObterGestorId();
+        var (sucesso, mensagem, ativo) = await _ativosService.AtualizarAtivoAsync(id, gestorId, dto);
 
-            int carteiraId = ativo.CarteiraId;
-            string ticker = ativo.Ticker;
-
-            var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(gestorIdStr, out int gestorId))
-            {
-                var log = new CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira
-                {
-                    CarteiraId = ativo.CarteiraId,
-                    GestorId = gestorId,
-                    Ticker = ativo.Ticker,
-                    NomeAtivo = ativo.NomeEmpresa ?? ativo.Ticker,
-                    Acao = "Excluiu",
-                    Vies = ativo.Vies,
-                    PrecoAlvo = ativo.PrecoTeto ?? 0,
-                    Justificativa = "Ativo removido da carteira pelo gestor.",
-                    DataRecomendacao = DateTime.UtcNow
-                };
-                _context.HistoricoRecomendacoesCarteiras.Add(log);
-            }
-
-            _context.Ativos.Remove(ativo);
-            await _context.SaveChangesAsync();
-
-            await DispararNotificacaoCarteiraAsync(
-                carteiraId, 
-                $"⚠️ Ativo Removido da Carteira", 
-                $"O ativo {ticker} encerrou sua tese e foi removido da carteira pelo Gestor."
-            );
-
-            return Ok(new { mensagem = "Ativo removido com sucesso!" });
-        }
-
-        [HttpPost]
-        [Authorize(Roles = "Gestor")] 
-        public async Task<IActionResult> CriarAtivo([FromBody] Ativo novoAtivo)
+        if (!sucesso)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            
-            var jaExiste = _context.Ativos.Any(a => a.Ticker == novoAtivo.Ticker && a.CarteiraId == novoAtivo.CarteiraId);
-            if (jaExiste) return BadRequest(new { mensagem = $"O ativo {novoAtivo.Ticker} já existe nesta carteira." });
-
-            if (string.IsNullOrWhiteSpace(novoAtivo.NomeEmpresa))
-            {
-                var dadosAtivo = await _acoesService.ObterCotacaoAsync(novoAtivo.Ticker);
-                novoAtivo.NomeEmpresa = (dadosAtivo != null && !string.IsNullOrWhiteSpace(dadosAtivo.Name)) 
-                                        ? dadosAtivo.Name : novoAtivo.Ticker;
-            }
-            
-            _context.Ativos.Add(novoAtivo);
-
-            var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(gestorIdStr, out int gestorId))
-            {
-                var log = new CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira
-                {
-                    CarteiraId = novoAtivo.CarteiraId,
-                    GestorId = gestorId,
-                    Ticker = novoAtivo.Ticker,
-                    NomeAtivo = novoAtivo.NomeEmpresa ?? novoAtivo.Ticker,
-                    Acao = "Adicionou",
-                    Vies = novoAtivo.Vies,
-                    PrecoAlvo = novoAtivo.PrecoTeto ?? 0,
-                    Justificativa = "Inclusão inicial na carteira.",
-                    DataRecomendacao = DateTime.UtcNow
-                };
-                _context.HistoricoRecomendacoesCarteiras.Add(log);
-            }
-
-            await _context.SaveChangesAsync();
-
-            await DispararNotificacaoCarteiraAsync(
-                novoAtivo.CarteiraId, 
-                $"🚨 Novo Ativo Adicionado", 
-                $"O Gestor adicionou {novoAtivo.Ticker} na carteira. Confira a tese de investimentos!"
-            );
-
-            return Ok(new { mensagem = "Recomendação publicada com sucesso!", ativo = novoAtivo });
-        }
-        
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Gestor")] 
-        public async Task<IActionResult> AtualizarAtivo(int id, [FromBody] Ativo ativoAtualizado)
-        {
-            var conflito = _context.Ativos.Any(a => a.Ticker == ativoAtualizado.Ticker && a.CarteiraId == ativoAtualizado.CarteiraId && a.Id != id);
-            if (conflito) return BadRequest(new { mensagem = "Já existe outro ativo com este ticker nesta carteira." });
-
-            var ativoBanco = await _context.Ativos.FindAsync(id);
-            if (ativoBanco == null) return NotFound();
-
-            if (ativoBanco.Vies != ativoAtualizado.Vies || ativoBanco.PrecoTeto != ativoAtualizado.PrecoTeto)
-            {
-                var gestorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (int.TryParse(gestorIdStr, out int gestorId))
-                {
-                    var log = new CaddieResearch.Api.Models.HistoricoRecomendacaoCarteira
-                    {
-                        CarteiraId = ativoAtualizado.CarteiraId,
-                        GestorId = gestorId,
-                        Ticker = ativoAtualizado.Ticker,
-                        NomeAtivo = ativoAtualizado.NomeEmpresa ?? ativoAtualizado.Ticker,
-                        Acao = "Atualizou",
-                        Vies = ativoAtualizado.Vies,
-                        PrecoAlvo = ativoAtualizado.PrecoTeto ?? 0,
-                        Justificativa = "Atualização estratégica de viés ou preço teto.",
-                        DataRecomendacao = DateTime.UtcNow
-                    };
-                    _context.HistoricoRecomendacoesCarteiras.Add(log);
-                }
-            }
-
-            ativoBanco.Ticker = ativoAtualizado.Ticker;
-            ativoBanco.PrecoTeto = ativoAtualizado.PrecoTeto;
-            ativoBanco.Vies = ativoAtualizado.Vies;
-            ativoBanco.NomeEmpresa = ativoAtualizado.NomeEmpresa; 
-            ativoBanco.Rentabilidade = ativoAtualizado.Rentabilidade;
-            ativoBanco.Vencimento = ativoAtualizado.Vencimento;
-            ativoBanco.Liquidez = ativoAtualizado.Liquidez;
-            ativoBanco.DataEntrada = ativoAtualizado.DataEntrada;
-            ativoBanco.Categoria = ativoAtualizado.Categoria;
-
-            await _context.SaveChangesAsync();
-
-            await DispararNotificacaoCarteiraAsync(
-                ativoAtualizado.CarteiraId, 
-                $"🔄 Recomendação Atualizada", 
-                $"O Gestor alterou os parâmetros e o racional do ativo {ativoAtualizado.Ticker}. Confira as mudanças."
-            );
-
-            return Ok(ativoBanco);
+            if (mensagem.Contains("não encontrado")) return NotFound(new { erro = mensagem });
+            return BadRequest(new { erro = mensagem });
         }
 
-        private async Task DispararNotificacaoCarteiraAsync(int carteiraId, string titulo, string mensagem)
-        {
-            try
-            {
-                var carteira = await _context.Carteiras.FindAsync(carteiraId);
-                if (carteira == null) return;
+        return Ok(ativo);
+    }
 
-                TimeZoneInfo fusoBrasilia;
-                try 
-                {
-                    fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time");
-                } 
-                catch 
-                {
-                    fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
-                }
-                DateTime horaBrasilia = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, fusoBrasilia);
+    /// <summary>
+    /// Remove um ativo de uma carteira recomendada.
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Gestor")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeletarAtivo(int id)
+    {
+        int gestorId = ObterGestorId();
+        var (sucesso, mensagem) = await _ativosService.DeletarAtivoAsync(id, gestorId);
 
-                var planosPermitidos = new List<string>();
+        if (!sucesso) return NotFound(new { erro = mensagem });
 
-                if (carteira.NivelAcesso <= 1) planosPermitidos.AddRange(new[] { "Basic", "Premium", "Black" });
-                else if (carteira.NivelAcesso <= 2) planosPermitidos.AddRange(new[] { "Premium", "Black" });
-                else planosPermitidos.Add("Black");
-
-                var usuariosAlvoIds = await _context.Usuarios
-                    .Where(u => u.TipoPerfil == "Gestor" || 
-                                _context.Assinaturas.Any(a => a.UsuarioId == u.Id 
-                                                           && a.Status == "Ativo" 
-                                                           && planosPermitidos.Contains(a.PlanoNome)))
-                    .Select(u => u.Id)
-                    .Distinct()
-                    .ToListAsync();
-
-                var novasNotificacoes = new List<Notificacao>();
-
-                foreach (var usuarioId in usuariosAlvoIds)
-                {
-                    novasNotificacoes.Add(new Notificacao
-                    {
-                        UsuarioId = usuarioId,
-                        Titulo = titulo,
-                        Mensagem = mensagem,
-                        Tipo = "Trade",
-                        LinkDestino = $"/carteiras/{carteira.Id}", 
-                        Lida = false,
-                        DataCriacao = horaBrasilia 
-                    });
-                }
-
-                if (novasNotificacoes.Any())
-                {
-                    _context.Notificacoes.AddRange(novasNotificacoes);
-                    await _context.SaveChangesAsync();
-
-                    foreach (var notif in novasNotificacoes)
-                    {
-                        await _hubContext.Clients.Group($"User_{notif.UsuarioId}")
-                                         .SendAsync("ReceberNotificacao", notif);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Erro ao disparar notificação centralizada: {ex.Message}");
-            }
-        }
+        return Ok(new { mensagem });
     }
 }

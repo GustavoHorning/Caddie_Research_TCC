@@ -1,132 +1,52 @@
-using CaddieResearch.Api.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Linq;
-using System.Threading.Tasks;
+using CaddieResearch.Api.Interfaces;
+using CaddieResearch.Api.DTOs.Busca;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Gerencia o motor de busca global e unificado da plataforma.
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class BuscasController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IBuscaService _buscaService;
 
-    public BuscasController(AppDbContext context)
+    public BuscasController(IBuscaService buscaService)
     {
-        _context = context;
+        _buscaService = buscaService;
     }
 
+    /// <summary>
+    /// Realiza uma pesquisa global em toda a plataforma.
+    /// </summary>
+    /// <remarks>
+    /// Varre o banco de dados procurando o termo informado em Ativos, Carteiras, Relatórios e Fórum.
+    /// Se o usuário estiver autenticado, a busca pode considerar preferências ou histórico pessoal para refinar os resultados.
+    /// </remarks>
+    /// <param name="termo">A palavra-chave ou termo a ser pesquisado. Exemplo: "Petrobras" ou "Dividendos"</param>
+    /// <response code="200">Resultados da busca agrupados por categoria.</response>
+    /// <response code="400">O parâmetro de busca está vazio ou inválido.</response>
     [HttpGet("global")]
+    [ProducesResponseType(typeof(List<BuscaGlobalResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> BuscarGlobal([FromQuery] string termo)
     {
         if (string.IsNullOrWhiteSpace(termo)) 
-            return BadRequest("O termo de busca não pode estar vazio.");
+            return BadRequest(new { erro = "O termo de busca não pode estar vazio." });
 
-        termo = termo.ToLower();
-
-        int nivelAcessoUsuario = 0; 
+        int usuarioId = 0;
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         if (!string.IsNullOrEmpty(userIdClaim))
         {
-            int usuarioId = int.Parse(userIdClaim);
-            var usuario = await _context.Usuarios
-                .Include(u => u.Assinaturas)
-                .FirstOrDefaultAsync(u => u.Id == usuarioId);
-
-            if (usuario != null)
-            {
-                if (usuario.TipoPerfil == "Gestor") nivelAcessoUsuario = 999; 
-                else
-                {
-                    var assinaturaAtiva = usuario.Assinaturas?.FirstOrDefault(a => a.Status == "Ativo");
-                    string plano = (!string.IsNullOrEmpty(usuario.Plano) ? usuario.Plano : assinaturaAtiva?.PlanoNome ?? "").ToLower();
-
-                    if (plano.Contains("black")) nivelAcessoUsuario = 3;
-                    else if (plano.Contains("premium")) nivelAcessoUsuario = 2;
-                    else if (plano.Contains("basic")) nivelAcessoUsuario = 1;
-                }
-            }
+            int.TryParse(userIdClaim, out usuarioId);
         }
 
-        // BUSCA EM RELATÓRIOS
-        var relatorios = await _context.Relatorios
-            .Include(r => r.Carteira)
-            .Where(r => 
-                r.Titulo.ToLower().Contains(termo) || 
-                r.Assunto.ToLower().Contains(termo) ||
-                (r.TagsAtivos != null && r.TagsAtivos.ToLower().Contains(termo)) || 
-                (nivelAcessoUsuario >= (r.Carteira != null ? r.Carteira.NivelAcesso : 1) && 
-                 (r.ConteudoTexto.ToLower().Contains(termo) || (r.ConteudoPdfTexto != null && r.ConteudoPdfTexto.ToLower().Contains(termo))))
-            )
-            .Select(r => new 
-            {
-                id = r.Id,
-                realId = r.Id,
-                tipo = "Relatório",
-                titulo = r.Titulo,
-                tags = new[] { r.Carteira != null ? r.Carteira.Nome : "Geral", r.Assunto },
-                dataPublicacao = r.DataPublicacao,
-                arquivoPdfUrl = r.ArquivoPdfUrl,
-                url = "/relatorios",
-                carteiraId = r.CarteiraId,
-                nivelExigido = r.Carteira != null ? r.Carteira.NivelAcesso : 1
-            })
-            .ToListAsync();
+        var resultados = await _buscaService.BuscarGlobalAsync(termo, usuarioId);
 
-        // BUSCA EM ATIVOS
-        var ativos = await _context.Ativos
-            .Include(a => a.Carteira)
-            .Where(a => 
-                a.Ticker.ToLower().Contains(termo) || 
-                (a.NomeEmpresa != null && a.NomeEmpresa.ToLower().Contains(termo))
-            )
-            .Select(a => new 
-            {
-                id = "ativo_" + a.Id, 
-                realId = a.Id,
-                tipo = a.Carteira != null && a.Carteira.Nome.ToLower().Contains("fii") ? "FII" : 
-                       a.Carteira != null && a.Carteira.Nome.ToLower().Contains("renda fixa") ? "Renda Fixa" : "Ação",
-                titulo = $"{a.Ticker} - {a.NomeEmpresa ?? "Bolsa B3"}",
-                tags = new[] { a.Carteira != null ? a.Carteira.Nome : "Geral", a.Categoria ?? "Aguardando" },
-                dataPublicacao = a.DataInclusao,
-                url = "/carteiras",
-                carteiraId = a.CarteiraId,
-                nivelExigido = a.Carteira != null ? a.Carteira.NivelAcesso : 1
-            })
-            .ToListAsync();
-
-        // BUSCA EM AUDITORIA (LOG IMUTÁVEL) - Correção da tradução do LINQ
-        var auditoriasBrutas = await _context.HistoricoRecomendacoesCarteiras
-            .Include(h => h.Carteira)
-            .Where(h => h.Ticker.ToLower().Contains(termo) || h.NomeAtivo.ToLower().Contains(termo))
-            .ToListAsync(); // Traz para a memória primeiro
-
-        var auditorias = auditoriasBrutas
-            .GroupBy(h => h.Ticker)
-            .Select(g => g.OrderByDescending(h => h.DataRecomendacao).First()) // Agrupa na memória do servidor
-            .Select(h => new
-            {
-                id = "auditoria_" + h.Id,
-                realId = h.Id,
-                tipo = "Auditoria",
-                titulo = $"Auditoria de Ativo: {h.Ticker}",
-                tags = new[] { "Auditoria", h.Carteira != null ? h.Carteira.Nome : "Log" },
-                dataPublicacao = h.DataRecomendacao,
-                arquivoPdfUrl = (string)null,
-                url = "/auditoria",
-                carteiraId = h.CarteiraId,
-                nivelExigido = h.Carteira != null ? h.Carteira.NivelAcesso : 1
-            })
-            .ToList();
-
-        var resultadosMisturados = relatorios.Cast<object>()
-            .Concat(ativos.Cast<object>())
-            .Concat(auditorias.Cast<object>())
-            .ToList();
-
-        return Ok(resultadosMisturados);
+        return Ok(resultados);
     }
 }

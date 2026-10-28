@@ -1,213 +1,133 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Services; 
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
+using CaddieResearch.Api.DTOs.Usuario;
+using CaddieResearch.Api.Interfaces;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Gerencia os dados do perfil, configurações de segurança e exclusão de contas.
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
 public class UsuarioController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly TokenService _tokenService;
-    private readonly BlobService _blobService; 
+    private readonly IUsuarioService _usuarioService;
 
-    public UsuarioController(AppDbContext context, TokenService tokenService, BlobService blobService)
+    public UsuarioController(IUsuarioService usuarioService)
     {
-        _context = context;
-        _tokenService = tokenService;
-        _blobService = blobService;
+        _usuarioService = usuarioService;
     }
 
+    private int ObterUsuarioLogadoId()
+    {
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(claim, out int id) ? id : 0;
+    }
+
+    /// <summary>
+    /// Retorna os dados completos do perfil do usuário, status do plano e data de vencimento.
+    /// </summary>
     [HttpGet("meu-perfil")]
+    [ProducesResponseType(typeof(UsuarioPerfilResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ObterPerfil()
     {
-        try
-        {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
-                return Unauthorized(new { mensagem = "Sessão inválida." });
+        int userId = ObterUsuarioLogadoId();
+        if (userId == 0) return Unauthorized(new UsuarioResponseDto { Mensagem = "Sessão inválida." });
 
-            var usuario = await _context.Usuarios
-                .Include(u => u.Assinaturas)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+        var perfil = await _usuarioService.ObterPerfilAsync(userId);
+        if (perfil == null) return NotFound(new UsuarioResponseDto { Mensagem = "Usuário não encontrado." });
 
-            if (usuario == null)
-                return NotFound(new { mensagem = "Usuário não encontrado." });
-
-            var assinaturaAtiva = usuario.Assinaturas?
-                .Where(a => a.Status == "Ativo" && a.DataVencimento > DateTime.UtcNow)
-                .OrderByDescending(a => a.DataVencimento)
-                .FirstOrDefault();
-
-            if (assinaturaAtiva == null && !string.IsNullOrEmpty(usuario.Plano))
-            {
-                usuario.Plano = null;
-
-                if (usuario.Assinaturas != null)
-                {
-                    foreach(var ass in usuario.Assinaturas.Where(a => a.Status == "Ativo"))
-                    {
-                        ass.Status = "Expirado";
-                    }
-                }
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new {
-                usuario.Nome,
-                usuario.Email,
-                usuario.TipoPerfil,
-                Plano = assinaturaAtiva?.PlanoNome, 
-                usuario.EhSocial,
-                usuario.FotoPerfilUrl,
-                dataVencimento = assinaturaAtiva != null ? assinaturaAtiva.DataVencimento.ToString("dd/MM/yyyy") : null
-            });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERRO PERFIL]: {ex.Message}");
-            return StatusCode(500, new { mensagem = "Erro interno no servidor.", detalhe = ex.Message });
-        }
+        return Ok(perfil);
     }
 
+    /// <summary>
+    /// Atualiza os dados básicos do perfil (Nome).
+    /// </summary>
     [HttpPut("atualizar")]
-    public async Task<IActionResult> AtualizarPerfil([FromBody] string novoNome)
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AtualizarPerfil([FromBody] AtualizarPerfilRequestDto dto) 
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+        int userId = ObterUsuarioLogadoId();
+        if (userId == 0) return Unauthorized();
 
-        var usuario = await _context.Usuarios.FindAsync(userId);
-        if (usuario == null) return NotFound();
+        var (sucesso, mensagem) = await _usuarioService.AtualizarPerfilAsync(userId, dto);
+        if (!sucesso) return BadRequest(new UsuarioResponseDto { Mensagem = mensagem });
 
-        usuario.Nome = novoNome;
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Perfil atualizado com sucesso!" });
+        return Ok(new UsuarioResponseDto { Mensagem = mensagem });
     }
 
+    /// <summary>
+    /// Altera a senha do usuário com base na senha anterior.
+    /// </summary>
     [HttpPut("alterar-senha")]
-    public async Task<IActionResult> AlterarSenha([FromBody] AlterarSenhaRequest request)
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AlterarSenha([FromBody] AlterarSenhaRequestDto request)
     {
-        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+        int userId = ObterUsuarioLogadoId();
+        if (userId == 0) return Unauthorized();
 
-        var usuario = await _context.Usuarios.FindAsync(userId);
-        if (usuario == null) return NotFound();
+        var (sucesso, mensagem) = await _usuarioService.AlterarSenhaAsync(userId, request);
+        if (!sucesso) return BadRequest(new UsuarioResponseDto { Mensagem = mensagem });
 
-        if (!_tokenService.VerifyPassword(request.SenhaAtual, usuario.SenhaHash))
-            return BadRequest(new { mensagem = "A senha atual está incorreta." });
-
-        if (_tokenService.VerifyPassword(request.NovaSenha, usuario.SenhaHash))
-            return BadRequest(new { mensagem = "A nova senha não pode ser igual à atual." });
-
-        usuario.SenhaHash = _tokenService.HashPassword(request.NovaSenha);
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Senha alterada com sucesso!" });
+        return Ok(new UsuarioResponseDto { Mensagem = mensagem });
     }
     
+    /// <summary>
+    /// Faz o upload de uma nova foto de perfil para o Azure Blob Storage.
+    /// </summary>
     [HttpPost("upload-foto")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UploadFoto([FromForm] IFormFile foto)
     {
-        try
-        {
-            if (foto == null || foto.Length == 0)
-                return BadRequest(new { mensagem = "Nenhuma imagem foi enviada." });
+        int userId = ObterUsuarioLogadoId();
+        if (userId == 0) return Unauthorized();
 
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+        var (sucesso, mensagem, url) = await _usuarioService.UploadFotoAsync(userId, foto);
+        if (!sucesso) return BadRequest(new UsuarioResponseDto { Mensagem = mensagem });
 
-            var usuario = await _context.Usuarios.FindAsync(userId);
-            if (usuario == null) return NotFound();
-
-            var urlImagem = await _blobService.UploadImagemAsync(foto, userIdString);
-
-            usuario.FotoPerfilUrl = urlImagem;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { url = urlImagem });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERRO UPLOAD]: {ex.Message}");
-            return StatusCode(500, new { mensagem = "Erro ao processar a imagem no servidor." });
-        }
+        return Ok(new UsuarioResponseDto { Url = url });
     }
     
+    /// <summary>
+    /// Remove a foto de perfil atual do usuário e a deleta do Storage.
+    /// </summary>
     [HttpDelete("remover-foto")]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RemoverFoto()
     {
-        try
-        {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+        int userId = ObterUsuarioLogadoId();
+        if (userId == 0) return Unauthorized();
 
-            var usuario = await _context.Usuarios.FindAsync(userId);
-            if (usuario == null) return NotFound();
+        var (sucesso, mensagem) = await _usuarioService.RemoverFotoAsync(userId);
+        if (!sucesso) return BadRequest(new UsuarioResponseDto { Mensagem = mensagem });
 
-            if (!string.IsNullOrEmpty(usuario.FotoPerfilUrl))
-            {
-                await _blobService.ExcluirImagemAsync(usuario.FotoPerfilUrl);
-                
-                usuario.FotoPerfilUrl = null;
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new { mensagem = "Foto removida com sucesso!" });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERRO REMOVER FOTO]: {ex.Message}");
-            return StatusCode(500, new { mensagem = "Erro ao remover a imagem do servidor." });
-        }
+        return Ok(new UsuarioResponseDto { Mensagem = mensagem });
     }
     
+    /// <summary>
+    /// Exclui permanentemente a conta do usuário e todos os arquivos associados a ele.
+    /// </summary>
     [HttpDelete("excluir-conta")]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UsuarioResponseDto), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ExcluirConta()
     {
-        try
-        {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdString, out int userId)) return Unauthorized();
+        int userId = ObterUsuarioLogadoId();
+        if (userId == 0) return Unauthorized();
 
-            var usuario = await _context.Usuarios.FindAsync(userId);
-            if (usuario == null) return NotFound();
+        var (sucesso, mensagem) = await _usuarioService.ExcluirContaAsync(userId);
+        if (!sucesso) return BadRequest(new UsuarioResponseDto { Mensagem = mensagem });
 
-            if (!string.IsNullOrEmpty(usuario.FotoPerfilUrl))
-            {
-                await _blobService.ExcluirImagemAsync(usuario.FotoPerfilUrl);
-            }
-
-            _context.Usuarios.Remove(usuario);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { mensagem = "Conta excluída com sucesso." });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERRO EXCLUIR CONTA]: {ex.Message}");
-            return StatusCode(500, new { mensagem = "Erro ao excluir conta." });
-        }
+        return Ok(new UsuarioResponseDto { Mensagem = mensagem });
     }
-}
-
-public class AlterarSenhaRequest
-{
-    [Required(ErrorMessage = "A senha atual é obrigatória.")]
-    public string SenhaAtual { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "A nova senha é obrigatória.")]
-    [MinLength(8, ErrorMessage = "A senha deve ter no mínimo 8 caracteres.")]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$", 
-        ErrorMessage = "A senha deve conter pelo menos 8 caracteres, uma letra maiúscula, uma minúscula, um número e um caractere especial.")]
-    public string NovaSenha { get; set; } = string.Empty;
 }

@@ -1,50 +1,30 @@
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
-using System.Collections.Generic;
+using CaddieResearch.Api.Data;
+using CaddieResearch.Api.Models;
+using CaddieResearch.Api.Interfaces;
+using CaddieResearch.Api.DTOs.Historico;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Consulta os logs de histórico, alterações de preço-teto e análises retroativas de ativos.
+/// </summary>
 [Route("api/historico-carteiras")]
 [ApiController]
 [Authorize]
 public class HistoricoCarteirasController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IAssinaturaService _assinaturaService; 
+    private readonly IHistoricoService _historicoService;   
 
-    public HistoricoCarteirasController(AppDbContext context)
+    public HistoricoCarteirasController(AppDbContext context, IAssinaturaService assinaturaService, IHistoricoService historicoService)
     {
         _context = context;
-    }
-
-    private int ObterNivelAcesso(Usuario usuario)
-    {
-        if (usuario.TipoPerfil == "Gestor") return 999;
-        
-        var assinaturaAtiva = usuario.Assinaturas?.FirstOrDefault(a => a.Status == "Ativo");
-        string plano = !string.IsNullOrEmpty(usuario.Plano) ? usuario.Plano.ToLower() : 
-                       (assinaturaAtiva != null ? assinaturaAtiva.PlanoNome.ToLower() : "");
-
-        if (plano.Contains("black")) return 3;
-        if (plano.Contains("premium")) return 2;
-        if (plano.Contains("basic")) return 1;
-        return 0;
-    }
-
-    private string ObterNomePlanoMinimo(int nivelExigido)
-    {
-        return nivelExigido switch
-        {
-            3 => "Black",
-            2 => "Premium",
-            _ => "Basic"
-        };
+        _assinaturaService = assinaturaService;
+        _historicoService = historicoService;
     }
 
     private int GetUsuarioId()
@@ -53,162 +33,67 @@ public class HistoricoCarteirasController : ControllerBase
         return int.TryParse(claim, out int id) ? id : 0;
     }
 
+    private bool EhGestor()
+    {
+        return User.FindFirst(ClaimTypes.Role)?.Value == "Gestor";
+    }
+
+    /// <summary>
+    /// Retorna o histórico de recomendações focado nos ativos de uma carteira específica.
+    /// </summary>
+    /// <remarks>Valida o acesso pelo paywall e agrupa o histórico por ativo, cruzando com os relatórios relacionados.</remarks>
     [HttpGet("{carteiraId}")]
+    [ProducesResponseType(typeof(List<HistoricoAtivoAgrupadoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HistoricoErrorDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetHistoricoCentradoNoAtivo(int carteiraId)
     {
-        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(idClaim, out int usuarioId)) return Unauthorized();
-
-        var usuario = await _context.Usuarios.Include(u => u.Assinaturas).FirstOrDefaultAsync(u => u.Id == usuarioId);
-        if (usuario == null) return Unauthorized();
+        int usuarioId = GetUsuarioId();
+        if (usuarioId == 0) return Unauthorized();
 
         var carteira = await _context.Carteiras.FindAsync(carteiraId);
         if (carteira == null) return NotFound();
 
-        int nivelAcesso = ObterNivelAcesso(usuario);
-        if (nivelAcesso < carteira.NivelAcesso && usuario.TipoPerfil != "Gestor") 
-            return StatusCode(403, new { mensagem = "Seu plano não permite visualizar o histórico desta carteira." });
+        bool isGestor = EhGestor();
+        int nivelAcesso = await _assinaturaService.ObterNivelAcessoAsync(usuarioId);
 
-        var historico = await _context.HistoricoRecomendacoesCarteiras
-            .Include(h => h.Gestor)
-            .Where(h => h.CarteiraId == carteiraId)
-            .OrderByDescending(h => h.DataRecomendacao)
-            .ToListAsync();
+        if (nivelAcesso < carteira.NivelAcesso && !isGestor) 
+            return StatusCode(403, new HistoricoErrorDto { Mensagem = "Seu plano não permite visualizar o histórico desta carteira." });
 
-        var relatorios = await _context.Relatorios
-            .Include(r => r.Carteira)
-            .OrderByDescending(r => r.DataPublicacao)
-            .Select(r => new { 
-                r.Id, 
-                r.Titulo, 
-                r.Assunto, 
-                r.DataPublicacao, 
-                r.TagsAtivos, 
-                r.CarteiraId,
-                NomeCarteira = r.Carteira != null ? r.Carteira.Nome : "Geral",
-                NivelExigido = r.Carteira != null ? r.Carteira.NivelAcesso : 1
-            })
-            .ToListAsync();
-
-        var resultado = historico.GroupBy(h => h.Ticker).Select(g => new {
-            Ticker = g.Key,
-            NomeAtivo = g.First().NomeAtivo,
-            Logs = g.Select(h => new {
-                h.Id, h.Acao, h.Vies, h.PrecoAlvo, h.Justificativa, 
-                h.DataRecomendacao, NomeGestor = h.Gestor!.Nome
-            }).ToList(),
-            RelatoriosRelacionados = relatorios
-                .Where(r => (r.TagsAtivos != null && r.TagsAtivos.ToUpper().Contains(g.Key.ToUpper())) || r.Titulo.ToUpper().Contains(g.Key.ToUpper()))
-                .Select(r => new {
-                    r.Id,
-                    r.Titulo,
-                    r.Assunto,
-                    r.DataPublicacao,
-                    r.NomeCarteira,
-                    Bloqueado = usuario.TipoPerfil != "Gestor" && nivelAcesso < r.NivelExigido,
-                    PlanoMinimo = ObterNomePlanoMinimo(r.NivelExigido)
-                })
-                .ToList()
-        }).ToList();
+        var resultado = await _historicoService.ObterHistoricoCentradoNoAtivoAsync(carteiraId, usuarioId, nivelAcesso, isGestor);
 
         return Ok(resultado);
     }
 
+    /// <summary>
+    /// Retorna a timeline completa de todos os ativos da plataforma.
+    /// </summary>
+    /// <remarks>Processa o histórico e omite dados de preço-alvo/viés de ativos bloqueados pelo plano atual do usuário.</remarks>
     [HttpGet]
+    [ProducesResponseType(typeof(List<HistoricoAtivoAgrupadoDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetHistoricoGlobal()
     {
-        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!int.TryParse(idClaim, out int usuarioId)) return Unauthorized();
+        int usuarioId = GetUsuarioId();
+        if (usuarioId == 0) return Unauthorized();
 
-        var usuario = await _context.Usuarios.Include(u => u.Assinaturas).FirstOrDefaultAsync(u => u.Id == usuarioId);
-        if (usuario == null) return Unauthorized();
+        bool isGestor = EhGestor();
+        int nivelAcesso = await _assinaturaService.ObterNivelAcessoAsync(usuarioId);
 
-        int nivelAcesso = ObterNivelAcesso(usuario);
-
-        var historico = await _context.HistoricoRecomendacoesCarteiras
-            .Include(h => h.Gestor)
-            .Include(h => h.Carteira)
-            .OrderByDescending(h => h.DataRecomendacao)
-            .ToListAsync();
-
-        var relatorios = await _context.Relatorios
-            .Include(r => r.Carteira)
-            .OrderByDescending(r => r.DataPublicacao)
-            .Select(r => new { 
-                r.Id, 
-                r.Titulo, 
-                r.Assunto, 
-                r.DataPublicacao, 
-                r.TagsAtivos, 
-                r.CarteiraId, 
-                NomeCarteira = r.Carteira != null ? r.Carteira.Nome : "Geral",
-                NivelExigido = r.Carteira != null ? r.Carteira.NivelAcesso : 1 
-            })
-            .ToListAsync();
-
-        var tickersNosLogs = historico.Select(h => h.Ticker.ToUpper().Trim());
-        var tickersNosRelatorios = relatorios
-            .Where(r => !string.IsNullOrWhiteSpace(r.TagsAtivos))
-            .SelectMany(r => r.TagsAtivos.Split(',', StringSplitOptions.RemoveEmptyEntries))
-            .Select(t => t.ToUpper().Trim());
-
-        var todosTickers = tickersNosLogs.Concat(tickersNosRelatorios).Distinct().ToList();
-
-        var resultado = todosTickers.Select(ticker => {
-            var logsDoTicker = historico.Where(h => h.Ticker.ToUpper().Trim() == ticker).ToList();
-            var relatoriosDoTicker = relatorios
-                .Where(r => (r.TagsAtivos != null && r.TagsAtivos.ToUpper().Split(',').Select(x => x.Trim()).Contains(ticker)) 
-                         || r.Titulo.ToUpper().Contains(ticker))
-                .Select(r => new {
-                    r.Id,
-                    r.Titulo,
-                    r.Assunto,
-                    r.DataPublicacao,
-                    r.NomeCarteira,
-                    Bloqueado = usuario.TipoPerfil != "Gestor" && nivelAcesso < r.NivelExigido,
-                    PlanoMinimo = ObterNomePlanoMinimo(r.NivelExigido)
-                })
-                .ToList();
-
-            var primeiroLog = logsDoTicker.FirstOrDefault();
-            int nivelExigidoAtivo = primeiroLog?.Carteira?.NivelAcesso ?? 1;
-            bool bloqueado = primeiroLog != null && usuario.TipoPerfil != "Gestor" && nivelAcesso < nivelExigidoAtivo;
-            string planoMinimo = ObterNomePlanoMinimo(nivelExigidoAtivo);
-
-            return new {
-                Ticker = ticker,
-                NomeAtivo = primeiroLog?.NomeAtivo ?? "Ativo Monitorado pela Research",
-                Bloqueado = bloqueado,
-                NivelExigido = nivelExigidoAtivo,
-                PlanoMinimo = planoMinimo,
-                Logs = logsDoTicker.Select(h => {
-                    int nivelCarteiraLog = h.Carteira?.NivelAcesso ?? 1;
-                    bool logBloqueado = usuario.TipoPerfil != "Gestor" && nivelAcesso < nivelCarteiraLog;
-                    return new {
-                        h.Id,
-                        h.Acao,
-                        Vies = logBloqueado ? "Restrito" : h.Vies,
-                        PrecoAlvo = logBloqueado ? 0m : h.PrecoAlvo,
-                        Justificativa = logBloqueado ? $"Conteúdo exclusivo para assinantes do plano {ObterNomePlanoMinimo(nivelCarteiraLog)}." : h.Justificativa,
-                        h.DataRecomendacao,
-                        NomeGestor = h.Gestor != null ? h.Gestor.Nome : "Gestor Caddie",
-                        NomeCarteira = h.Carteira != null ? h.Carteira.Nome : "Carteira",
-                        Bloqueado = logBloqueado,
-                        PlanoMinimo = ObterNomePlanoMinimo(nivelCarteiraLog)
-                    };
-                }).ToList(),
-                RelatoriosRelacionados = relatoriosDoTicker
-            };
-        }).ToList();
+        var resultado = await _historicoService.ObterHistoricoGlobalAsync(usuarioId, nivelAcesso, isGestor);
 
         return Ok(resultado);
     }
 
+    /// <summary>
+    /// Insere um novo log de recomendação na timeline de um ativo (Acesso Restrito: Gestor).
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = "Gestor")]
-    public async Task<IActionResult> CriarRegistro([FromBody] HistoricoRecomendacaoCarteira dto)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CriarRegistro([FromBody] CriarRegistroHistoricoDto dto) 
     {
-        var gestorId = GetUsuarioId();
+        int gestorId = GetUsuarioId();
         if (gestorId == 0) return Unauthorized();
 
         var novoRegistro = new HistoricoRecomendacaoCarteira
@@ -227,6 +112,7 @@ public class HistoricoCarteirasController : ControllerBase
         _context.HistoricoRecomendacoesCarteiras.Add(novoRegistro);
         await _context.SaveChangesAsync();
         
-        return Ok(novoRegistro);
+        // Retornar anônimo aqui na criação não quebra tanto o Scalar, mas o ideal seria mapear para o DTO
+        return Ok(new { Mensagem = "Registro criado com sucesso!", Id = novoRegistro.Id });
     }
 }

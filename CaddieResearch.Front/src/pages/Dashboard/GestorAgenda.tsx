@@ -11,7 +11,7 @@ export default function GestorAgenda() {
 
     const [modalAberto, setModalAberto] = useState(false);
     const [enviando, setEnviando] = useState(false);
-    const [eventoEditando, setEventoEditando] = useState<number | null>(null); 
+    const [eventoEditando, setEventoEditando] = useState<number | null>(null);
 
     const [form, setForm] = useState({
         titulo: '', data: '', hora: '', impacto: '2', linkExterno: '', descricao: ''
@@ -45,7 +45,7 @@ export default function GestorAgenda() {
         setForm({
             titulo: evento.titulo,
             data: evento.dataStr,
-            hora: evento.hora,    
+            hora: evento.hora,
             impacto: evento.impacto.toString(),
             linkExterno: evento.link || evento.linkExterno || '',
             descricao: evento.descricao || ''
@@ -82,7 +82,7 @@ export default function GestorAgenda() {
                 descricao: form.descricao,
                 linkExterno: form.linkExterno,
                 impacto: parseInt(form.impacto),
-                tipo: 'Caddie' 
+                tipo: 'Caddie'
             };
 
             if (eventoEditando) {
@@ -107,7 +107,7 @@ export default function GestorAgenda() {
 
         try {
             await api.delete(`/api/calendario/${eventoParaDeletar}`, configSeguranca);
-            mostrarNotificacao('Evento removido.', 'sucesso');
+            mostrarNotificacao('Evento removido com sucesso.', 'sucesso');
             setEventoParaDeletar(null);
             carregarEventos();
         } catch {
@@ -120,9 +120,6 @@ export default function GestorAgenda() {
         setTimeout(() => setToastMsg(''), 3000);
     };
 
-    const inpStyle: React.CSSProperties = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '9px 12px', color: '#e6edf3', fontSize: '0.9rem', outline: 'none' };
-    const selStyle: React.CSSProperties = { ...inpStyle, cursor: 'pointer' };
-
     return (
         <div className="dashboard-layout">
             <SidebarGestor activePath="/gestor/agenda" isOpen={menuMobileAberto} onClose={() => setMenuMobileAberto(false)} />
@@ -130,92 +127,88 @@ export default function GestorAgenda() {
             <TopBar userName="Gestor" onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} />
 
             <main className="dashboard-main">
-                <div className="gestor-content">
+                <div className="gestor-page">
 
-                    <div className="gestor-header-title">
-                        <h2>Agenda & Eventos da Caddie</h2>
-                        <p>Gerencie as lives, calls de rebalanceamento e publicações que aparecem no calendário dos clientes.</p>
-                    </div>
+                    <header className="gestor-hero">
+                        <div className="gestor-hero-left">
+                            <div className="gestor-kicker-row">
+                                <span className="gestor-kicker-badge">Comunicação e Cronograma</span>
+                            </div>
+                            <h1 className="gestor-title">Agenda & Eventos da Caddie</h1>
+                            <p className="gestor-subtitle">Gerencie as lives, calls de rebalanceamento e publicações que aparecem no calendário dos clientes.</p>
+                        </div>
+                    </header>
 
-                    <div className="gestor-card">
-                        <div className="gestor-ativos-header" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: '16px' }}>
-                            <div></div>
-                            <button className="gestor-btn-novo-ativo" onClick={abrirModalNovo}>
+                    <div className="gestor-panel">
+                        <div className="gestor-toolbar">
+                            <div className="gestor-toolbar-left"></div>
+                            <button className="gestor-btn gestor-btn-primary" onClick={abrirModalNovo}>
                                 + Novo Evento
                             </button>
                         </div>
 
-                        <div className="gestor-tabela-wrapper">
-                            <table className="gestor-tabela">
+                        <div className="gestor-table-container">
+                            <table className="gestor-table">
                                 <thead>
                                 <tr>
                                     <th>Data / Hora</th>
                                     <th>Título do Evento</th>
-                                    <th className="td-center">Impacto</th>
-                                    <th>Link</th>
-                                    <th className="td-center">Ações</th>
+                                    <th className="align-center">Impacto / Relevância</th>
+                                    <th>Link da Transmissão</th>
+                                    <th className="align-center">Ações</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {carregando ? (
-                                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#8b949e' }}>Carregando eventos...</td></tr>
+                                    <tr><td colSpan={5} className="gestor-empty-row">Sincronizando eventos da agenda...</td></tr>
                                 ) : eventos.length > 0 ? (
                                     eventos.map(evento => (
                                         <tr key={evento.id}>
-                                            <td>
-                                                <div style={{ color: '#e6edf3', fontWeight: 500 }}>{evento.dataStr.split('-').reverse().join('/')}</div>
-                                                <div style={{ fontSize: '11px', color: '#8b949e', marginTop: '2px' }}>às {evento.hora}</div>
+                                            <td data-label="Data / Hora">
+                                                <div className="gestor-secondary-cell">
+                                                    <strong>{evento.dataStr.split('-').reverse().join('/')}</strong>
+                                                    <span>às {evento.hora}</span>
+                                                </div>
                                             </td>
-                                            <td>
-                                                <strong style={{ color: '#00B4D8' }}>{evento.titulo}</strong>
-                                                {evento.descricao && <div style={{ fontSize: '12px', color: '#8b949e', marginTop: '4px' }}>{evento.descricao}</div>}
+                                            <td data-label="Título">
+                                                <div className="gestor-secondary-cell">
+                                                    <strong className="text-cyan">{evento.titulo}</strong>
+                                                    {evento.descricao && <span>{evento.descricao}</span>}
+                                                </div>
                                             </td>
-                                            <td className="td-center">
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'rgba(255,255,255,0.05)' }}>
-                                                    {evento.impacto} Estrela{evento.impacto > 1 && 's'}
-                                                </span>
+                                            <td className="align-center" data-label="Impacto">
+                                                <div style={{ display: 'inline-flex', gap: '3px', alignItems: 'flex-end', height: '14px' }} title={`Relevância: ${evento.impacto}`}>
+                                                    <span style={{ width: '5px', height: '6px', borderRadius: '1px', background: evento.impacto >= 1 ? 'var(--g-cyan)' : 'var(--g-border-strong)' }}></span>
+                                                    <span style={{ width: '5px', height: '10px', borderRadius: '1px', background: evento.impacto >= 2 ? 'var(--g-cyan)' : 'var(--g-border-strong)' }}></span>
+                                                    <span style={{ width: '5px', height: '14px', borderRadius: '1px', background: evento.impacto >= 3 ? 'var(--g-cyan)' : 'var(--g-border-strong)' }}></span>
+                                                </div>
                                             </td>
-                                            <td>
-                                                {evento.link ? (
-                                                    <a href={evento.link} target="_blank" rel="noopener noreferrer" style={{ color: '#58a6ff', fontSize: '0.85rem', textDecoration: 'none' }}>Acessar Link ↗</a>
-                                                ) : '---'}
+                                            <td data-label="Link">
+                                                {evento.link || evento.linkExterno ? (
+                                                    <a href={evento.link || evento.linkExterno} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g-cyan)', fontSize: '0.85rem', textDecoration: 'none', fontWeight: 600 }}>Acessar Sala ↗</a>
+                                                ) : <span className="gestor-muted">---</span>}
                                             </td>
-                                            <td className="td-center">
-                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                                    {/* BOTÃO DE EDITAR (LÁPIS) */}
-                                                    <button
-                                                        className="btn-acao-svg btn-editar"
-                                                        onClick={() => abrirModalEdicao(evento)}
-                                                        title="Editar Evento"
-                                                        style={{ background: 'transparent', border: 'none', color: '#8b949e', cursor: 'pointer', transition: 'color 0.2s' }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.color = '#8b949e'}
-                                                    >
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                        </svg>
+                                            <td className="align-center" data-label="Ações">
+                                                <div className="gestor-actions-cell">
+                                                    <button className="gestor-icon-btn edit" onClick={() => abrirModalEdicao(evento)} title="Editar Evento">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                     </button>
-
-                                                    <button
-                                                        className="btn-acao-svg btn-remover"
-                                                        onClick={() => setEventoParaDeletar(evento.id)}
-                                                        title="Remover Evento"
-                                                        style={{ background: 'transparent', border: 'none', color: '#8b949e', cursor: 'pointer', transition: 'color 0.2s' }}
-                                                        onMouseEnter={(e) => e.currentTarget.style.color = '#ff6b6b'}
-                                                        onMouseLeave={(e) => e.currentTarget.style.color = '#8b949e'}
-                                                    >
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                        </svg>
+                                                    <button className="gestor-icon-btn delete" onClick={() => setEventoParaDeletar(evento.id)} title="Remover Evento">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#8b949e' }}>Nenhum evento da Caddie programado.</td></tr>
+                                    <tr>
+                                        <td colSpan={5} className="gestor-empty-row">
+                                            <div className="gestor-empty-box">
+                                                <strong>Nenhum evento programado.</strong>
+                                                <span>Clique em "+ Novo Evento" para agendar a sua próxima Live.</span>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 )}
                                 </tbody>
                             </table>
@@ -224,89 +217,111 @@ export default function GestorAgenda() {
 
                 </div>
 
+                {/* MODAL DE CADASTRO DE EVENTO */}
                 {modalAberto && (
-                    <div className="gestor-modal-overlay" onClick={fecharModal}>
-                        <div className="gestor-modal-box" style={{ width: 500, maxWidth: '95vw', background: '#161b22', borderRadius: 16, padding: 28, display: 'flex', flexDirection: 'column', gap: 14 }} onClick={e => e.stopPropagation()}>
-                            <h3 style={{ margin: 0, color: '#e6edf3', fontSize: '1.05rem' }}>
-                                📅 {eventoEditando ? 'Editar Evento Caddie' : 'Novo Evento Caddie'}
-                            </h3>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                {[
-                                    { label: 'Título do Evento', col: '1/-1', el: <input style={inpStyle} type="text" placeholder="Ex: Live de Rebalanceamento" value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))} /> },
-                                    { label: 'Data', el: <input style={inpStyle} type="date" value={form.data} onChange={e => setForm(p => ({ ...p, data: e.target.value }))} /> },
-                                    { label: 'Hora (Ex: 19:00)',
-                                        el: <input
-                                            style={inpStyle}
-                                            type="text"
-                                            maxLength={5}
-                                            placeholder="19:00"
-                                            value={form.hora}
-                                            onChange={e => {
-                                                let valor = e.target.value.replace(/\D/g, '');
-                                                if (valor.length > 4) valor = valor.slice(0, 4);
-
-                                                if (valor.length > 2) {
-                                                    valor = valor.slice(0, 2) + ':' + valor.slice(2);
-                                                }
-
-                                                setForm(p => ({ ...p, hora: valor }));
-                                            }}
-                                        /> },
-                                    { label: 'Impacto (1 a 3)', el: <select style={selStyle} value={form.impacto} onChange={e => setForm(p => ({ ...p, impacto: e.target.value }))}>
-                                            <option value="1" style={{ background: '#161b22', color: '#e6edf3' }}>Baixo (1)</option>
-                                            <option value="2" style={{ background: '#161b22', color: '#e6edf3' }}>Médio (2)</option>
-                                            <option value="3" style={{ background: '#161b22', color: '#e6edf3' }}>Alto (3)</option>
-                                        </select> },
-                                    { label: 'Link (YouTube/Zoom/PDF)', col: '1/-1', el: <input style={inpStyle} type="text" placeholder="https://..." value={form.linkExterno} onChange={e => setForm(p => ({ ...p, linkExterno: e.target.value }))} /> },
-                                    { label: 'Descrição (opcional)', col: '1/-1', el: <input style={inpStyle} type="text" placeholder="Breve resumo..." value={form.descricao} onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))} /> },
-                                ].map(({ label, col, el }) => (
-                                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: col }}>
-                                        <label style={{ fontSize: '0.8rem', color: '#8b949e' }}>{label}</label>
-                                        {el}
-                                    </div>
-                                ))}
+                    <div className="gestor-modal-backdrop" onClick={fecharModal}>
+                        <div className="gestor-modal-dialog" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+                            <div className="gestor-modal-header">
+                                <div>
+                                    <span className="gestor-modal-kicker">Gestão de Cronograma</span>
+                                    <h3>{eventoEditando ? 'Editar Agendamento' : 'Programar Novo Evento'}</h3>
+                                </div>
+                                <button className="gestor-modal-close" onClick={fecharModal}>✕</button>
                             </div>
 
-                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 10 }}>
-                                <button className="gestor-btn-novo-ativo" onClick={salvarEvento} disabled={enviando}>
-                                    {enviando ? 'Salvando...' : eventoEditando ? 'Salvar Alterações' : 'Publicar Evento'}
+                            <div className="gestor-modal-body" style={{ gridTemplateColumns: '1fr', padding: '24px 32px' }}>
+                                <div className="gestor-form-column">
+                                    <div className="gestor-field-row">
+                                        <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                            <label>Título do Evento</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ex: Live de Rebalanceamento"
+                                                value={form.titulo}
+                                                onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="gestor-field-row">
+                                        <div className="gestor-field">
+                                            <label>Data</label>
+                                            <input
+                                                type="date"
+                                                value={form.data}
+                                                onChange={e => setForm(p => ({ ...p, data: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="gestor-field">
+                                            <label>Hora (Ex: 19:00)</label>
+                                            <input
+                                                type="text"
+                                                maxLength={5}
+                                                placeholder="19:00"
+                                                value={form.hora}
+                                                onChange={e => {
+                                                    let valor = e.target.value.replace(/\D/g, '');
+                                                    if (valor.length > 4) valor = valor.slice(0, 4);
+                                                    if (valor.length > 2) valor = valor.slice(0, 2) + ':' + valor.slice(2);
+                                                    setForm(p => ({ ...p, hora: valor }));
+                                                }}
+                                            />
+                                        </div>
+                                        <div className="gestor-field">
+                                            <label>Impacto / Grau (1 a 3)</label>
+                                            <select value={form.impacto} onChange={e => setForm(p => ({ ...p, impacto: e.target.value }))}>
+                                                <option value="1">Baixo (1)</option>
+                                                <option value="2">Médio (2)</option>
+                                                <option value="3">Alto (3)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="gestor-field-row">
+                                        <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                            <label>Link (YouTube / Zoom)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="https://..."
+                                                value={form.linkExterno}
+                                                onChange={e => setForm(p => ({ ...p, linkExterno: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="gestor-field-row">
+                                        <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                            <label>Descrição Opcional</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Breve resumo..."
+                                                value={form.descricao}
+                                                onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="gestor-modal-footer">
+                                <button className="gestor-btn gestor-btn-outline" onClick={fecharModal} disabled={enviando}>Cancelar</button>
+                                <button className="gestor-btn gestor-btn-primary" onClick={salvarEvento} disabled={enviando}>
+                                    {enviando ? 'A guardar...' : (eventoEditando ? 'Salvar Alterações' : 'Publicar Evento')}
                                 </button>
-                                <button className="gestor-btn-cancelar" onClick={fecharModal}>Cancelar</button>
                             </div>
                         </div>
                     </div>
                 )}
 
+                {/* MODAL DE EXCLUSÃO DE EVENTO */}
                 {eventoParaDeletar !== null && (
-                    <div className="gestor-modal-overlay" onClick={() => setEventoParaDeletar(null)}>
-                        <div className="gestor-modal-box" style={{ width: 400, maxWidth: '90vw', background: '#161b22', borderRadius: 16, padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                            <div style={{ background: 'rgba(218, 54, 51, 0.1)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#da3633" strokeWidth="2">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
+                    <div className="gestor-modal-backdrop" onClick={() => setEventoParaDeletar(null)}>
+                        <div className="gestor-confirm-box" onClick={e => e.stopPropagation()}>
+                            <div className="gestor-confirm-icon">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </div>
-                            <h3 style={{ margin: 0, color: '#e6edf3', fontSize: '1.2rem' }}>Excluir Evento</h3>
-                            <p style={{ margin: 0, color: '#8b949e', fontSize: '0.95rem', lineHeight: '1.5' }}>
-                                Tem certeza que deseja remover este evento da agenda? Esta ação não poderá ser desfeita.
-                            </p>
-                            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12 }}>
-                                <button
-                                    className="gestor-btn-cancelar"
-                                    onClick={() => setEventoParaDeletar(null)}
-                                    style={{ flex: 1, padding: '10px 0' }}
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={deletarEvento}
-                                    style={{ flex: 1, background: '#da3633', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 0', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = '#b32624'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = '#da3633'}
-                                >
-                                    Sim, excluir
-                                </button>
+                            <h3>Cancelar Evento</h3>
+                            <p>Tem a certeza de que deseja apagar este evento da agenda? O link deixará de estar disponível aos clientes.</p>
+                            <div className="gestor-confirm-actions">
+                                <button className="gestor-btn gestor-btn-outline" onClick={() => setEventoParaDeletar(null)}>Manter Evento</button>
+                                <button className="gestor-btn gestor-btn-danger" onClick={deletarEvento}>Sim, excluir</button>
                             </div>
                         </div>
                     </div>

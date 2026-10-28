@@ -2,9 +2,7 @@ import { useState } from 'react';
 import api from '../../services/api';
 import SidebarGestor from '../../components/SidebarGestor';
 import TopBar from '../../components/TopBar';
-import '../../components/DashboardLayout.css';
 import './Gestor/PainelGestor.css';
-import './MorningCall.css';
 
 interface Topico {
     titulo: string;
@@ -18,7 +16,7 @@ function novoTopico(): Topico {
     return { titulo: '', texto: '', link: '', imagemUrl: '', imagemArquivo: null };
 }
 
-function MorningCallGestor() {
+export default function MorningCallGestor() {
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
     const [titulo, setTitulo] = useState('');
@@ -27,9 +25,18 @@ function MorningCallGestor() {
     const [audioArquivo, setAudioArquivo] = useState<File | null>(null);
     const [audioPreview, setAudioPreview] = useState('');
     const [enviando, setEnviando] = useState(false);
-    const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
+
+    // Usando o sistema de Toast institucional
+    const [toastMsg, setToastMsg] = useState('');
+    const [toastTipo, setToastTipo] = useState<'sucesso' | 'erro'>('sucesso');
 
     const configSeguranca = { headers: { Authorization: `Bearer ${localStorage.getItem('caddie_token')}` } };
+
+    const mostrarNotificacao = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
+        setToastMsg(msg);
+        setToastTipo(tipo);
+        setTimeout(() => setToastMsg(''), 3000);
+    };
 
     function adicionarTopico() {
         setTopicos([...topicos, novoTopico()]);
@@ -45,7 +52,6 @@ function MorningCallGestor() {
         setTopicos(novos);
     }
 
-    // Quando o gestor escolhe um arquivo de imagem no PC dele
     function handleImagemArquivo(index: number, event: React.ChangeEvent<HTMLInputElement>) {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -53,15 +59,14 @@ function MorningCallGestor() {
         const previewUrl = URL.createObjectURL(file);
         const novos = [...topicos];
         novos[index].imagemArquivo = file;
-        novos[index].imagemUrl = previewUrl; // usamos o mesmo campo para exibir o preview
+        novos[index].imagemUrl = previewUrl;
         setTopicos(novos);
     }
 
-    // Quando o gestor cola uma URL de imagem em vez de fazer upload
     function handleImagemUrl(index: number, valor: string) {
         const novos = [...topicos];
         novos[index].imagemUrl = valor;
-        novos[index].imagemArquivo = null; // se digitou uma URL, descarta o arquivo escolhido antes
+        novos[index].imagemArquivo = null;
         setTopicos(novos);
     }
 
@@ -78,7 +83,7 @@ function MorningCallGestor() {
         if (!file) return;
 
         if (file.size > 25 * 1024 * 1024) {
-            setMensagem({ texto: 'O áudio deve ter no máximo 25 MB.', tipo: 'erro' });
+            mostrarNotificacao('O áudio deve ter no máximo 25 MB.', 'erro');
             return;
         }
 
@@ -102,23 +107,18 @@ function MorningCallGestor() {
 
     async function publicar() {
         if (!titulo.trim()) {
-            setMensagem({ texto: 'Preencha o título do Morning Call.', tipo: 'erro' });
-            return;
+            return mostrarNotificacao('Preencha o título do Morning Call.', 'erro');
         }
         if (topicos.some(t => !t.titulo.trim() || !t.texto.trim())) {
-            setMensagem({ texto: 'Preencha título e texto em todos os tópicos.', tipo: 'erro' });
-            return;
+            return mostrarNotificacao('Preencha título e texto em todos os tópicos.', 'erro');
         }
 
         setEnviando(true);
-        setMensagem(null);
 
-        // Monta os dados dos tópicos (sem os arquivos, que vão separados no FormData)
         const topicosParaEnviar = topicos.map(t => ({
             titulo: t.titulo,
             texto: t.texto,
             link: t.link,
-            // Se o gestor colou uma URL (não escolheu arquivo), manda ela aqui
             imagemUrlExistente: t.imagemArquivo ? null : (t.imagemUrl || null),
         }));
 
@@ -127,8 +127,6 @@ function MorningCallGestor() {
         formData.append('data', data);
         formData.append('topicosJson', JSON.stringify(topicosParaEnviar));
 
-        // Cada imagem vai num campo próprio (imagem_0, imagem_1...) — o número é o
-        // índice do tópico correspondente. Tópicos sem upload simplesmente não geram campo.
         topicos.forEach((t, i) => {
             if (t.imagemArquivo) {
                 formData.append(`imagem_${i}`, t.imagemArquivo);
@@ -141,12 +139,12 @@ function MorningCallGestor() {
 
         try {
             await api.post('/api/morningcall', formData, configSeguranca);
-            setMensagem({ texto: 'Morning Call publicado com sucesso!', tipo: 'sucesso' });
+            mostrarNotificacao('Morning Call publicado com sucesso!', 'sucesso');
             limparFormulario();
         } catch (error) {
             console.error('Erro ao publicar Morning Call', error);
             const erroApi = (error as { response?: { data?: { erro?: string } } }).response?.data?.erro;
-            setMensagem({ texto: erroApi || 'Ocorreu um erro ao publicar o Morning Call.', tipo: 'erro' });
+            mostrarNotificacao(erroApi || 'Ocorreu um erro ao publicar o Morning Call.', 'erro');
         } finally {
             setEnviando(false);
         }
@@ -160,159 +158,189 @@ function MorningCallGestor() {
             <TopBar userName="Gestor" onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} />
 
             <main className="dashboard-main">
-                <div className="gestor-content">
-                    <div className="gestor-header-title" style={{ textAlign: 'center' }}>
-                        <h2>Publicar Morning Call</h2>
-                        <p>Monte o resumo do dia para seus clientes</p>
-                    </div>
+                <div className="gestor-page">
 
-                    <div className="gestor-card" style={{ marginTop: '32px', maxWidth: '720px', marginLeft: 'auto', marginRight: 'auto' }}>
-                        <div className="mc-page" style={{ background: 'transparent', padding: 0, minHeight: 'auto', marginTop: 0, paddingTop: 0 }}>
-                            <div className="mc-container" style={{ maxWidth: 'none', margin: 0 }}>
-                                {mensagem && (
-                                    <div className={`mc-mensagem mc-mensagem-${mensagem.tipo}`}>
-                                        {mensagem.texto}
+                    <header className="gestor-hero">
+                        <div className="gestor-hero-left">
+                            <div className="gestor-kicker-row">
+                                <span className="gestor-kicker-badge">Produção de Conteúdo Diário</span>
+                            </div>
+                            <h1 className="gestor-title">Publicar Morning Call</h1>
+                            <p className="gestor-subtitle">Monte o resumo do dia para os seus clientes. Adicione tópicos, imagens e áudio de acompanhamento.</p>
+                        </div>
+                    </header>
+
+                    <section className="gestor-panel" style={{ maxWidth: '850px', margin: '0 auto', border: '1px solid var(--g-border-strong)' }}>
+                        <div className="gestor-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '36px', gridTemplateColumns: '1fr' }}>
+
+                            {/* DADOS GERAIS */}
+                            <div className="gestor-form-column">
+                                <div className="gestor-preview-title" style={{ marginBottom: '8px' }}>Configurações da Edição</div>
+
+                                <div className="gestor-field-row">
+                                    <div className="gestor-field" style={{ flex: 1 }}>
+                                        <label>Data de Publicação</label>
+                                        <input
+                                            type="date"
+                                            value={data}
+                                            onChange={e => setData(e.target.value)}
+                                        />
                                     </div>
-                                )}
-
-                                <div className="mc-field">
-                                    <label>Data</label>
-                                    <input
-                                        type="date"
-                                        value={data}
-                                        onChange={e => setData(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="mc-field">
-                                    <label>Título do Morning Call</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ex: Resumo do mercado — 25 de agosto"
-                                        value={titulo}
-                                        onChange={e => setTitulo(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="mc-field">
-                                    <label>Áudio do Morning Call (opcional)</label>
-                                    <div className="mc-imagem-field">
-                                        {audioArquivo ? (
-                                            <>
-                                                <div className="mc-audio-nome">🎧 {audioArquivo.name}</div>
-                                                <audio className="mc-audio-preview" src={audioPreview} controls />
-                                                <button type="button" className="mc-imagem-remover" onClick={removerAudio}>
-                                                    ✖ Remover áudio
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <label className="mc-imagem-upload">
-                                                <span>🎧 Clique para enviar um áudio (.mp4, .m4a ou .mp3 — até 25 MB)</span>
-                                                <input
-                                                    type="file"
-                                                    accept=".mp4,.m4a,.mp3,audio/mp4,audio/mpeg,video/mp4"
-                                                    style={{ display: 'none' }}
-                                                    onChange={handleAudioArquivo}
-                                                />
-                                            </label>
-                                        )}
+                                    <div className="gestor-field" style={{ flex: 3 }}>
+                                        <label>Título do Morning Call (Headline Principal)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Ex: Resumo do mercado — 25 de agosto"
+                                            value={titulo}
+                                            onChange={e => setTitulo(e.target.value)}
+                                        />
                                     </div>
                                 </div>
 
-                                <div className="mc-divider"></div>
-                                <div className="mc-section-label">Tópicos de notícia</div>
-
-                                {topicos.map((topico, index) => (
-                                    <div className="mc-topico" key={index}>
-                                        <div className="mc-topico-head">
-                                            <span>Tópico {index + 1}</span>
-                                            {topicos.length > 1 && (
-                                                <button className="mc-remove" onClick={() => removerTopico(index)}>
-                                                    Remover
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* ---------- Imagem da notícia (upload ou URL) ---------- */}
-                                        <div className="mc-imagem-field">
-                                            {topico.imagemUrl ? (
-                                                <div className="mc-imagem-preview-wrap">
-                                                    <img
-                                                        src={topico.imagemUrl}
-                                                        alt="Prévia da imagem da notícia"
-                                                        className="mc-imagem-preview"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        className="mc-imagem-remover"
-                                                        onClick={() => removerImagem(index)}
-                                                    >
-                                                        ✖ Remover imagem
+                                <div className="gestor-field-row">
+                                    <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                        <label>Áudio do Analista (Formato Podcast)</label>
+                                        <div style={{ border: '2px dashed var(--g-border-strong)', padding: '24px', textAlign: 'center', borderRadius: '12px', background: 'var(--g-bg-input)' }}>
+                                            {audioArquivo ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                                    <span style={{ fontSize: '0.9rem', color: 'var(--g-text-main)', fontWeight: 600 }}>🎧 {audioArquivo.name}</span>
+                                                    <audio src={audioPreview} controls style={{ height: '36px', outline: 'none' }} />
+                                                    <button type="button" onClick={removerAudio} style={{ background: 'transparent', border: 'none', color: 'var(--g-rose)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
+                                                        ✕ Remover Faixa
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <label className="mc-imagem-upload">
-                                                    <span>🖼️ Clique para enviar uma imagem</span>
+                                                <>
                                                     <input
                                                         type="file"
-                                                        accept="image/png, image/jpeg, image/webp"
-                                                        style={{ display: 'none' }}
-                                                        onChange={e => handleImagemArquivo(index, e)}
+                                                        accept=".mp4,.m4a,.mp3,audio/mp4,audio/mpeg,video/mp4"
+                                                        onChange={handleAudioArquivo}
+                                                        style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--g-text-secondary)' }}
                                                     />
-                                                </label>
+                                                    <span style={{ display: 'block', marginTop: '8px', fontSize: '0.75rem', color: 'var(--g-text-muted)' }}>Formatos Suportados: .mp3, .m4a (Até 25MB)</span>
+                                                </>
                                             )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                                            <div className="mc-imagem-ou">ou</div>
+                            <hr style={{ border: 'none', borderTop: '1px solid var(--g-border)', margin: 0 }} />
 
-                                            <input
-                                                type="text"
-                                                placeholder="Colar URL de uma imagem (https://...)"
-                                                value={topico.imagemArquivo ? '' : topico.imagemUrl}
-                                                onChange={e => handleImagemUrl(index, e.target.value)}
-                                                disabled={!!topico.imagemArquivo}
-                                            />
+                            {/* TÓPICOS DE NOTÍCIA */}
+                            <div className="gestor-form-column">
+                                <div className="gestor-preview-title" style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Tópicos & Notícias</span>
+                                </div>
+
+                                {topicos.map((topico, index) => (
+                                    <div key={index} style={{ background: 'var(--g-bg-elevated)', border: '1px solid var(--g-border)', padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--g-border)', paddingBottom: '12px', marginBottom: '8px' }}>
+                                            <strong style={{ fontSize: '0.9rem', color: 'var(--g-cyan)' }}>Notícia {index + 1}</strong>
+                                            {topicos.length > 1 && (
+                                                <button onClick={() => removerTopico(index)} style={{ background: 'none', border: 'none', color: 'var(--g-rose)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+                                                    Remover Bloco
+                                                </button>
+                                            )}
                                         </div>
 
-                                        <input
-                                            type="text"
-                                            placeholder="Título da notícia"
-                                            value={topico.titulo}
-                                            onChange={e => atualizarTopico(index, 'titulo', e.target.value)}
-                                        />
-                                        <textarea
-                                            placeholder="Escreva o resumo da notícia..."
-                                            value={topico.texto}
-                                            onChange={e => atualizarTopico(index, 'texto', e.target.value)}
-                                            rows={3}
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Link da notícia original (https://...)"
-                                            value={topico.link}
-                                            onChange={e => atualizarTopico(index, 'link', e.target.value)}
-                                        />
+                                        <div className="gestor-field-row">
+                                            <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                                <label>Imagem da Notícia</label>
+
+                                                {topico.imagemUrl ? (
+                                                    <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--g-border)' }}>
+                                                        <img src={topico.imagemUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <button
+                                                            onClick={() => removerImagem(index)}
+                                                            style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                                        >
+                                                            ✕ Trocar
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                        <div style={{ flex: 1, border: '1px dashed var(--g-border-strong)', padding: '10px 14px', borderRadius: '8px', background: 'var(--g-bg-surface)' }}>
+                                                            <input type="file" accept="image/png, image/jpeg, image/webp" onChange={e => handleImagemArquivo(index, e)} style={{ width: '100%', background: 'transparent', border: 'none' }} />
+                                                        </div>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--g-text-muted)', fontWeight: 600 }}>OU</span>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Cole a URL da Imagem aqui..."
+                                                            value={topico.imagemArquivo ? '' : topico.imagemUrl}
+                                                            onChange={e => handleImagemUrl(index, e.target.value)}
+                                                            disabled={!!topico.imagemArquivo}
+                                                            style={{ flex: 1 }}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="gestor-field-row">
+                                            <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                                <label>Manchete / Título da Notícia</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ex: Ibovespa fecha em alta puxado por commodities"
+                                                    value={topico.titulo}
+                                                    onChange={e => atualizarTopico(index, 'titulo', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="gestor-field-row">
+                                            <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                                <label>Resumo (Takeaway)</label>
+                                                <textarea
+                                                    placeholder="Escreva os pontos chave desta notícia..."
+                                                    value={topico.texto}
+                                                    onChange={e => atualizarTopico(index, 'texto', e.target.value)}
+                                                    rows={4}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="gestor-field-row">
+                                            <div className="gestor-field" style={{ flex: '1 1 100%' }}>
+                                                <label>Link da Fonte Original (Opcional)</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="https://exame.com/..."
+                                                    value={topico.link}
+                                                    onChange={e => atualizarTopico(index, 'link', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
 
-                                <button className="mc-add-topico" onClick={adicionarTopico}>
-                                    + Adicionar tópico
+                                <button
+                                    className="gestor-btn gestor-btn-outline"
+                                    onClick={adicionarTopico}
+                                    style={{ width: 'fit-content', alignSelf: 'center', marginTop: '8px' }}
+                                >
+                                    + Adicionar Novo Bloco de Notícia
                                 </button>
-
-                                <div className="mc-actions">
-                                    <button className="mc-btn-cancel" onClick={limparFormulario} disabled={enviando}>
-                                        Cancelar
-                                    </button>
-                                    <button className="mc-btn-publish" onClick={publicar} disabled={enviando}>
-                                        {enviando ? 'Publicando...' : 'Publicar Morning Call'}
-                                    </button>
-                                </div>
                             </div>
+
                         </div>
-                    </div>
+
+                        {/* RODAPÉ DO FORMULÁRIO */}
+                        <div className="gestor-form-acoes">
+                            <button className="gestor-btn gestor-btn-outline" onClick={limparFormulario} disabled={enviando}>
+                                Limpar
+                            </button>
+                            <button className="gestor-btn gestor-btn-primary" onClick={publicar} disabled={enviando}>
+                                {enviando ? 'A Publicar Morning Call...' : 'Publicar Edição Diária'}
+                            </button>
+                        </div>
+                    </section>
+
                 </div>
             </main>
+
+            {toastMsg && <div className={`gestor-toast toast-${toastTipo}`}>{toastMsg}</div>}
         </div>
     );
 }
-
-export default MorningCallGestor;

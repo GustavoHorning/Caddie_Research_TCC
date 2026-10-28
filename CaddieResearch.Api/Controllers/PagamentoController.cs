@@ -1,44 +1,67 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Text.Json;
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
-using CaddieResearch.Api.Services;
+using System.Security.Claims;
+using CaddieResearch.Api.DTOs.Pagamento;
+using CaddieResearch.Api.Interfaces; 
+using CaddieResearch.Api.Services; 
 
 namespace CaddieResearch.Api.Controllers
 {
+    /// <summary>
+    /// Gerencia o fluxo de assinaturas, checkouts e webhooks integrados com a AbacatePay.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class PagamentoController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IAssinaturaService _assinaturaService; 
+        private readonly IAbacatePayService _abacatePayService;
+        private readonly TokenService _tokenService;
+
         private static readonly ConcurrentDictionary<string, bool> _processedWebhooks = new();
         private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
-        public PagamentoController(AppDbContext context)
+        public PagamentoController(
+            IAssinaturaService assinaturaService, 
+            IAbacatePayService abacatePayService, 
+            TokenService tokenService)
         {
-            _context = context;
+            _assinaturaService = assinaturaService;
+            _abacatePayService = abacatePayService;
+            _tokenService = tokenService;
         }
 
+        /// <summary>
+        /// Gera uma URL de checkout para o plano e método escolhidos.
+        /// </summary>
         [HttpPost("checkout")]
-        public async Task<IActionResult> CriarCheckout(
-            [FromBody] CheckoutDto request, 
-            [FromServices] AbacatePayService abacatePayService)
+        [ProducesResponseType(typeof(CheckoutResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagamentoErrorDto), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CriarCheckout([FromBody] PagamentoDtos request)
         {
             try
             {
-                var url = await abacatePayService.GerarCheckoutAsync(request.Plano, request.Metodo, request.UsuarioId);
-                return Ok(new { url });
+                var url = await _abacatePayService.GerarCheckoutAsync(request.Plano, request.Metodo, request.UsuarioId);
+                return Ok(new CheckoutResponseDto { Url = url });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { erro = "Falha no gateway", detalhe = ex.Message });
+                return BadRequest(new PagamentoErrorDto { Erro = "Falha no gateway", Detalhe = ex.Message });
             }
         }
 
+        /// <summary>
+        /// Recebe e processa eventos (Webhooks) enviados pelo gateway de pagamento.
+        /// </summary>
+        /// <remarks>
+        /// Contém controle de concorrência nativo (Semaphore/Dictionary) para evitar a aprovação duplicada do mesmo checkout.
+        /// </remarks>
         [HttpPost("webhook")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Webhook()
         {
             using var reader = new StreamReader(Request.Body);
@@ -73,45 +96,19 @@ namespace CaddieResearch.Api.Controllers
                 if (!int.TryParse(usuarioIdStr, out var usuarioId))
                 {
                     _processedWebhooks.TryRemove(checkoutId, out _);
-                    return BadRequest(new { erro = "Usuário inválido no metadata." });
+                    return BadRequest(new PagamentoErrorDto { Erro = "Usuário inválido no metadata." });
                 }
 
                 await _semaphore.WaitAsync();
 
                 try
                 {
-                    var usuario = await _context.Usuarios.FindAsync(usuarioId);
-                    if (usuario == null)
-                    {
-                        _processedWebhooks.TryRemove(checkoutId, out _);
-                        return NotFound(new { erro = $"Usuário com ID {usuarioId} não existe no banco de dados." });
-                    }
-
-                    var assinaturasAtivas = await _context.Assinaturas
-                        .Where(a => a.UsuarioId == usuarioId && a.Status == "Ativo")
-                        .ToListAsync();
-
-                    foreach (var assinatura in assinaturasAtivas)
-                    {
-                        assinatura.Status = "Cancelado";
-                    }
-
-                    usuario.Plano = planoEscolhido;
-
-                    var novaAssinatura = new Assinatura
-                    {
-                        UsuarioId = usuarioId,
-                        PlanoNome = planoEscolhido,
-                        ValorPago = valorPago,
-                        Status = "Ativo",
-                        CheckoutId = checkoutId,
-                        TipoPagamento = metodoPagamento,
-                        DataInicio = DateTime.UtcNow,
-                        DataVencimento = DateTime.UtcNow.AddMonths(1)
-                    };
-
-                    _context.Assinaturas.Add(novaAssinatura);
-                    await _context.SaveChangesAsync();
+                    await _assinaturaService.ProcessarPagamentoAprovadoAsync(usuarioId, planoEscolhido, metodoPagamento, valorPago, checkoutId);
+                }
+                catch (Exception ex)
+                {
+                    _processedWebhooks.TryRemove(checkoutId, out _);
+                    return NotFound(new PagamentoErrorDto { Erro = ex.Message });
                 }
                 finally
                 {
@@ -121,53 +118,37 @@ namespace CaddieResearch.Api.Controllers
             catch (Exception ex)
             {
                 _processedWebhooks.TryRemove(checkoutId, out _);
-                
-                return StatusCode(500, new 
+                return StatusCode(500, new PagamentoErrorDto 
                 { 
-                    erro = "Erro interno ao processar o webhook.", 
-                    excecaoPrincipal = ex.Message,
-                    excecaoInterna = ex.InnerException?.Message,
-                    checkoutAnalisado = checkoutId
+                    Erro = "Erro interno ao processar o webhook.", 
+                    Detalhe = ex.Message
                 });
             }
 
             return Ok();
         }
 
+        /// <summary>
+        /// Verifica periodicamente se um pagamento via PIX foi aprovado e renova o Token JWT.
+        /// </summary>
         [HttpGet("verificar-status")]
         [Authorize]
-        public async Task<IActionResult> VerificarStatus([FromQuery] string planoDesejado, [FromServices] TokenService tokenService)
+        [ProducesResponseType(typeof(VerificarStatusResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> VerificarStatus([FromQuery] string planoDesejado)
         {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out int usuarioId))
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int usuarioId)) return Unauthorized();
+
+            var usuarioPago = await _assinaturaService.VerificarStatusPagamentoAsync(usuarioId, planoDesejado);
+
+            if (usuarioPago != null)
             {
-                return Unauthorized();
+                var novoToken = _tokenService.GenerateToken(usuarioPago);
+                return Ok(new VerificarStatusResponseDto { Status = "pago", Token = novoToken });
             }
 
-            var assinaturaAtiva = await _context.Assinaturas
-                .FirstOrDefaultAsync(a => a.UsuarioId == usuarioId 
-                                       && a.Status == "Ativo" 
-                                       && a.PlanoNome.ToLower() == planoDesejado.ToLower());
-
-            if (assinaturaAtiva != null)
-            {
-                var usuario = await _context.Usuarios.FindAsync(usuarioId);
-                if (usuario != null)
-                {
-                    var novoToken = tokenService.GenerateToken(usuario);
-                    
-                    return Ok(new { status = "pago", token = novoToken });
-                }
-            }
-
-            return Ok(new { status = "pendente" });
+            return Ok(new VerificarStatusResponseDto { Status = "pendente", Token = null });
         }
-    }
-
-    public class CheckoutDto
-    {
-        public string Plano { get; set; } = string.Empty;
-        public string Metodo { get; set; } = string.Empty;
-        public int UsuarioId { get; set; }
     }
 }

@@ -1,508 +1,176 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using CaddieResearch.Api.Data;
-using CaddieResearch.Api.Models;
-using CaddieResearch.Api.Services;
+﻿using Microsoft.AspNetCore.Mvc;
+using CaddieResearch.Api.DTOs.Auth;
+using CaddieResearch.Api.Interfaces;
 
 namespace CaddieResearch.Api.Controllers;
 
+/// <summary>
+/// Gerencia a autenticação, registro e recuperação de senhas dos usuários.
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class AuthController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly TokenService _tokenService;
-    private readonly EmailService _emailService;
-    private readonly IConfiguration _configuration;
+    private readonly IAuthService _authService;
 
-    public AuthController(AppDbContext context, TokenService tokenService, EmailService emailService, IConfiguration configuration)
+    public AuthController(IAuthService authService)
     {
-        _context = context;
-        _tokenService = tokenService;
-        _emailService = emailService; 
-        _configuration = configuration;
+        _authService = authService;
     }
 
+    /// <summary>
+    /// Cadastra um novo usuário no sistema.
+    /// </summary>
+    /// <remarks>
+    /// Cria a conta, gera o portfólio inicial vazio e envia o e-mail de confirmação obrigatória.
+    /// </remarks>
+    /// <response code="201">Conta criada. O usuário deve verificar o e-mail.</response>
+    /// <response code="400">E-mail já está em uso.</response>
     [HttpPost("cadastrar")]
+    [ProducesResponseType(typeof(AuthResultDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Cadastrar([FromBody] CadastrarUsuarioRequest request)
     {
-        var emailNormalizado = request.Email.Trim().ToLower();
-        var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email.ToLower() == emailNormalizado);
-        if (emailExiste)
-        {
-            return BadRequest(new { mensagem = "Este e-mail já está em uso no Caddie Research." });
-        }
-        
-        string tokenGerado = Guid.NewGuid().ToString();
-
-        var novoUsuario = new Usuario
-        {
-            Nome = request.Nome.Trim(),
-            Email = emailNormalizado,
-            SenhaHash = _tokenService.HashPassword(request.Senha),
-            TokenConfirmacaoEmail = tokenGerado
-        };
-
-        _context.Usuarios.Add(novoUsuario);
-        await _context.SaveChangesAsync();
-
-        await GarantirPortfolioInicialAsync(novoUsuario.Id);
-
-        var emailCodificado = Uri.EscapeDataString(novoUsuario.Email);
-        var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
-        var linkDeConfirmacao = $"{frontendUrl}/confirmar-email?email={emailCodificado}&token={tokenGerado}";        
-        await _emailService.EnviarEmailConfirmacaoAsync(novoUsuario.Email, novoUsuario.Nome, linkDeConfirmacao);
-
-        return Created("", new { mensagem = "Usuário cadastrado com sucesso! Verifique seu e-mail para validar a conta." });
+        var (sucesso, mensagem) = await _authService.CadastrarAsync(request);
+        if (!sucesso) return BadRequest(new AuthResultDto { Mensagem = mensagem });
+        return Created("", new AuthResultDto { Mensagem = mensagem });
     }
     
+    /// <summary>
+    /// Confirma o endereço de e-mail de um novo usuário.
+    /// </summary>
+    /// <remarks>
+    /// Valida o token recebido no link do e-mail, liberando o acesso do usuário à plataforma.
+    /// </remarks>
+    /// <response code="200">E-mail confirmado com sucesso.</response>
+    /// <response code="400">E-mail já confirmado anteriormente.</response>
+    /// <response code="401">Token inválido ou expirado.</response>
+    /// <response code="404">Usuário não encontrado.</response>
     [HttpGet("confirmar-email")]
+    [ProducesResponseType(typeof(AuthResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ConfirmarEmail([FromQuery] string email, [FromQuery] string token)
     {
-        var emailNormalizado = email.Trim().ToLower();
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
-
-        if (usuario == null)
-        {
-            return NotFound(new { mensagem = "Usuário não encontrado." });
-        }
-
-        if (usuario.EmailConfirmado)
-        {
-            return BadRequest(new { mensagem = "Este e-mail já foi confirmado anteriormente." });
-        }
+        var (sucesso, mensagem) = await _authService.ConfirmarEmailAsync(email, token);
         
-        if (usuario.TokenConfirmacaoEmail != token)
+        if (!sucesso)
         {
-            return Unauthorized(new { mensagem = "Token de verificação inválido ou expirado." });
+            if (mensagem.Contains("não encontrado")) return NotFound(new AuthResultDto { Mensagem = mensagem });
+            if (mensagem.Contains("inválido")) return Unauthorized(new AuthResultDto { Mensagem = mensagem });
+            return BadRequest(new AuthResultDto { Mensagem = mensagem });
         }
 
-        usuario.EmailConfirmado = true;
-        usuario.TokenConfirmacaoEmail = null;
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "E-mail confirmado com sucesso! Você já pode fazer login no Caddie Research." });
+        return Ok(new AuthResultDto { Mensagem = mensagem });
     }
 
+    /// <summary>
+    /// Realiza o login utilizando e-mail e senha.
+    /// </summary>
+    /// <remarks>
+    /// Valida as credenciais tradicionais e retorna o token JWT de sessão. Requer que o e-mail tenha sido confirmado.
+    /// </remarks>
+    /// <response code="200">Login realizado com sucesso.</response>
+    /// <response code="401">Credenciais inválidas ou e-mail não confirmado.</response>
     [HttpPost("login")]
+    [ProducesResponseType(typeof(LoginResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var emailNormalizado = request.Email.Trim().ToLower();
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
-
-        if (usuario == null)
-        {
-            return Unauthorized(new { mensagem = "E-mail ou senha incorretos." }); 
-        }
-
-        var senhaValida = _tokenService.VerifyPassword(request.Senha, usuario.SenhaHash);
-        if (!senhaValida)
-        {
-            return Unauthorized(new { mensagem = "E-mail ou senha incorretos." });
-        }
-        
-        if (!usuario.EmailConfirmado)
-        {
-            return Unauthorized(new { mensagem = "Acesso negado. Por favor, confirme seu e-mail antes de fazer login." });
-        }
-
-        var token = _tokenService.GenerateToken(usuario);
-
-        return Ok(new 
-        { 
-            mensagem = "Login realizado com sucesso!",
-            token = token,
-            usuario = new 
-            { 
-                id = usuario.Id, 
-                nome = usuario.Nome, 
-                email = usuario.Email,
-                tipoPerfil = usuario.TipoPerfil
-            }
-        });
+        var (sucesso, mensagem, dadosLogin) = await _authService.LoginAsync(request);
+        if (!sucesso) return Unauthorized(new AuthResultDto { Mensagem = mensagem });
+        return Ok(dadosLogin);
     }
     
+    /// <summary>
+    /// Realiza o login social utilizando uma conta Google.
+    /// </summary>
+    /// <remarks>
+    /// Valida o token OAuth2 fornecido pelo Google e cria a conta automaticamente caso seja o primeiro acesso.
+    /// </remarks>
+    /// <response code="200">Autenticação social realizada com sucesso.</response>
+    /// <response code="400">Falha ao validar o token com os servidores do Google.</response>
     [HttpPost("login-google")]
+    [ProducesResponseType(typeof(LoginResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> LoginGoogle([FromBody] LoginGoogleRequest request)
     {
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", request.Token);
-        
-        var response = await httpClient.GetAsync("https://www.googleapis.com/oauth2/v3/userinfo");
-
-        if (!response.IsSuccessStatusCode)
-        {
-            return BadRequest(new { mensagem = "Não foi possível validar sua conta com o Google." });
-        }
-
-        var googleUser = await response.Content.ReadFromJsonAsync<GoogleUserInfo>();
-        
-        if (googleUser == null || string.IsNullOrEmpty(googleUser.email))
-        {
-            return BadRequest(new { mensagem = "Dados do Google inválidos." });
-        }
-
-        var emailNormalizado = googleUser.email.Trim().ToLower();
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
-
-        if (usuario == null)
-        {
-            usuario = new Usuario
-            {
-                Nome = string.IsNullOrWhiteSpace(googleUser.name) ? emailNormalizado.Split('@')[0] : googleUser.name,
-                Email = emailNormalizado,
-                EmailConfirmado = true, 
-                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "Caddie@2026!"), 
-                EhSocial = true
-            };
-
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
-        }
-        else if (!usuario.EmailConfirmado)
-        {
-            // Account Linking: utilizador tinha criado conta por e-mail/senha mas ainda não tinha confirmado o e-mail
-            usuario.EmailConfirmado = true;
-            usuario.TokenConfirmacaoEmail = null;
-            await _context.SaveChangesAsync();
-        }
-
-        await GarantirPortfolioInicialAsync(usuario.Id);
-
-        var tokenCaddie = _tokenService.GenerateToken(usuario);
-
-        return Ok(new 
-        { 
-            mensagem = "Login com Google realizado com sucesso!",
-            token = tokenCaddie,
-            usuario = new 
-            { 
-                id = usuario.Id, 
-                nome = usuario.Nome, 
-                email = usuario.Email,
-                tipoPerfil = usuario.TipoPerfil
-            }
-        });
+        var (sucesso, mensagem, dadosLogin) = await _authService.LoginGoogleAsync(request.Token);
+        if (!sucesso) return BadRequest(new AuthResultDto { Mensagem = mensagem });
+        return Ok(dadosLogin);
     }
     
+    /// <summary>
+    /// Realiza o login social utilizando uma conta Microsoft.
+    /// </summary>
+    /// <remarks>
+    /// Valida o token OAuth2 fornecido pela Microsoft (Graph API) e cria a conta automaticamente caso seja o primeiro acesso.
+    /// </remarks>
+    /// <response code="200">Autenticação social realizada com sucesso.</response>
+    /// <response code="400">Falha ao validar o token com os servidores da Microsoft.</response>
     [HttpPost("login-microsoft")]
+    [ProducesResponseType(typeof(LoginResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> LoginMicrosoft([FromBody] LoginMicrosoftRequest request)
     {
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", request.Token);
-        
-        var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
-
-        if (!response.IsSuccessStatusCode)
-        {
-            return BadRequest(new { mensagem = "Não foi possível validar sua conta com a Microsoft." });
-        }
-
-        var msUser = await response.Content.ReadFromJsonAsync<MicrosoftUserInfo>();
-        var emailDaMicrosoft = ExtrairEmailMicrosoft(msUser);
-
-        if (string.IsNullOrEmpty(emailDaMicrosoft))
-        {
-            return BadRequest(new { mensagem = "Não conseguimos ler o e-mail da sua conta Microsoft." });
-        }
-
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailDaMicrosoft);
-
-        if (usuario == null)
-        {
-            usuario = new Usuario
-            {
-                Nome = !string.IsNullOrWhiteSpace(msUser?.displayName) ? msUser.displayName : emailDaMicrosoft.Split('@')[0],
-                Email = emailDaMicrosoft,
-                EmailConfirmado = true,
-                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieMS@2026!"),
-                EhSocial = true
-            };
-
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
-        }
-        else if (!usuario.EmailConfirmado)
-        {
-            usuario.EmailConfirmado = true;
-            usuario.TokenConfirmacaoEmail = null;
-            await _context.SaveChangesAsync();
-        }
-
-        await GarantirPortfolioInicialAsync(usuario.Id);
-
-        var tokenCaddie = _tokenService.GenerateToken(usuario);
-
-        return Ok(new 
-        { 
-            mensagem = "Login com Microsoft realizado com sucesso!",
-            token = tokenCaddie,
-            usuario = new 
-            { 
-                id = usuario.Id, 
-                nome = usuario.Nome, 
-                email = usuario.Email,
-                tipoPerfil = usuario.TipoPerfil
-            }
-        });
+        var (sucesso, mensagem, dadosLogin) = await _authService.LoginMicrosoftAsync(request.Token);
+        if (!sucesso) return BadRequest(new AuthResultDto { Mensagem = mensagem });
+        return Ok(dadosLogin);
     }
 
+    /// <summary>
+    /// Realiza a autenticação corporativa via Single Sign-On (Microsoft Entra ID) exclusiva para Gestores.
+    /// </summary>
+    /// <response code="200">Autenticação corporativa realizada com sucesso.</response>
+    /// <response code="403">Acesso negado para contas sem permissão de Gestor.</response>
     [HttpPost("login-sso-corporativo")]
+    [ProducesResponseType(typeof(LoginResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> LoginSsoCorporativo([FromBody] LoginMicrosoftRequest request)
     {
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", request.Token);
-        
-        var response = await httpClient.GetAsync("https://graph.microsoft.com/v1.0/me");
-
-        if (!response.IsSuccessStatusCode)
+        var (sucesso, mensagem, dadosLogin) = await _authService.LoginSsoCorporativoAsync(request.Token);
+        if (!sucesso)
         {
-            return BadRequest(new { mensagem = "Não foi possível validar a credencial corporativa no Microsoft Entra ID." });
+            if (mensagem.StartsWith("Acesso"))
+                return StatusCode(StatusCodes.Status403Forbidden, new AuthResultDto { Mensagem = mensagem });
+
+            return BadRequest(new AuthResultDto { Mensagem = mensagem });
         }
-
-        var msUser = await response.Content.ReadFromJsonAsync<MicrosoftUserInfo>();
-        var emailCorporativo = ExtrairEmailMicrosoft(msUser);
-
-        if (string.IsNullOrEmpty(emailCorporativo))
-        {
-            return BadRequest(new { mensagem = "Não foi possível identificar o e-mail corporativo no diretório da Azure." });
-        }
-
-        // Lista opcional de e-mails ou domínios autorizados no appsettings.json para auto-provisionamento de Gestor
-        var emailsGestoresConfig = _configuration.GetSection("SsoCorporativo:EmailsAutorizados").Get<string[]>() ?? Array.Empty<string>();
-        var dominiosCorporativos = _configuration.GetSection("SsoCorporativo:DominiosAutorizados").Get<string[]>() ?? Array.Empty<string>();
-
-        bool autorizadoPorConfig = emailsGestoresConfig.Any(e => e.Equals(emailCorporativo, StringComparison.OrdinalIgnoreCase)) ||
-                                   dominiosCorporativos.Any(d => emailCorporativo.EndsWith($"@{d.TrimStart('@')}", StringComparison.OrdinalIgnoreCase));
-
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => 
-            u.Email.ToLower() == emailCorporativo || 
-            (!string.IsNullOrEmpty(msUser!.userPrincipalName) && u.Email.ToLower() == msUser.userPrincipalName.ToLower()));
-
-        if (usuario == null)
-        {
-            if (!autorizadoPorConfig)
-            {
-                return StatusCode(403, new { mensagem = $"Acesso negado: A conta '{emailCorporativo}' não pertence ao grupo de Gestores no Microsoft Entra ID." });
-            }
-
-            // Provisionamento automático (Just-In-Time) se estiver autorizado na configuração corporativa
-            usuario = new Usuario
-            {
-                Nome = !string.IsNullOrWhiteSpace(msUser?.displayName) ? msUser.displayName : "Gestor Caddie",
-                Email = emailCorporativo,
-                EmailConfirmado = true,
-                TipoPerfil = "Gestor",
-                Plano = "Gestor",
-                SenhaHash = _tokenService.HashPassword(Guid.NewGuid().ToString() + "CaddieSSO@2026!"),
-                EhSocial = true
-            };
-
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
-        }
-        else
-        {
-            bool ehGestorNoBanco = string.Equals(usuario.TipoPerfil, "Gestor", StringComparison.OrdinalIgnoreCase) ||
-                                  string.Equals(usuario.Plano, "Gestor", StringComparison.OrdinalIgnoreCase);
-
-            if (!ehGestorNoBanco && !autorizadoPorConfig)
-            {
-                return StatusCode(403, new { mensagem = "Acesso restrito: Este canal de Single Sign-On (SSO) é exclusivo para Gestores autorizados." });
-            }
-
-            // Garante que o perfil e a confirmação estejam atualizados para o Gestor
-            usuario.TipoPerfil = "Gestor";
-            usuario.EmailConfirmado = true;
-            usuario.TokenConfirmacaoEmail = null;
-            await _context.SaveChangesAsync();
-        }
-
-        var tokenCaddie = _tokenService.GenerateToken(usuario);
-
-        return Ok(new 
-        { 
-            mensagem = "Autenticação via SSO Corporativo realizada com sucesso!",
-            token = tokenCaddie,
-            usuario = new 
-            { 
-                id = usuario.Id, 
-                nome = usuario.Nome, 
-                email = usuario.Email,
-                tipoPerfil = usuario.TipoPerfil
-            }
-        });
+        return Ok(dadosLogin);
     }
-
+    
+    /// <summary>
+    /// Solicita a recuperação de senha.
+    /// </summary>
+    /// <remarks>
+    /// Gera um código numérico de 6 dígitos e envia para o e-mail do usuário. O código expira em 15 minutos.
+    /// </remarks>
+    /// <response code="200">Instruções enviadas para o e-mail (caso exista na base).</response>
     [HttpPost("esqueci-senha")]
+    [ProducesResponseType(typeof(AuthResultDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaRequest request)
     {
-        var emailNormalizado = request.Email.Trim().ToLower();
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
-        
-        if (usuario == null)
-        {
-            return Ok(new { mensagem = "Se o e-mail estiver correto, você receberá o código em instantes." });
-        }
-
-        var random = new Random();
-        string codigo = random.Next(100000, 999999).ToString();
-
-        usuario.CodigoRecuperacao = codigo;
-        usuario.DataExpiracaoCodigo = DateTime.UtcNow.AddMinutes(15);
-        await _context.SaveChangesAsync();
-
-        await _emailService.EnviarEmailRecuperacaoAsync(usuario.Email, usuario.Nome, codigo);
-
-        return Ok(new { mensagem = "Código enviado com sucesso!" });
+        var (sucesso, mensagem) = await _authService.EsqueciSenhaAsync(request.Email);
+        return Ok(new AuthResultDto { Mensagem = mensagem });
     }
 
+    /// <summary>
+    /// Redefine a senha utilizando um código de recuperação.
+    /// </summary>
+    /// <remarks>
+    /// Valida o código enviado por e-mail e aplica a nova senha informada pelo usuário.
+    /// </remarks>
+    /// <response code="200">Senha atualizada com sucesso.</response>
+    /// <response code="400">Código inválido, expirado ou usuário não encontrado.</response>
     [HttpPost("redefinir-senha")]
+    [ProducesResponseType(typeof(AuthResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaRequest request)
     {
-        var emailNormalizado = request.Email.Trim().ToLower();
-        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == emailNormalizado);
-        
-        if (usuario == null) 
-            return BadRequest(new { mensagem = "Usuário não encontrado." });
-
-        if (usuario.CodigoRecuperacao != request.Token)
-            return BadRequest(new { mensagem = "Código inválido. Verifique se digitou corretamente." });
-
-        if (usuario.DataExpiracaoCodigo < DateTime.UtcNow)
-            return BadRequest(new { mensagem = "O código expirou. Por favor, solicite um novo." });
-        
-        var usouMesmaSenha = _tokenService.VerifyPassword(request.NovaSenha, usuario.SenhaHash);
-        if (usouMesmaSenha)
-        {
-            return BadRequest(new { mensagem = "A nova senha não pode ser igual à senha atual. Escolha uma senha diferente." });
-        }
-
-        usuario.SenhaHash = _tokenService.HashPassword(request.NovaSenha); 
-        usuario.CodigoRecuperacao = null;
-        usuario.DataExpiracaoCodigo = null;
-
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Senha redefinida com sucesso!" });
+        var (sucesso, mensagem) = await _authService.RedefinirSenhaAsync(request);
+        if (!sucesso) return BadRequest(new AuthResultDto { Mensagem = mensagem });
+        return Ok(new AuthResultDto { Mensagem = mensagem });
     }
-
-    private async Task GarantirPortfolioInicialAsync(int usuarioId)
-    {
-        var possuiPortfolio = await _context.Portfolios.AnyAsync(p => p.UsuarioId == usuarioId);
-        if (!possuiPortfolio)
-        {
-            _context.Portfolios.Add(new Portfolio
-            {
-                UsuarioId = usuarioId,
-                Nome = "Portfólio Inicial",
-                DataInicio = DateTime.UtcNow
-            });
-            await _context.SaveChangesAsync();
-        }
-    }
-
-    private static string? ExtrairEmailMicrosoft(MicrosoftUserInfo? msUser)
-    {
-        if (msUser == null) return null;
-
-        if (!string.IsNullOrWhiteSpace(msUser.mail))
-        {
-            return msUser.mail.Trim().ToLower();
-        }
-
-        if (!string.IsNullOrWhiteSpace(msUser.userPrincipalName))
-        {
-            var upn = msUser.userPrincipalName.Trim();
-
-            // Trata contas Microsoft Entra ID no formato nome_dominio.com#EXT#@tenant.onmicrosoft.com
-            var extIndex = upn.IndexOf("#EXT#@", StringComparison.OrdinalIgnoreCase);
-            if (extIndex > 0)
-            {
-                var prefixo = upn.Substring(0, extIndex);
-                var lastUnderscore = prefixo.LastIndexOf('_');
-                if (lastUnderscore > 0)
-                {
-                    return (prefixo.Substring(0, lastUnderscore) + "@" + prefixo.Substring(lastUnderscore + 1)).ToLower();
-                }
-            }
-
-            return upn.ToLower();
-        }
-
-        return null;
-    }
-}
-
-public class CadastrarUsuarioRequest
-{
-    [Required(ErrorMessage = "O nome é obrigatório.")]
-    [MinLength(3, ErrorMessage = "O nome deve ter no mínimo 3 caracteres.")]
-    [MaxLength(100, ErrorMessage = "O nome excedeu o limite de 100 caracteres.")]
-    public string Nome { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "O e-mail é obrigatório.")]
-    [EmailAddress(ErrorMessage = "O formato do e-mail é inválido.")]
-    public string Email { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "A senha é obrigatória.")]
-    [MinLength(8, ErrorMessage = "A senha deve ter no mínimo 8 caracteres.")]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$", 
-        ErrorMessage = "A senha deve conter pelo menos 8 caracteres, uma letra maiúscula, uma minúscula, um número e um caractere especial.")]
-    public string Senha { get; set; } = string.Empty;
-}
-
-public class LoginRequest
-{
-    [Required(ErrorMessage = "O e-mail é obrigatório.")]
-    [EmailAddress(ErrorMessage = "O formato do e-mail é inválido.")]
-    public string Email { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "A senha é obrigatória.")]
-    public string Senha { get; set; } = string.Empty;
-}
-
-public class EsqueciSenhaRequest
-{
-    public string Email { get; set; } = string.Empty;
-}
-
-public class RedefinirSenhaRequest
-{
-    [Required(ErrorMessage = "O e-mail é obrigatório.")]
-    public string Email { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "O código é obrigatório.")]
-    public string Token { get; set; } = string.Empty; 
-
-    [Required(ErrorMessage = "A nova senha é obrigatória.")]
-    [MinLength(8, ErrorMessage = "A senha deve ter no mínimo 8 caracteres.")]
-    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$", 
-        ErrorMessage = "A senha deve conter pelo menos 8 caracteres, uma letra maiúscula, uma minúscula, um número e um caractere especial.")]
-    public string NovaSenha { get; set; } = string.Empty;
-}
-
-public class LoginGoogleRequest
-{
-    public string Token { get; set; } = string.Empty;
-}
-
-public class GoogleUserInfo
-{
-    public string email { get; set; } = string.Empty;
-    public string name { get; set; } = string.Empty;
-    public bool email_verified { get; set; }
-}
-
-public class LoginMicrosoftRequest
-{
-    public string Token { get; set; } = string.Empty;
-}
-
-public class MicrosoftUserInfo
-{
-    public string displayName { get; set; } = string.Empty;
-    public string mail { get; set; } = string.Empty;
-    public string userPrincipalName { get; set; } = string.Empty;
 }
