@@ -20,12 +20,12 @@ interface Relatorio {
     carteiraId: number;
     carteira?: Carteira;
     dataPublicacao: string;
-    tagsAtivos: string; // Adicionado aqui
+    tagsAtivos: string;
 }
 
 export default function RelatoriosGestor() {
     const [menuMobileAberto, setMenuMobileAberto] = useState(false);
-    
+
     const [relatorios, setRelatorios] = useState<Relatorio[]>([]);
     const [carteirasLista, setCarteirasLista] = useState<Carteira[]>([]);
     const [carregando, setCarregando] = useState(false);
@@ -41,7 +41,7 @@ export default function RelatoriosGestor() {
     const [titulo, setTitulo] = useState('');
     const [assunto, setAssunto] = useState('');
     const [conteudoTexto, setConteudoTexto] = useState('');
-    const [tagsAtivos, setTagsAtivos] = useState(''); // Novo Estado
+    const [tagsAtivos, setTagsAtivos] = useState('');
     const [carteiraId, setCarteiraId] = useState<number | string>('');
     const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
     const [loadingForm, setLoadingForm] = useState(false);
@@ -83,16 +83,16 @@ export default function RelatoriosGestor() {
 
     const handleAbrirPdf = async (id: number, titulo: string) => {
         try {
-            mostrarNotificacao("Carregando visualizador...", "sucesso");
-            
+            mostrarNotificacao("A carregar visualizador...", "sucesso");
+
             const response = await api.get(`/api/relatorios/${id}/download`, {
                 ...configSeguranca,
-                responseType: 'blob' 
+                responseType: 'blob'
             });
 
             const blob = new Blob([response.data], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
-            
+
             setViewerUrl(url);
             setViewerTitulo(titulo);
             setViewerAberto(true);
@@ -130,9 +130,9 @@ export default function RelatoriosGestor() {
         setTitulo(relatorio.titulo);
         setAssunto(relatorio.assunto);
         setConteudoTexto(relatorio.conteudoTexto);
-        setTagsAtivos(relatorio.tagsAtivos || ''); 
+        setTagsAtivos(relatorio.tagsAtivos || '');
         setCarteiraId(relatorio.carteiraId);
-        setArquivoPdf(null); 
+        setArquivoPdf(null);
         setMostrarForm(true);
     };
 
@@ -160,9 +160,9 @@ export default function RelatoriosGestor() {
         formData.append('titulo', titulo);
         formData.append('assunto', assunto);
         formData.append('conteudoTexto', conteudoTexto);
-        formData.append('tagsAtivos', tagsAtivos); // Enviando nova coluna
+        formData.append('tagsAtivos', tagsAtivos);
         formData.append('carteiraId', carteiraId.toString());
-        
+
         if (arquivoPdf) {
             formData.append('arquivoPdf', arquivoPdf);
         }
@@ -185,10 +185,20 @@ export default function RelatoriosGestor() {
         }
     };
 
-    const relatoriosFiltrados = relatorios.filter(rel => 
-        rel.titulo.toLowerCase().includes(termoBusca.toLowerCase()) || 
-        rel.assunto.toLowerCase().includes(termoBusca.toLowerCase())
+    const relatoriosFiltrados = relatorios.filter(rel =>
+        rel.titulo.toLowerCase().includes(termoBusca.toLowerCase()) ||
+        rel.assunto.toLowerCase().includes(termoBusca.toLowerCase()) ||
+        (rel.tagsAtivos && rel.tagsAtivos.toLowerCase().includes(termoBusca.toLowerCase()))
     );
+
+    // KPIs Calculados
+    const totalRelatorios = relatorios.length;
+    const relatoriosMes = relatorios.filter(r => {
+        const dataPub = new Date(r.dataPublicacao);
+        const hoje = new Date();
+        return dataPub.getMonth() === hoje.getMonth() && dataPub.getFullYear() === hoje.getFullYear();
+    }).length;
+    const temArquivoUpload = relatorios.filter(r => r.arquivoPdfUrl).length;
 
     return (
         <div className="dashboard-layout">
@@ -198,255 +208,264 @@ export default function RelatoriosGestor() {
             <TopBar userName="Gestor" onMenuToggle={() => setMenuMobileAberto(!menuMobileAberto)} />
 
             <main className="dashboard-main">
-                <div className="gestor-content">
+                {/* 1. WRAPPER PRINCIPAL (O segredo do layout perfeito) */}
+                <div className="gestor-page">
 
-                    <div className="gestor-header-title">
-                        <h2>Central de Relatórios</h2>
-                        <p>Publique relatórios em PDF e análises vinculadas aos planos de assinatura.</p>
-                    </div>
-
-                    <div className="gestor-card" style={{ marginTop: '32px' }}>
-                        <div className="gestor-ativos-header" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: '16px' }}>
-                            <div className="gestor-busca">
-                                <input 
-                                    type="text" 
-                                    placeholder="Buscar relatório..." 
-                                    value={termoBusca} 
-                                    onChange={(e) => setTermoBusca(e.target.value)} 
-                                />
+                    {/* 2. HEADER EXECUTIVO */}
+                    <header className="gestor-hero">
+                        <div className="gestor-hero-left">
+                            <div className="gestor-kicker-row">
+                                <span className="gestor-kicker-badge">Research & Análise</span>
                             </div>
-                            <button className="gestor-btn-novo-ativo" onClick={() => { setMostrarForm(true); setRelatorioEditandoId(null); }}>
-                                + Novo Relatório
+                            <h1 className="gestor-title">Central de Relatórios</h1>
+                            <p className="gestor-subtitle">Publique relatórios em PDF, defina os níveis de subscrição exigidos e vincule as análises aos ativos da carteira.</p>
+                        </div>
+                    </header>
+
+                    {/* 3. STRIP DE KPIs (Opção premium) */}
+                    <section className="gestor-kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                        <div className="gestor-kpi-card">
+                            <div className="gestor-kpi-top">
+                                <span className="gestor-kpi-label">Volume do Acervo</span>
+                                <span className="gestor-kpi-pill pill-cyan">Publicados</span>
+                            </div>
+                            <strong className="gestor-kpi-value">{totalRelatorios}</strong>
+                            <div className="gestor-kpi-bar"><div className="gestor-kpi-fill fill-cyan" style={{ width: '100%' }}></div></div>
+                        </div>
+                        <div className="gestor-kpi-card">
+                            <div className="gestor-kpi-top">
+                                <span className="gestor-kpi-label">Produção Mensal</span>
+                                <span className="gestor-kpi-pill pill-emerald">Mês Atual</span>
+                            </div>
+                            <strong className="gestor-kpi-value text-emerald">{relatoriosMes}</strong>
+                            <div className="gestor-kpi-bar"><div className="gestor-kpi-fill fill-emerald" style={{ width: '100%' }}></div></div>
+                        </div>
+                        <div className="gestor-kpi-card">
+                            <div className="gestor-kpi-top">
+                                <span className="gestor-kpi-label">Taxa de Anexação</span>
+                                <span className="gestor-kpi-pill pill-amber">Com PDF Original</span>
+                            </div>
+                            <strong className="gestor-kpi-value text-amber">{totalRelatorios > 0 ? Math.round((temArquivoUpload / totalRelatorios) * 100) : 0}%</strong>
+                            <div className="gestor-kpi-bar"><div className="gestor-kpi-fill fill-amber" style={{ width: `${totalRelatorios > 0 ? (temArquivoUpload / totalRelatorios) * 100 : 0}%` }}></div></div>
+                        </div>
+                    </section>
+
+                    {/* 4. PAINEL E TABELA */}
+                    <section className="gestor-panel">
+                        <div className="gestor-toolbar">
+                            <div className="gestor-toolbar-left">
+                                <div className="gestor-search-box">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        placeholder="Pesquisar por título, assunto ou ticker..."
+                                        value={termoBusca}
+                                        onChange={(e) => setTermoBusca(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <button className="gestor-btn gestor-btn-primary" onClick={() => { setMostrarForm(true); setRelatorioEditandoId(null); }}>
+                                + Nova Publicação
                             </button>
                         </div>
 
-                        {mostrarForm && (
-                            <div className="modal-cadastro-overlay">
-                                <div className="modal-cadastro-content">
-                                    <div className="modal-cadastro-header">
-                                        <h3>{relatorioEditandoId ? "Editar Relatório" : "Publicar Novo Relatório"}</h3>
-                                        <button className="modal-btn-fechar" onClick={limparFormulario}>
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </button>
-                                    </div>
-
-                                    <div className="gestor-form-grid" style={{ gridTemplateColumns: '1fr' }}>
-                                        <div className="gestor-upload-campos">
-                                            
-                                            <div className="gestor-campo-row">
-                                                <div className="gestor-campo">
-                                                    <label>Carteira Destino (Define o plano necessário para ler)</label>
-                                                    <select value={carteiraId} onChange={e => setCarteiraId(Number(e.target.value))}>
-                                                        {carteirasLista.length === 0 && <option value="">Carregando carteiras...</option>}
-                                                        {carteirasLista.map(cart => (
-                                                            <option key={cart.id} value={cart.id}>
-                                                                {cart.nome} (Nível {cart.nivelAcesso})
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                                <div className="gestor-campo">
-                                                    <label>Assunto / Categoria</label>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Ex: Fechamento de Mercado, Resultado 3T26..." 
-                                                        value={assunto} 
-                                                        onChange={e => setAssunto(e.target.value)} 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="gestor-campo-row">
-                                                <div className="gestor-campo">
-                                                    <label>Título do Relatório</label>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Ex: A tese estrutural de Vale (VALE3)" 
-                                                        value={titulo} 
-                                                        onChange={e => setTitulo(e.target.value)} 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="gestor-campo-row">
-                                                <div className="gestor-campo">
-                                                    <label>Ativos Vinculados (Opcional)</label>
-                                                    <input 
-                                                        type="text" 
-                                                        placeholder="Ex: PETR4, VALE3 (Para cruzar na Auditoria)" 
-                                                        value={tagsAtivos} 
-                                                        onChange={e => setTagsAtivos(e.target.value)} 
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="gestor-campo-row">
-                                                <div className="gestor-campo">
-                                                    <label>Conteúdo (Texto Livre)</label>
-                                                    <textarea 
-                                                        value={conteudoTexto} 
-                                                        onChange={e => setConteudoTexto(e.target.value)} 
-                                                        placeholder="Escreva um resumo ou a análise completa aqui..." 
-                                                        rows={5}
-                                                        style={{ 
-                                                            width: '100%', padding: '12px 16px', borderRadius: '10px', 
-                                                            background: 'rgba(255, 255, 255, 0.04)', color: '#fff', 
-                                                            border: '1px solid rgba(255, 255, 255, 0.1)', outline: 'none',
-                                                            fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical'
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="gestor-campo-row">
-                                                <div className="gestor-campo">
-                                                    <label>Anexar Arquivo PDF {relatorioEditandoId && "(Opcional - Selecione para substituir)"}</label>
-                                                    <div style={{ border: '2px dashed rgba(0, 180, 216, 0.3)', padding: '24px', textAlign: 'center', borderRadius: '10px', background: 'rgba(0, 180, 216, 0.02)' }}>
-                                                        <input 
-                                                            type="file" 
-                                                            accept="application/pdf"
-                                                            onChange={e => setArquivoPdf(e.target.files ? e.target.files[0] : null)}
-                                                            style={{ width: '100%', background: 'transparent', border: 'none' }}
-                                                        />
+                        <div className="gestor-table-container">
+                            <table className="gestor-table">
+                                <thead>
+                                <tr>
+                                    <th>Título da Publicação</th>
+                                    <th>Categoria / Carteira</th>
+                                    <th className="align-center">Acesso (Subscrição)</th>
+                                    <th className="align-center">Data</th>
+                                    <th className="align-center">Ações</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {carregando ? (
+                                    [1, 2, 3].map((n) => (
+                                        <tr key={`sk-${n}`}>
+                                            <td colSpan={5}>
+                                                <div className="gestor-skeleton-row"></div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : relatoriosFiltrados.length > 0 ? (
+                                    relatoriosFiltrados.map((rel) => (
+                                        <tr key={rel.id}>
+                                            <td data-label="Título">
+                                                <div className="gestor-asset-cell">
+                                                    <div className="gestor-asset-avatar" style={{ background: 'var(--g-amber-soft)', color: 'var(--g-amber)' }}>
+                                                        📄
+                                                    </div>
+                                                    <div>
+                                                        <strong className="gestor-ticker-name" style={{ whiteSpace: 'normal', maxWidth: '400px', display: 'block' }}>{rel.titulo}</strong>
+                                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                                                            <span className="gestor-cat-tag">{rel.assunto}</span>
+                                                            {rel.tagsAtivos && <span className="gestor-cat-tag" style={{ background: 'var(--g-bg-subtle)', color: 'var(--g-text-secondary)' }}>📎 {rel.tagsAtivos}</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td data-label="Carteira">
+                                                <div className="gestor-secondary-cell">
+                                                    <strong>{rel.carteira?.nome || 'Geral (Público)'}</strong>
+                                                    <span>Vínculo Estratégico</span>
+                                                </div>
+                                            </td>
+                                            <td data-label="Acesso" className="align-center">
+                                                    <span className={`gestor-vies-badge ${rel.carteira?.nivelAcesso === 1 ? 'vies-comprar' : rel.carteira?.nivelAcesso === 2 ? 'vies-aguardar' : 'vies-vender'}`}>
+                                                        {rel.carteira?.nivelAcesso === 1 ? 'Basic' : rel.carteira?.nivelAcesso === 2 ? 'Premium' : 'Black'}
+                                                    </span>
+                                            </td>
+                                            <td data-label="Data" className="align-center">
+                                                    <span className="gestor-entry-date" style={{ margin: 0 }}>
+                                                        {new Date(rel.dataPublicacao).toLocaleDateString('pt-BR')}
+                                                    </span>
+                                            </td>
+                                            <td data-label="Ações" className="align-center">
+                                                <div className="gestor-actions-cell">
+                                                    {rel.arquivoPdfUrl && (
+                                                        <button className="gestor-icon-btn" onClick={() => handleAbrirPdf(rel.id, rel.titulo)} title="Ver PDF" style={{ color: 'var(--g-cyan)' }}>
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                                        </button>
+                                                    )}
+                                                    <button className="gestor-icon-btn edit" onClick={() => handleEditar(rel)} title="Editar Relatório">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                                    </button>
+                                                    <button className="gestor-icon-btn delete" onClick={() => setRelatorioParaRemover({id: rel.id, titulo: rel.titulo})} title="Apagar Relatório">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="gestor-empty-row">
+                                            <div className="gestor-empty-box">
+                                                <strong>Nenhuma publicação correspondente.</strong>
+                                                <span>Inicie a sua cobertura publicando análises para os subscritores.</span>
                                             </div>
+                                        </td>
+                                    </tr>
+                                )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </main>
 
-                                            <div className="gestor-form-acoes" style={{ gridColumn: '1 / -1', marginTop: '24px' }}>
-                                                <button className="gestor-btn-cancelar" onClick={limparFormulario} disabled={loadingForm}>Cancelar</button>
-                                                <button className="gestor-btn-publicar" onClick={handleSubmit} disabled={loadingForm}>
-                                                    {loadingForm ? 'Salvando...' : (relatorioEditandoId ? "Salvar Alterações" : "Publicar Relatório")}
-                                                </button>
-                                            </div>
+            {/* 5. MODAL DE PUBLICAÇÃO */}
+            {mostrarForm && (
+                <div className="gestor-modal-backdrop">
+                    <div className="gestor-modal-dialog">
+                        <div className="gestor-modal-header">
+                            <div>
+                                <span className="gestor-modal-kicker">Geração de Conteúdo</span>
+                                <h3>{relatorioEditandoId ? "Editar Publicação" : "Nova Publicação de Research"}</h3>
+                            </div>
+                            <button className="gestor-modal-close" onClick={limparFormulario}>✕</button>
+                        </div>
+
+                        <div className="gestor-modal-body" style={{ gridTemplateColumns: '1fr', padding: '32px' }}>
+                            <div className="gestor-form-column">
+                                <div className="gestor-field-row">
+                                    <div className="gestor-field">
+                                        <label>Vínculo Estratégico (Carteira / Acesso)</label>
+                                        <select value={carteiraId} onChange={e => setCarteiraId(Number(e.target.value))}>
+                                            {carteirasLista.length === 0 && <option value="">Carregando carteiras...</option>}
+                                            {carteirasLista.map(cart => (
+                                                <option key={cart.id} value={cart.id}>
+                                                    {cart.nome} (Acesso: Nível {cart.nivelAcesso})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="gestor-field">
+                                        <label>Macro-Tema / Assunto</label>
+                                        <input type="text" placeholder="Ex: Resultado 3T26, Cenário Macro..." value={assunto} onChange={e => setAssunto(e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="gestor-field-row">
+                                    <div className="gestor-field">
+                                        <label>Título da Publicação (Headline)</label>
+                                        <input type="text" placeholder="Ex: O destravamento de valor da WEG" value={titulo} onChange={e => setTitulo(e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="gestor-field-row">
+                                    <div className="gestor-field">
+                                        <label>Tickers Mencionados (Compliance & Tracking)</label>
+                                        <input type="text" placeholder="Ex: WEGE3, PETR4 (Para cruzar na trilha de auditoria do cliente)" value={tagsAtivos} onChange={e => setTagsAtivos(e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="gestor-field-row">
+                                    <div className="gestor-field">
+                                        <label>Resumo / Takeaway (Opcional)</label>
+                                        <textarea
+                                            value={conteudoTexto}
+                                            onChange={e => setConteudoTexto(e.target.value)}
+                                            placeholder="Descreva os pontos-chave desta tese para leitura rápida..."
+                                            rows={4}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="gestor-field-row">
+                                    <div className="gestor-field">
+                                        <label>Anexo (Documento PDF Completo)</label>
+                                        <div style={{ border: '2px dashed var(--g-border-strong)', padding: '24px', textAlign: 'center', borderRadius: '12px', background: 'var(--g-bg-input)' }}>
+                                            <input
+                                                type="file"
+                                                accept="application/pdf"
+                                                onChange={e => setArquivoPdf(e.target.files ? e.target.files[0] : null)}
+                                                style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--g-text-secondary)' }}
+                                            />
+                                            {relatorioEditandoId && !arquivoPdf && <span style={{display: 'block', marginTop: '8px', fontSize: '0.75rem', color: 'var(--g-text-muted)'}}>Mantém o arquivo atual se não selecionar um novo.</span>}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        )}
+                        </div>
 
-                        <div className="gestor-tabela-wrapper">
-                            <table className="gestor-tabela">
-                                <thead>
-                                    <tr>
-                                        <th>Título / Assunto</th>
-                                        <th>Carteira Vinculada</th>
-                                        <th className="td-center">Data</th>
-                                        <th className="td-center">Anexo</th>
-                                        <th className="td-center">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {carregando ? (
-                                        [1, 2, 3].map((skeleton) => (
-                                            <tr key={`skeleton-${skeleton}`}>
-                                                <td className="gestor-td-ticker"><div className="skeleton skeleton-text" style={{width: '180px', height: '20px'}}></div></td>
-                                                <td className="gestor-td-empresa"><div className="skeleton skeleton-text" style={{width: '100px', height: '16px'}}></div></td>
-                                                <td className="td-center"><div className="skeleton skeleton-text" style={{width: '80px', height: '20px', margin: '0 auto'}}></div></td>
-                                                <td className="td-center"><div className="skeleton skeleton-text" style={{width: '40px', height: '24px', margin: '0 auto'}}></div></td>
-                                                <td className="td-center"><div className="skeleton skeleton-text" style={{width: '60px', height: '24px', margin: '0 auto'}}></div></td>
-                                            </tr>
-                                        ))
-                                    ) : relatoriosFiltrados.length > 0 ? (
-                                        relatoriosFiltrados.map((rel) => (
-                                            <tr key={rel.id}>
-                                                <td className="gestor-td-ticker" data-label="Título">
-                                                    {rel.titulo}
-                                                    <span style={{ display: 'block', fontSize: '11px', color: '#8b949e', fontWeight: 500, marginTop: '4px' }}>
-                                                        {rel.assunto} {rel.tagsAtivos ? `| Ativos: ${rel.tagsAtivos}` : ''}
-                                                    </span>
-                                                </td>
-
-                                                <td className="gestor-td-empresa" data-label="Carteira">
-                                                    <span style={{ color: '#e6edf3', fontWeight: 500 }}>
-                                                        {rel.carteira ? rel.carteira.nome : 'Desconhecida'}
-                                                    </span>
-                                                </td>
-
-                                                <td className="td-center" data-label="Data" style={{ color: '#8b949e', fontSize: '0.9rem' }}>
-                                                    {new Date(rel.dataPublicacao).toLocaleDateString('pt-BR')}
-                                                </td>
-
-                                                <td className="td-center" data-label="Anexo">
-                                                    {rel.arquivoPdfUrl ? (
-                                                        <button 
-                                                            onClick={() => handleAbrirPdf(rel.id, rel.titulo)} 
-                                                            style={{ background: 'none', border: 'none', color: '#00B4D8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '0.85rem', padding: 0 }}
-                                                        >
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                                            PDF
-                                                        </button>
-                                                    ) : (
-                                                        <span style={{ color: '#6e7681', fontSize: '0.85rem' }}>Sem anexo</span>
-                                                    )}
-                                                </td>
-
-                                                <td className="td-center" data-label="Ações">
-                                                    <div className="gestor-acoes-grupo">
-                                                        <button className="btn-acao-svg btn-editar" onClick={() => handleEditar(rel)} title="Editar Relatório">
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                            </svg>
-                                                        </button>
-                                                        <button className="btn-acao-svg btn-remover" onClick={() => setRelatorioParaRemover({id: rel.id, titulo: rel.titulo})} title="Remover Relatório">
-                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#8b949e' }}>
-                                                {termoBusca ? "Nenhum relatório encontrado." : "Nenhum relatório publicado ainda."}
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                        <div className="gestor-modal-footer">
+                            <button type="button" className="gestor-btn gestor-btn-outline" onClick={limparFormulario} disabled={loadingForm}>
+                                Cancelar
+                            </button>
+                            <button type="button" className="gestor-btn gestor-btn-primary" onClick={handleSubmit} disabled={loadingForm}>
+                                {loadingForm ? 'A publicar...' : (relatorioEditandoId ? "Salvar Alterações" : "Submeter Publicação")}
+                            </button>
                         </div>
                     </div>
-
                 </div>
-            </main>
+            )}
 
+            {/* 6. MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
             {relatorioParaRemover && (
-                <div className="gestor-modal-overlay">
-                    <div className="gestor-modal-box">
-                        <div className="gestor-modal-icone">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                                <line x1="12" y1="9" x2="12" y2="13"></line>
-                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                            </svg>
+                <div className="gestor-modal-backdrop" onClick={() => setRelatorioParaRemover(null)}>
+                    <div className="gestor-confirm-box" onClick={e => e.stopPropagation()}>
+                        <div className="gestor-confirm-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </div>
-                        <h3>Remover Relatório</h3>
-                        <p>Tem certeza que deseja apagar o relatório <strong>{relatorioParaRemover.titulo}</strong>? O PDF associado também será apagado da nuvem.</p>
-                        <div className="gestor-modal-acoes">
-                            <button className="gestor-btn-cancelar" onClick={() => setRelatorioParaRemover(null)}>Cancelar</button>
-                            <button className="gestor-btn-remover-confirmar" onClick={handleConfirmarRemocao}>Sim, apagar</button>
+                        <h3>Apagar Publicação</h3>
+                        <p>Tem a certeza de que deseja apagar o relatório <strong>{relatorioParaRemover.titulo}</strong>? O documento e o seu histórico na auditoria serão removidos.</p>
+                        <div className="gestor-confirm-actions">
+                            <button type="button" className="gestor-btn gestor-btn-outline" onClick={() => setRelatorioParaRemover(null)}>Cancelar</button>
+                            <button type="button" className="gestor-btn gestor-btn-danger" onClick={handleConfirmarRemocao}>Apagar Relatório</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <PdfViewerModal 
-                isOpen={viewerAberto} 
-                onClose={handleFecharViewer} 
-                pdfUrl={viewerUrl} 
-                titulo={viewerTitulo} 
-            />
+            <PdfViewerModal isOpen={viewerAberto} onClose={handleFecharViewer} pdfUrl={viewerUrl} titulo={viewerTitulo} />
 
-            {toastMsg && (
-                <div className={`gestor-toast toast-${toastTipo}`}>
-                    {toastMsg}
-                </div>
-            )}
+            {toastMsg && <div className={`gestor-toast toast-${toastTipo}`}>{toastMsg}</div>}
         </div>
     )
 }

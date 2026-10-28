@@ -62,8 +62,7 @@ function App() {
                     <Route path="/portfolio" element={<ProtectedRoute clientOnly><DashboardLayout><Portfolio /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/portfolio/:id" element={<ProtectedRoute clientOnly><DashboardLayout><PortfolioDetalhe /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/relatorios" element={<Relatorios />} />
-                    <Route path="/auditoria" element={<ProtectedRoute><DashboardLayout><HistoricoAtivos /></DashboardLayout></ProtectedRoute>} />
-                    <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
+                    <Route path="/auditoria" element={<ProtectedRoute><HistoricoAtivos /></ProtectedRoute>} />                    <Route path="/morning-call" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCall /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/morning-call/noticia/:id" element={<ProtectedRoute clientOnly><DashboardLayout><MorningCallNoticia /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/forum" element={<ProtectedRoute clientOnly><DashboardLayout><Forum /></DashboardLayout></ProtectedRoute>} />
                     <Route path="/forum/topico/:id" element={<ProtectedRoute clientOnly><DashboardLayout><ForumTopico voltarPara="/forum" voltarRotulo="Fórum" /></DashboardLayout></ProtectedRoute>} />
